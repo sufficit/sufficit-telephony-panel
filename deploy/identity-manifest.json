@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "sufficit-telephony-panel-eveo",
+  "rolloutMode": "Enforce",
+  "scopes": [{
+    "name": "entitlements",
+    "displayName": "Diretivas de acesso do usuário",
+    "description": "NOT YET ACTIVE. Registered and grantable, but releases no claim: the claim-to-scope map still gates the authorization claim behind the directives scope. Do not switch any client to this name until identity emits the claim under it.",
+    "resources": [
+      "SufficitEndpointsIntrospection",
+      "https://endpoints.sufficit.com.br/mcp",
+      "sufficit_cloud_mobile_api"
+    ]
+  }],
+  "clients": [{
+    "clientId": "sufficit-telephony-panel",
+    "displayName": "Sufficit Telephony Panel",
+    "clientType": "public",
+    "consentType": "explicit",
+    "requirePkce": true,
+    "grantTypes": ["authorization_code"],
+    "responseTypes": ["code"],
+    "scopes": ["openid", "profile", "roles", "entitlements"],
+    "redirectUris": [
+      "https://panel.sufficit.com.br/telephony-panel/signin-oidc",
+      "https://eveo-apps.sufficit.com.br/telephony-panel/signin-oidc"
+    ]
+  }]
+}

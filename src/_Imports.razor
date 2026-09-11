@@ -1,12 +1,15 @@
-﻿@using System.Net.Http
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
-@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.JSInterop
-@using Sufficit.Telephony.BlazorPanel
-@using Sufficit.Telephony.BlazorPanel.Shared
-@using Sufficit.Telephony.EventsPanel
-@using Sufficit.Telephony.EventsPanel.Components
+@using Sufficit.Blazor.UI
+@using Sufficit.Blazor.UI.Components
+@using Sufficit.Blazor.UI.Themes
+@using Sufficit.Telephony.Panel
+@using Sufficit.Telephony.Panel.Monitoring
+@using Sufficit.Telephony.Panel.Security
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Sufficit.Telephony.Panel.Localization
+@inject PanelText Text

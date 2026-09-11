@@ -12,3 +12,10 @@ src/appsettings.Development-Sufficit.json
 src/appsettings.Production-Sufficit.json
 # Worktrees (padrao): arvores de trabalho em <repo>/.worktrees/
 **/.worktrees/
+**/bin/
+**/obj/
+.playwright-cli/
+.impeccable/review/
+artifacts/
+published/
+*.secrets.json

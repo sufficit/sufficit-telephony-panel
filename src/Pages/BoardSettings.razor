@@ -1,0 +1,149 @@
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.EventsPanel
+@inject BoardConfigurationAccess Access
+
+<section class="board-settings" aria-labelledby="board-settings-title">
+    <div class="heading"><div><h2 id="board-settings-title">@Text["Board trunks and filters"]</h2>
+        <p class="muted">@Text["Rules shared between managers. They organize the board without changing Asterisk, other tabs or permissions."]</p></div></div>
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)</SUIAlert> }
+    @if (Message is not null) { <p role="status" class="settings-feedback">@Text.Observed(Message)</p> }
+    <div class="settings-toolbar">
+        <SUIButton VariantValue="SUIVariant.Filled" OnClick="Save" Disabled="@(Busy || !Dirty || Editing)">@Text["Save configuration"]</SUIButton>
+        <SUIButton VariantValue="SUIVariant.Outlined" OnClick="() => ConfirmReload = true" Disabled="Busy">@Text["Reload configuration"]</SUIButton>
+        <span class="muted">@(Dirty || Editing ? Text["Unpublished draft"] : Text["No pending changes"]) · @(Draft.UpdatedAt is { } time ? Text.Format("Saved at {0}", time.ToLocalTime().ToString("g", Text.Culture)) : Text["No rules saved yet"])</span>
+    </div>
+    @if (ConfirmReload)
+    {
+        <div class="settings-confirm" role="alert"><p>@Text["Reloading discards the draft and retrieves the last saved version."]</p><SUIButton OnClick="Reload" Disabled="Busy">@Text["Discard and reload"]</SUIButton><SUIButton OnClick="() => ConfirmReload = false" VariantValue="SUIVariant.Text">@Text["Keep draft"]</SUIButton></div>
+    }
+    <div class="settings-layout">
+        <section class="settings-rules" aria-labelledby="rules-title">
+            <div class="heading"><h3 id="rules-title">@Text.Format("Rule order · {0}/100", Draft.Rules.Length)</h3><SUIButton OnClick="NewRule" Disabled="@(Busy || Editing || Draft.Rules.Length >= 100)" VariantValue="SUIVariant.Outlined">@Text["New rule"]</SUIButton></div>
+            <p class="muted">@Text["The first active rule matching the identifier and server wins. Use Move up / Move down to set priority."]</p>
+            <SUICheckbox Value="Draft.ShowUnmatched" ValueChanged="SetUnmatched" Disabled="Busy" Label="@Text["Show resources without a matching rule"]" />
+            @if (!Draft.ShowUnmatched) { <p class="settings-warning">@Text["Unmatched resources will be hidden only from the board. They remain in other tabs."]</p> }
+            @if (Draft.Rules.Length == 0) { <div class="settings-empty"><h4>@Text["No rules configured"]</h4><p>@Text["Create a trunk group, rename an extension or hide technical resources. Nothing is imported automatically from FOP."]</p><SUIButton OnClick="WhatsAppExample" Disabled="@(Busy || Editing)" VariantValue="SUIVariant.Text">@Text["Prepare WhatsApp example"]</SUIButton></div> }
+            <ol class="settings-rule-list">
+            @foreach (var rule in Draft.Rules)
+            {
+                var index = Array.IndexOf(Draft.Rules, rule);
+                <li @key="rule.Id" class="settings-rule @(EditId == rule.Id ? "is-editing" : "")">
+                    <div><strong>@rule.Label</strong><span class="muted">@KindLabel(rule.Kind) · @(rule.Enabled ? Text["Enabled"] : Text["Disabled"]) · @(rule.Node.Length == 0 ? Text["All servers"] : rule.Node)</span><small>@string.Join(" · ", rule.Patterns)</small></div>
+                    <div class="settings-rule-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Busy || Editing)" OnClick="() => Edit(rule)">@Text["Edit"] <span class="sr-only">@rule.Label</span></SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Busy || Editing || index == 0)" OnClick="() => Move(index, -1)">@Text["Move up"] <span class="sr-only">@rule.Label</span></SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Busy || Editing || index == Draft.Rules.Length - 1)" OnClick="() => Move(index, 1)">@Text["Move down"] <span class="sr-only">@rule.Label</span></SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Busy || Editing)" OnClick="() => RemoveId = rule.Id">@Text["Remove"] <span class="sr-only">@rule.Label</span></SUIButton></div>
+                    @if (RemoveId == rule.Id) { <div class="settings-confirm"><p>@Text.Format("Remove “{0}” from the draft? The board changes only after saving.", rule.Label)</p><SUIButton OnClick="() => Remove(rule.Id)">@Text["Confirm removal"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" OnClick="() => RemoveId = null">@Text["Cancel removal"]</SUIButton></div> }
+                </li>
+            }
+            </ol>
+        </section>
+        <section class="settings-editor" aria-labelledby="rule-editor-title" tabindex="-1" @ref="EditorElement">
+            <h3 id="rule-editor-title">@(Editing ? (Draft.Rules.Any(r => r.Id == EditId) ? Text["Edit rule"] : Text["New rule"]) : Text["Select or create a rule"])</h3>
+            @if (Editing)
+            {
+                <SUITextField T="string" Label="@Text["Board name"]" @bind-Value="Label" Immediate="true" MaxLength="80" Disabled="Busy" />
+                <SUISelect T="string" Label="@Text["Display as"]" @bind-Value="Kind" Disabled="Busy"><SUISelectItem Value="@("trunk")">@Text["Trunk"]</SUISelectItem><SUISelectItem Value="@("peer")">@Text["Extension"]</SUISelectItem><SUISelectItem Value="@("hidden")">@Text["Hide from board"]</SUISelectItem></SUISelect>
+                <SUITextField T="string" Label="@Text["Server (optional)"]" @bind-Value="Node" Immediate="true" MaxLength="100" Disabled="Busy" HelperText="@Text["Empty applies to all. Use the exact identifier displayed on the board."]" />
+                <SUITextField T="string" Label="@Text["SIP/PJSIP identifiers"]" @bind-Value="Patterns" Immediate="true" Multiline="true" Rows="6" MaxLength="10304" Disabled="Busy" HelperText="@Text["One per line, up to 64. Exact: PJSIP/6007. Prefix: SIP/in-dtr-*. Case-sensitive; no regex."]" />
+                <SUICheckbox @bind-Value="Enabled" Disabled="Busy" Label="@Text["Active rule"]" />
+                <p class="muted">@Text["A rule groups its identifiers into one card per server. The channel hexadecimal suffix is removed only for matching; SIP and PJSIP remain distinct."]</p>
+                @if (FormError is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(FormError)</SUIAlert> }
+                <div class="settings-toolbar"><SUIButton OnClick="ApplyRule" Disabled="Busy">@Text["Apply to draft"]</SUIButton><SUIButton OnClick="CancelEdit" Disabled="Busy" VariantValue="SUIVariant.Text">@Text["Cancel editing"]</SUIButton></div>
+            }
+            else { <p class="muted">@Text["The editor keeps changes in a draft. Check the preview and save to update the board for all managers."]</p> }
+        </section>
+    </div>
+    <section class="settings-preview" aria-labelledby="rules-preview-title">
+        <h3 id="rules-preview-title">@Text["Draft preview"]</h3>
+        <p class="muted">@Text["Uses only authorized resources from the current view, ignoring text and state filters. No match now does not mean the rule will never be used."]</p>
+        @if (Editing) { <p class="settings-warning">@Text["The open edit is not included in this preview yet. Click Apply to draft."]</p> }
+        <p>@Text.Format("{0} cards before rules → {1} after · {2} trunks · {3} extensions/endpoints.", Source.Length, PreviewTiles.Length, PreviewTiles.Count(t => t.Kind == EventsPanelCardKind.TRUNK), PreviewTiles.Count(t => t.Kind == EventsPanelCardKind.PEER))</p>
+        <div class="settings-preview-list">@foreach (var tile in PreviewTiles.OrderByDescending(t => t.Id.StartsWith("rule|", StringComparison.Ordinal)).Take(12)) { <div><strong>@tile.Title</strong><span>@(tile.Kind == EventsPanelCardKind.TRUNK ? Text["Trunk"] : Text["Extension / endpoint"]) · @tile.Node</span></div> }</div>
+        @if (PreviewTiles.Length == 0) { <p>@Text["No visible resources in the preview. Review rules and Show unmatched resources."]</p> }
+        @if (PreviewTiles.Length > 12) { <p class="muted">@Text["Sample of 12 cards. The full board keeps its pagination."]</p> }
+    </section>
+</section>
+
+@code {
+    [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
+    [Parameter] public BoardConfiguration Configuration { get; set; } = new();
+    [Parameter] public OperatorTile[] Source { get; set; } = [];
+    [Parameter] public bool Demo { get; set; }
+    [Parameter] public EventCallback<BoardConfiguration> Saved { get; set; }
+    private BoardConfiguration Draft = new();
+    private bool Initialized, Busy, Dirty, Editing, ConfirmReload, FocusEditor;
+    private string? Error, Message, FormError, EditId, RemoveId;
+    private string Label = "", Node = "", Kind = "trunk", Patterns = "";
+    private bool Enabled = true;
+    private ElementReference EditorElement;
+    private OperatorTile[]? previewSource;
+    private BoardConfiguration? previewDraft;
+    private OperatorTile[] previewTiles = [];
+    private OperatorTile[] PreviewTiles
+    {
+        get
+        {
+            if (!ReferenceEquals(previewSource, Source) || !ReferenceEquals(previewDraft, Draft))
+            { previewSource = Source; previewDraft = Draft; previewTiles = BoardRuleEngine.Apply(Source, Draft); }
+            return previewTiles;
+        }
+    }
+    protected override void OnParametersSet()
+    {
+        if (!Initialized) { Draft = Configuration; Initialized = true; }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    { if (FocusEditor) { FocusEditor = false; await EditorElement.FocusAsync(); } }
+    private string KindLabel(string kind) => kind switch { "trunk" => Text["Trunk"], "peer" => Text["Extension"], _ => Text["Hide"] };
+    private void NewRule() => Edit(new BoardRule());
+    private void WhatsAppExample() => Edit(new BoardRule { Label = "WhatsApp", Patterns = ["PJSIP/gateway-whatsapp-official", "PJSIP/gateway-whatsapp-quepasa-inbound"] });
+    private void Edit(BoardRule rule)
+    {
+        EditId = rule.Id; Label = rule.Label; Node = rule.Node; Kind = rule.Kind;
+        Patterns = string.Join('\n', rule.Patterns); Enabled = rule.Enabled;
+        Editing = true; FormError = null; RemoveId = null; FocusEditor = true; Message = null;
+    }
+    private void CancelEdit() { Editing = false; EditId = null; FormError = null; }
+    private void ApplyRule()
+    {
+        try
+        {
+            var rule = new BoardRule { Id = EditId!, Label = Label.Trim(), Kind = Kind, Node = Node.Trim(), Enabled = Enabled,
+                Patterns = Patterns.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToArray() };
+            new BoardConfiguration { Rules = [rule] }.Validate();
+            var index = Array.FindIndex(Draft.Rules, r => r.Id == rule.Id);
+            var rules = Draft.Rules.ToList();
+            if (index < 0) rules.Add(rule); else rules[index] = rule;
+            var next = Draft with { Rules = rules.ToArray() }; next.Validate();
+            Draft = next; Dirty = true; CancelEdit(); Message = Text["Rule applied to draft. Check the preview and save."];
+        }
+        catch (InvalidOperationException e) { FormError = e.Message; }
+    }
+    private void SetUnmatched(bool value) { Draft = Draft with { ShowUnmatched = value }; Dirty = true; Message = null; }
+    private void Move(int index, int delta)
+    {
+        var rules = Draft.Rules.ToArray(); (rules[index], rules[index + delta]) = (rules[index + delta], rules[index]);
+        Draft = Draft with { Rules = rules }; Dirty = true; Message = null;
+    }
+    private void Remove(string id) { Draft = Draft with { Rules = Draft.Rules.Where(r => r.Id != id).ToArray() }; RemoveId = null; Dirty = true; Message = null; }
+    private async Task Reload()
+    {
+        Busy = true; Error = null;
+        try { Draft = Demo ? Configuration : await Access.Read(); Dirty = false; CancelEdit(); ConfirmReload = false; await Saved.InvokeAsync(Draft); Message = Text["Configuration reloaded."]; }
+        catch (Exception e) { Error = Failure(e); }
+        finally { Busy = false; }
+    }
+    private async Task Save()
+    {
+        if (Busy || Editing || !Dirty) return;
+        Busy = true; Error = null; Message = null;
+        try
+        {
+            Draft = Demo ? Draft with { Revision = Guid.CreateVersion7().ToString("N"), UpdatedAt = DateTimeOffset.UtcNow } : await Access.Save(Draft);
+            Dirty = false; await Saved.InvokeAsync(Draft);
+            Message = Demo ? Text["Saved only in this demo. No real file was changed."] : Text["Configuration saved. All managers receive the rules on the next refresh."];
+        }
+        catch (Exception e) { Error = Failure(e); }
+        finally { Busy = false; }
+    }
+    private string Failure(Exception e) => e is InvalidOperationException or UnauthorizedAccessException
+        ? e.Message : Text["Could not access the rules file. Your draft was kept; retry or ask the team to check panel storage."];
+}

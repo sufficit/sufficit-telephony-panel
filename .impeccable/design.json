@@ -1,0 +1,721 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T21:07:03Z",
+  "title": "Design System: Sufficit Telephony Panel",
+  "extensions": {
+    "colorMeta": {
+      "primary-light": {
+        "role": "primary",
+        "displayName": "primary-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1469 41.79)",
+          "oklch(26.43% 0.1469 41.79)",
+          "oklch(37.86% 0.1469 41.79)",
+          "oklch(49.29% 0.1469 41.79)",
+          "oklch(60.71% 0.1469 41.79)",
+          "oklch(72.14% 0.1469 41.79)",
+          "oklch(83.57% 0.1469 41.79)",
+          "oklch(95.00% 0.1469 41.79)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "primary-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.1405 50.71)",
+          "oklch(26.43% 0.1405 50.71)",
+          "oklch(37.86% 0.1405 50.71)",
+          "oklch(49.29% 0.1405 50.71)",
+          "oklch(60.71% 0.1405 50.71)",
+          "oklch(72.14% 0.1405 50.71)",
+          "oklch(83.57% 0.1405 50.71)",
+          "oklch(95.00% 0.1405 50.71)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "on-primary-light": {
+        "role": "primary",
+        "displayName": "on-primary-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95.00% 0.0000 89.88)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "on-primary-dark": {
+        "role": "primary",
+        "displayName": "on-primary-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0096 53.01)",
+          "oklch(26.43% 0.0096 53.01)",
+          "oklch(37.86% 0.0096 53.01)",
+          "oklch(49.29% 0.0096 53.01)",
+          "oklch(60.71% 0.0096 53.01)",
+          "oklch(72.14% 0.0096 53.01)",
+          "oklch(83.57% 0.0096 53.01)",
+          "oklch(95.00% 0.0096 53.01)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "primary-soft",
+        "tonalRamp": [
+          "oklch(15.00% 0.1469 41.79)",
+          "oklch(26.43% 0.1469 41.79)",
+          "oklch(37.86% 0.1469 41.79)",
+          "oklch(49.29% 0.1469 41.79)",
+          "oklch(60.71% 0.1469 41.79)",
+          "oklch(72.14% 0.1469 41.79)",
+          "oklch(83.57% 0.1469 41.79)",
+          "oklch(95.00% 0.1469 41.79)"
+        ],
+        "note": "Rampa ilustrativa sintetizada da primária clara; o token real continua relativo ao tema e translúcido."
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "surface-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95.00% 0.0000 89.88)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "surface-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0088 255.59)",
+          "oklch(26.43% 0.0088 255.59)",
+          "oklch(37.86% 0.0088 255.59)",
+          "oklch(49.29% 0.0088 255.59)",
+          "oklch(60.71% 0.0088 255.59)",
+          "oklch(72.14% 0.0088 255.59)",
+          "oklch(83.57% 0.0088 255.59)",
+          "oklch(95.00% 0.0088 255.59)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "surface-2-light": {
+        "role": "neutral",
+        "displayName": "surface-2-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0017 247.84)",
+          "oklch(26.43% 0.0017 247.84)",
+          "oklch(37.86% 0.0017 247.84)",
+          "oklch(49.29% 0.0017 247.84)",
+          "oklch(60.71% 0.0017 247.84)",
+          "oklch(72.14% 0.0017 247.84)",
+          "oklch(83.57% 0.0017 247.84)",
+          "oklch(95.00% 0.0017 247.84)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "surface-2-dark": {
+        "role": "neutral",
+        "displayName": "surface-2-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0108 254.01)",
+          "oklch(26.43% 0.0108 254.01)",
+          "oklch(37.86% 0.0108 254.01)",
+          "oklch(49.29% 0.0108 254.01)",
+          "oklch(60.71% 0.0108 254.01)",
+          "oklch(72.14% 0.0108 254.01)",
+          "oklch(83.57% 0.0108 254.01)",
+          "oklch(95.00% 0.0108 254.01)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "surface-3-light": {
+        "role": "neutral",
+        "displayName": "surface-3-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0052 247.88)",
+          "oklch(26.43% 0.0052 247.88)",
+          "oklch(37.86% 0.0052 247.88)",
+          "oklch(49.29% 0.0052 247.88)",
+          "oklch(60.71% 0.0052 247.88)",
+          "oklch(72.14% 0.0052 247.88)",
+          "oklch(83.57% 0.0052 247.88)",
+          "oklch(95.00% 0.0052 247.88)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "surface-3-dark": {
+        "role": "neutral",
+        "displayName": "surface-3-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0147 252.29)",
+          "oklch(26.43% 0.0147 252.29)",
+          "oklch(37.86% 0.0147 252.29)",
+          "oklch(49.29% 0.0147 252.29)",
+          "oklch(60.71% 0.0147 252.29)",
+          "oklch(72.14% 0.0147 252.29)",
+          "oklch(83.57% 0.0147 252.29)",
+          "oklch(95.00% 0.0147 252.29)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "text-light": {
+        "role": "neutral",
+        "displayName": "text-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0134 253.06)",
+          "oklch(26.43% 0.0134 253.06)",
+          "oklch(37.86% 0.0134 253.06)",
+          "oklch(49.29% 0.0134 253.06)",
+          "oklch(60.71% 0.0134 253.06)",
+          "oklch(72.14% 0.0134 253.06)",
+          "oklch(83.57% 0.0134 253.06)",
+          "oklch(95.00% 0.0134 253.06)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "text-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0025 228.78)",
+          "oklch(26.43% 0.0025 228.78)",
+          "oklch(37.86% 0.0025 228.78)",
+          "oklch(49.29% 0.0025 228.78)",
+          "oklch(60.71% 0.0025 228.78)",
+          "oklch(72.14% 0.0025 228.78)",
+          "oklch(83.57% 0.0025 228.78)",
+          "oklch(95.00% 0.0025 228.78)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "muted-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0253 246.21)",
+          "oklch(26.43% 0.0253 246.21)",
+          "oklch(37.86% 0.0253 246.21)",
+          "oklch(49.29% 0.0253 246.21)",
+          "oklch(60.71% 0.0253 246.21)",
+          "oklch(72.14% 0.0253 246.21)",
+          "oklch(83.57% 0.0253 246.21)",
+          "oklch(95.00% 0.0253 246.21)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "muted-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0168 245.13)",
+          "oklch(26.43% 0.0168 245.13)",
+          "oklch(37.86% 0.0168 245.13)",
+          "oklch(49.29% 0.0168 245.13)",
+          "oklch(60.71% 0.0168 245.13)",
+          "oklch(72.14% 0.0168 245.13)",
+          "oklch(83.57% 0.0168 245.13)",
+          "oklch(95.00% 0.0168 245.13)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "border-light": {
+        "role": "neutral",
+        "displayName": "border-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0123 247.97)",
+          "oklch(26.43% 0.0123 247.97)",
+          "oklch(37.86% 0.0123 247.97)",
+          "oklch(49.29% 0.0123 247.97)",
+          "oklch(60.71% 0.0123 247.97)",
+          "oklch(72.14% 0.0123 247.97)",
+          "oklch(83.57% 0.0123 247.97)",
+          "oklch(95.00% 0.0123 247.97)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "border-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0198 254.06)",
+          "oklch(26.43% 0.0198 254.06)",
+          "oklch(37.86% 0.0198 254.06)",
+          "oklch(49.29% 0.0198 254.06)",
+          "oklch(60.71% 0.0198 254.06)",
+          "oklch(72.14% 0.0198 254.06)",
+          "oklch(83.57% 0.0198 254.06)",
+          "oklch(95.00% 0.0198 254.06)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "border-strong-light": {
+        "role": "neutral",
+        "displayName": "border-strong-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0258 244.30)",
+          "oklch(26.43% 0.0258 244.30)",
+          "oklch(37.86% 0.0258 244.30)",
+          "oklch(49.29% 0.0258 244.30)",
+          "oklch(60.71% 0.0258 244.30)",
+          "oklch(72.14% 0.0258 244.30)",
+          "oklch(83.57% 0.0258 244.30)",
+          "oklch(95.00% 0.0258 244.30)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "border-strong-dark": {
+        "role": "neutral",
+        "displayName": "border-strong-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0262 246.29)",
+          "oklch(26.43% 0.0262 246.29)",
+          "oklch(37.86% 0.0262 246.29)",
+          "oklch(49.29% 0.0262 246.29)",
+          "oklch(60.71% 0.0262 246.29)",
+          "oklch(72.14% 0.0262 246.29)",
+          "oklch(83.57% 0.0262 246.29)",
+          "oklch(95.00% 0.0262 246.29)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "success-light": {
+        "role": "semantic",
+        "displayName": "success-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0980 155.21)",
+          "oklch(26.43% 0.0980 155.21)",
+          "oklch(37.86% 0.0980 155.21)",
+          "oklch(49.29% 0.0980 155.21)",
+          "oklch(60.71% 0.0980 155.21)",
+          "oklch(72.14% 0.0980 155.21)",
+          "oklch(83.57% 0.0980 155.21)",
+          "oklch(95.00% 0.0980 155.21)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "success-dark": {
+        "role": "semantic",
+        "displayName": "success-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.1090 157.52)",
+          "oklch(26.43% 0.1090 157.52)",
+          "oklch(37.86% 0.1090 157.52)",
+          "oklch(49.29% 0.1090 157.52)",
+          "oklch(60.71% 0.1090 157.52)",
+          "oklch(72.14% 0.1090 157.52)",
+          "oklch(83.57% 0.1090 157.52)",
+          "oklch(95.00% 0.1090 157.52)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "warning-light": {
+        "role": "semantic",
+        "displayName": "warning-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1022 74.13)",
+          "oklch(26.43% 0.1022 74.13)",
+          "oklch(37.86% 0.1022 74.13)",
+          "oklch(49.29% 0.1022 74.13)",
+          "oklch(60.71% 0.1022 74.13)",
+          "oklch(72.14% 0.1022 74.13)",
+          "oklch(83.57% 0.1022 74.13)",
+          "oklch(95.00% 0.1022 74.13)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "warning-dark": {
+        "role": "semantic",
+        "displayName": "warning-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.1167 86.29)",
+          "oklch(26.43% 0.1167 86.29)",
+          "oklch(37.86% 0.1167 86.29)",
+          "oklch(49.29% 0.1167 86.29)",
+          "oklch(60.71% 0.1167 86.29)",
+          "oklch(72.14% 0.1167 86.29)",
+          "oklch(83.57% 0.1167 86.29)",
+          "oklch(95.00% 0.1167 86.29)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "error-light": {
+        "role": "semantic",
+        "displayName": "error-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1794 26.96)",
+          "oklch(26.43% 0.1794 26.96)",
+          "oklch(37.86% 0.1794 26.96)",
+          "oklch(49.29% 0.1794 26.96)",
+          "oklch(60.71% 0.1794 26.96)",
+          "oklch(72.14% 0.1794 26.96)",
+          "oklch(83.57% 0.1794 26.96)",
+          "oklch(95.00% 0.1794 26.96)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "error-dark": {
+        "role": "semantic",
+        "displayName": "error-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.1096 19.74)",
+          "oklch(26.43% 0.1096 19.74)",
+          "oklch(37.86% 0.1096 19.74)",
+          "oklch(49.29% 0.1096 19.74)",
+          "oklch(60.71% 0.1096 19.74)",
+          "oklch(72.14% 0.1096 19.74)",
+          "oklch(83.57% 0.1096 19.74)",
+          "oklch(95.00% 0.1096 19.74)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "info-light": {
+        "role": "semantic",
+        "displayName": "info-light",
+        "tonalRamp": [
+          "oklch(15.00% 0.0856 241.66)",
+          "oklch(26.43% 0.0856 241.66)",
+          "oklch(37.86% 0.0856 241.66)",
+          "oklch(49.29% 0.0856 241.66)",
+          "oklch(60.71% 0.0856 241.66)",
+          "oklch(72.14% 0.0856 241.66)",
+          "oklch(83.57% 0.0856 241.66)",
+          "oklch(95.00% 0.0856 241.66)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      },
+      "info-dark": {
+        "role": "semantic",
+        "displayName": "info-dark",
+        "tonalRamp": [
+          "oklch(15.00% 0.0686 236.71)",
+          "oklch(26.43% 0.0686 236.71)",
+          "oklch(37.86% 0.0686 236.71)",
+          "oklch(49.29% 0.0686 236.71)",
+          "oklch(60.71% 0.0686 236.71)",
+          "oklch(72.14% 0.0686 236.71)",
+          "oklch(83.57% 0.0686 236.71)",
+          "oklch(95.00% 0.0686 236.71)"
+        ],
+        "note": "Rampa ilustrativa sintetizada em OKLCH, não uma escala adicional implementada."
+      }
+    },
+    "typographyMeta": {
+      "board-title": {
+        "displayName": "Nome no mosaico",
+        "purpose": "Nome compacto do recurso, com reticências e acesso ao detalhe."
+      },
+      "board-status": {
+        "displayName": "Evidência no mosaico",
+        "purpose": "Estado escrito e canais observados; nunca disponibilidade presumida."
+      },
+      "board-node": {
+        "displayName": "Servidor no mosaico",
+        "purpose": "Identificação auxiliar do nó na família SUI herdada."
+      },
+      "display": {
+        "displayName": "Entrada",
+        "purpose": "Título da tela de entrada."
+      },
+      "headline": {
+        "displayName": "Operação",
+        "purpose": "Título da tela operacional."
+      },
+      "title": {
+        "displayName": "Seção",
+        "purpose": "Títulos de grupos."
+      },
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Texto herdado da família de sistema."
+      },
+      "label": {
+        "displayName": "Rótulo",
+        "purpose": "Labels SUI acima de campos."
+      },
+      "button": {
+        "displayName": "Ação",
+        "purpose": "Botões SUI."
+      }
+    },
+    "shadows": [
+      {
+        "name": "sui-shadow-1",
+        "value": "0 1px 2px rgba(15,23,42,.06)",
+        "purpose": "Relevo discreto dos botões preenchidos."
+      },
+      {
+        "name": "sui-shadow-2",
+        "value": "0 4px 10px rgba(15,23,42,.08)",
+        "purpose": "Menu flutuante do SUISelect."
+      }
+    ],
+    "motion": [
+      {
+        "name": "board-tile-state",
+        "value": "background-color 200ms, border-color 200ms",
+        "purpose": "Resposta dos cartões da Mesa de operação; removida com reduced-motion."
+      },
+      {
+        "name": "sui-transition",
+        "value": "160ms cubic-bezier(.4, 0, .2, 1)",
+        "purpose": "Mudança de estado dos controles."
+      },
+      {
+        "name": "node-hover",
+        "value": "200ms; translateX(3px)",
+        "purpose": "Resposta à passagem do ponteiro na lista."
+      },
+      {
+        "name": "detail-in",
+        "value": "350ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Entrada do detalhe por deslocamento de 6px e recorte."
+      },
+      {
+        "name": "chart-reveal",
+        "value": "600ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Revelação do traçado já observado."
+      },
+      {
+        "name": "read-pulse",
+        "value": "1s ease-in-out infinite",
+        "purpose": "Pulso somente durante Busy; removido com reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "settings-stack-editor",
+        "value": "800px"
+      },
+      {
+        "name": "board-stack-rail",
+        "value": "900px"
+      },
+      {
+        "name": "stack-operations",
+        "value": "1000px"
+      },
+      {
+        "name": "compact-panel",
+        "value": "600px"
+      },
+      {
+        "name": "resource-scroll-hint",
+        "value": "700px"
+      },
+      {
+        "name": "sui-touch",
+        "value": "599.98px"
+      }
+    ],
+    "focus": {
+      "panel": "3px solid var(--sui-color-primary); offset 4px",
+      "suiButton": "2px solid var(--sui-color-primary); offset 2px",
+      "suiSelect": "primary border + 0 0 0 3px var(--sui-color-primary-soft)"
+    },
+    "accessibility": {
+      "reducedMotion": "prefers-reduced-motion: reduce desativa animações e transições.",
+      "sound": "Opt-in, não persistido; página oculta não toca; intervalo mínimo de 15s.",
+      "operationalDetails": "Detalhes de recursos têm região de rolagem nomeada e focável, com instrução visível até 700px para descobrir registro, alcance, uso e horários. Registro SIP, alcance e uso são evidências independentes; datas de detalhe incluem deslocamento UTC. Confirmação de supervisão recebe foco e mantém ações distintas de confirmar e cancelar.",
+      "placeholders": "Campos operacionais usam text-secondary com opacidade 1 nos dois temas; o rótulo permanece visível."
+    },
+    "evidence": {
+      "sources": [
+        "src/Pages/BoardSettings.razor",
+        "src/Operations/BoardConfiguration.cs",
+        "src/Operations/BoardRuleEngine.cs",
+        "docs/board-configuration.md",
+        "src/Pages/OperatorBoard.razor",
+        "docs/operator-board.md",
+        "PRODUCT.md",
+        "src/App.razor",
+        "src/PanelTheme.cs",
+        "src/Pages/Home.razor",
+        "src/Pages/LiveOperations.razor",
+        "src/wwwroot/panel.css",
+        "src/wwwroot/panel.js"
+      ],
+      "screenshots": [
+        ".impeccable/review/settings-desktop.png",
+        ".impeccable/review/settings-dark.png",
+        ".impeccable/review/settings-mobile.png",
+        ".impeccable/review/board-user-1977.png",
+        ".impeccable/review/board-desktop.png",
+        ".impeccable/review/board-dark.png",
+        ".impeccable/review/board-mobile.png",
+        ".impeccable/review/desktop.png",
+        ".impeccable/review/dark.png",
+        ".impeccable/review/mobile.png",
+        ".impeccable/review/operations-desktop.png",
+        ".impeccable/review/operations-calls.png",
+        ".impeccable/review/operations-queues.png",
+        ".impeccable/review/operations-dark.png",
+        ".impeccable/review/operations-mobile.png",
+        ".impeccable/review/central-desktop.png",
+        ".impeccable/review/central-peer.png",
+        ".impeccable/review/central-dark.png",
+        ".impeccable/review/central-mobile.png",
+        ".impeccable/review/central-user-1941.png"
+      ],
+      "settingsScope": "Capturas settings-* documentam lista e editor inline, temas claro/escuro e composição móvel com fixtures Development. Parecer visual final ship, sem correção material; não comprova login, persistência real, eventos reais ou deploy.",
+      "scope": "Fixtures locais identificadas como demonstração, não servidores reais. Pass de revisão após três correções de histórico; não valida login ou deploy.",
+      "operationalScope": "Capturas operacionais sintéticas locais em desktop 1440px e móvel 390px, incluindo filtros, detalhes, temas e confirmação. O veredito ship da revisão operacional se limita às três correções revisadas: contraste do placeholder, acesso móvel ao horário e persistência. Não é aprovação integral de produção nem comprova login autorizado, eventos reais dos três PBXs ou uma chamada real. A ativação de entitlements na Identity continua pendente.",
+      "centralScope": "Capturas central-* sintéticas locais em 1440px, 390px e 1941px documentam a extensão visual de Toda a central; não comprovam inventário completo, snapshot histórico, registros anteriores à conexão ou aceite autenticado com dados reais. A observação geral de manager independe da ativação de entitlements; filtro por empresa e supervisão ainda dependem dela. A documentação visual não ativa nem valida esses direitos.",
+      "snippets": "Amostras visuais autônomas com tokens SUI herdados e fallbacks claros; não substituem os componentes Blazor funcionais.",
+      "boardScope": "Capturas board-* em 1977px, 1440px e 390px documentam o mosaico compacto nos temas claro e escuro, com fixtures sintéticas identificadas. Não comprovam inventário completo, eventos reais, autenticação ou supervisão em produção. A referência externa forneceu somente a composição; seus dados e credenciais não pertencem ao sistema."
+    },
+    "operatorBoard": {
+      "scope": "Mesa de operação é a aba inicial de Telefonia ao vivo. Sua densidade e largura são locais; preservam-se identidade SUI e as outras abas.",
+      "layout": "Invólucro full-width com spacing.board-gutter e margens de spacing.sm até 600px. Grade minmax(0,1fr) / minmax(290px,24%), separada por spacing.board-rail-gap; colunas automáticas mínimas de 210px, espaçamento spacing.board-gap, preenchimento spacing.xs e rolagem de 300px a 65vh. Listas laterais rolam até 42vh. Até 900px, trilho abaixo em duas colunas e grade até 60vh. Até 600px, trilho empilhado e grade em duas colunas, gap de 5px e padding de 6px.",
+      "sectionHeading": "Faixa grafite #484e55 com texto branco, padding 10px 12px, título de 13px/peso 650 e contagem tabular de 12px; seções e inspetor usam rounded.board-section, sem sombra.",
+      "legend": "Success: alcançável/registrado; warning: com canais/em uso; info: tocando; error: sem resposta/não registrado; neutro: sem informação. A legenda escrita acompanha os pontos e os fundos tonais. Registro ou alcance não garantem disponibilidade.",
+      "interaction": "Botões com aria-pressed abrem o inspetor abaixo e transferem foco no clique/Enter; não executam ação telefônica. Hover usa borda primária; seleção usa outline primário de 2px com offset -2px; foco mantém a regra global do painel. Dois canais por cartão e indicação dos excedentes. O detalhe separa registro, alcance, uso e horários e mantém confirmação por canal para Ouvir/Sussurrar.",
+      "limits": "120 ramais por página, 40 troncos e 12 recursos com canais no trilho; contagens são do conjunto filtrado, com avisos de excedente. Detalhe limitado a 100 canais com aviso. Estados vazios não provam disponibilidade; a central não inventa classificação de troncos."
+    },
+    "boardSettings": {
+      "scope": "Extensão local Configurar mesa: regras compartilhadas de apresentação, sem modificar Asterisk, permissões, outras abas ou o mundo SUI. Reutiliza componentes, tipografia e paleta; não cria novas primitivas visuais.",
+      "layout": "Lista e editor inline em minmax(0,1.2fr) / minmax(320px,1fr), gap spacing.section. Até 800px, uma coluna e gap spacing.compact-detail. Editor tonal surface-2, borda fina e rounded.board-section, padding spacing.compact-detail reduzido a spacing.md. Linhas com padding vertical spacing.md e divisória inferior; regra em edição recebe surface-2. Nomes, identificadores e servidores quebram linha. Barra de ações flexível divide espaço entre botões até 800px.",
+      "previewLayout": "Prévia abaixo, com divisória, margem spacing.section e padding superior spacing.lg. Itens textuais sem cartões de estado, nome seguido de tipo/servidor auxiliar de 13px. Grade auto-fit mínima de 210px, gap spacing.sm / spacing.lg, uma coluna até 800px.",
+      "interaction": "Subir/Descer explicitam prioridade da primeira regra ativa correspondente. Nova regra e Editar transferem foco ao editor. Aplicar ao rascunho não publica: Salvar configuração é explícito e fica indisponível durante edição, envio ou ausência de mudanças. Remoção e descarte/recarregamento exigem confirmação inline. Erros SUIAlert e falhas preservam o rascunho; resultados usam success com role=status e avisos warning com explicação escrita.",
+      "preview": "Contagens antes/depois e até 12 itens, priorizando grupos configurados e informando limite. A edição aberta só entra após Aplicar ao rascunho. Conjunto já autorizado da visão atual, sem filtros temporários de texto/estado/servidor; ausência de correspondência não equivale a regra inválida. Agrupamento por regra e servidor, sem misturar nós. Vazio oferece criação ou exemplo sem importação/publicação automática; ocultação afeta somente a mesa."
+    },
+    "centralObservation": {
+      "scope": "Toda a central é a visão inicial de gerente. Empresa é filtro opcional, pesquisável e removível; limpar a empresa retorna ao escopo central.",
+      "filters": "Texto, servidor observado e estado observado precedem os recursos; a grade usa 2fr 1fr 1.4fr e uma coluna até 600px.",
+      "classification": "Sem empresa selecionada, Ramais e endpoints reúne endpoints recebidos sem inventar sua classificação entre ramal e tronco; Troncos separado pertence ao escopo de empresa.",
+      "evidence": "Registro SIP, teste de alcance e uso do dispositivo são independentes. Último registro observado é recepção de evento de registro, não RTT nem histórico do PBX. A última evidência de contato não agrega todos os dispositivos; qualify não comprova conexão WebSocket/TCP."
+    }
+  },
+  "components": [
+    {
+      "name": "Cartão da Mesa de operação",
+      "kind": "button",
+      "refersTo": "board-tile",
+      "description": "Recurso compacto selecionável com evidência textual e nó. Amostra sintética neutra; seleção e abertura do inspetor são controladas pelo aplicativo Blazor.",
+      "html": "<button class=\"ds-board-tile\" type=\"button\" aria-pressed=\"false\" title=\"Recurso de demonstração · sem nó observado · sem informação. Abrir detalhes.\"><span class=\"ds-board-title\"><span class=\"ds-board-dot\" aria-hidden=\"true\"></span><strong>Recurso de demonstração</strong></span><span class=\"ds-board-status\">Sem informação de alcance</span><span class=\"ds-board-node\">Sem nó observado</span></button>",
+      "css": ".ds-board-tile{display:block;width:100%;min-width:0;min-height:62px;text-align:left;font-family:var(--sui-font,-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif);padding:6px 8px;border:1px solid var(--sui-border-strong,#8998a5);border-radius:5px;color:var(--sui-text-primary,#20252b);background:var(--sui-surface-2,#f5f6f7);cursor:pointer;transition:background-color .2s,border-color .2s}.ds-board-tile:hover{border-color:var(--sui-color-primary,#a94210)}.ds-board-tile[aria-pressed=true]{outline:2px solid var(--sui-color-primary,#a94210);outline-offset:-2px}.ds-board-tile:focus-visible{outline:3px solid var(--sui-color-primary,#a94210);outline-offset:4px}.ds-board-title{display:flex;align-items:center;gap:6px;font-size:12px}.ds-board-title strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ds-board-dot{width:8px;height:8px;flex:none;border-radius:50%;background:var(--sui-text-secondary,#515e6a)}.ds-board-status,.ds-board-node{display:block;margin-top:3px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-board-node{font-size:10px;color:var(--sui-text-secondary,#515e6a)}.ds-board-online{background:color-mix(in srgb,var(--sui-color-success,#146139) 16%,var(--sui-surface,#fff))}.ds-board-busy{background:color-mix(in srgb,var(--sui-color-warning,#805400) 22%,var(--sui-surface,#fff))}.ds-board-ringing{background:color-mix(in srgb,var(--sui-color-info,#215a80) 20%,var(--sui-surface,#fff))}.ds-board-offline{background:color-mix(in srgb,var(--sui-color-error,#b02020) 12%,var(--sui-surface,#fff))}.ds-board-online .ds-board-dot{background:var(--sui-color-success,#146139)}.ds-board-busy .ds-board-dot{background:var(--sui-color-warning,#805400)}.ds-board-ringing .ds-board-dot{background:var(--sui-color-info,#215a80)}.ds-board-offline .ds-board-dot{background:var(--sui-color-error,#b02020)}@media(max-width:600px){.ds-board-tile{min-height:68px}}@media(prefers-reduced-motion:reduce){.ds-board-tile{transition:none}}"
+    },
+    {
+      "name": "Botão preenchido SUI",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal; mesma estrutura no tema escuro pelos tokens SUI herdados.",
+      "html": "<button class=\"ds-btn ds-filled\" type=\"button\">Atualizar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:4px 14px;font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif);font-size:.875rem;line-height:1.3;font-weight:500;border-radius:10px;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:background 160ms cubic-bezier(.4,0,.2,1),border-color 160ms cubic-bezier(.4,0,.2,1),color 160ms cubic-bezier(.4,0,.2,1);}.ds-btn:focus-visible{outline:2px solid var(--sui-color-primary,#a94210);outline-offset:2px}.ds-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}@media(pointer:coarse),(max-width:599.98px){.ds-btn{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-btn{transition:none}}.ds-filled{background:linear-gradient(#0000,#0001) var(--sui-color-primary-action,#a94210);color:var(--sui-color-primary-action-contrast,#ffffff);border-color:color-mix(in srgb,var(--sui-color-primary-action,#a94210) 90%,var(--sui-color-primary-action-contrast,#ffffff));box-shadow:var(--sui-shadow-1,0 1px 2px rgba(15,23,42,.06))}.ds-filled:not(:disabled):hover{background-color:color-mix(in srgb,var(--sui-color-primary-action,#a94210) 94%,black)}.ds-filled:not(:disabled):active{background-color:color-mix(in srgb,var(--sui-color-primary-action,#a94210) 88%,black)}"
+    },
+    {
+      "name": "Botão contornado SUI",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Preferência de som, desligada inicialmente.",
+      "html": "<button class=\"ds-btn ds-outlined\" type=\"button\">Ativar sons</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:4px 14px;font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif);font-size:.875rem;line-height:1.3;font-weight:500;border-radius:10px;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:background 160ms cubic-bezier(.4,0,.2,1),border-color 160ms cubic-bezier(.4,0,.2,1),color 160ms cubic-bezier(.4,0,.2,1);}.ds-btn:focus-visible{outline:2px solid var(--sui-color-primary,#a94210);outline-offset:2px}.ds-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}@media(pointer:coarse),(max-width:599.98px){.ds-btn{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-btn{transition:none}}.ds-outlined{color:var(--sui-color-primary,#a94210);background:transparent;border-color:color-mix(in srgb,var(--sui-color-primary,#a94210) 30%,var(--sui-border,#d3dae1))}.ds-outlined:not(:disabled):hover{background:color-mix(in srgb,var(--sui-color-primary,#a94210) 8%,transparent)}.ds-outlined:not(:disabled):active{background:color-mix(in srgb,var(--sui-color-primary,#a94210) 14%,transparent)}"
+    },
+    {
+      "name": "Botão de texto SUI",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Alternância de tema no cabeçalho.",
+      "html": "<button class=\"ds-btn ds-text\" type=\"button\">Tema escuro</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:4px 14px;font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif);font-size:.875rem;line-height:1.3;font-weight:500;border-radius:10px;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:background 160ms cubic-bezier(.4,0,.2,1),border-color 160ms cubic-bezier(.4,0,.2,1),color 160ms cubic-bezier(.4,0,.2,1);}.ds-btn:focus-visible{outline:2px solid var(--sui-color-primary,#a94210);outline-offset:2px}.ds-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}@media(pointer:coarse),(max-width:599.98px){.ds-btn{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-btn{transition:none}}.ds-text{background:transparent;color:var(--sui-color-primary,#a94210)}.ds-text:not(:disabled):hover{background:color-mix(in srgb,var(--sui-color-primary,#a94210) 8%,transparent)}.ds-text:not(:disabled):active{background:color-mix(in srgb,var(--sui-color-primary,#a94210) 14%,transparent)}"
+    },
+    {
+      "name": "Seletor SUI",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Amostra visual do gatilho do combobox de indicador; o aplicativo usa o componente SUISelect real para lista e teclado.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" id=\"ds-metric-label\">Indicador</label><button class=\"ds-select\" type=\"button\" role=\"combobox\" aria-expanded=\"false\" aria-labelledby=\"ds-metric-label\"><span>Chamadas ativas</span><svg class=\"ds-chevron\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"m4 6 4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button></div>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:4px;min-width:0;width:100%;font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif)}.ds-label{font-size:.75rem;color:var(--sui-text-secondary,#515e6a);font-weight:600}.ds-select{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px;width:100%;padding:0 12px;background:var(--sui-surface,#ffffff);color:var(--sui-text-primary,#20252b);border:1px solid var(--sui-border-strong,#8998a5);border-radius:8px;font:inherit;font-size:.8125rem;font-weight:500;line-height:1.35;text-align:start;cursor:pointer;transition:border-color 160ms cubic-bezier(.4,0,.2,1),box-shadow 160ms cubic-bezier(.4,0,.2,1),background 160ms cubic-bezier(.4,0,.2,1)}.ds-select:hover{background:var(--sui-surface-2,#f5f6f7)}.ds-select:focus-visible{border-color:var(--sui-color-primary,#a94210);box-shadow:0 0 0 3px var(--sui-color-primary-soft,color-mix(in srgb,#a94210 14%,transparent));outline:none}.ds-select:disabled{background:var(--sui-surface-2,#f5f6f7);color:var(--sui-text-disabled,#94a3b8);cursor:not-allowed}.ds-select[aria-invalid=true]{border-color:var(--sui-color-error,#b02020)}.ds-chevron{width:16px;height:16px;flex:none}@media(pointer:coarse),(max-width:599.98px){.ds-select{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-select{transition:none}}"
+    },
+    {
+      "name": "Seleção de servidor",
+      "kind": "nav",
+      "refersTo": "node-row-selected",
+      "description": "Navegação contextual por botão; valores do snippet são ausentes, não uma leitura de servidor.",
+      "html": "<button class=\"ds-node\" aria-pressed=\"true\" type=\"button\"><span class=\"ds-name\">Apoint<span class=\"ds-id\">apoint-voip</span></span><span class=\"ds-state\"><span class=\"ds-dot\"></span>Sem leitura atual</span><span class=\"ds-number\">—<small>chamadas no nó</small></span></button>",
+      "css": ".ds-node{display:grid;grid-template-columns:1fr 1.1fr .8fr;align-items:center;gap:16px;width:100%;border:0;border-top:1px solid var(--sui-border,#d3dae1);border-bottom:1px solid var(--sui-border,#d3dae1);padding:22px 16px;text-align:left;background:transparent;color:var(--sui-text-primary,#20252b);font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif);cursor:pointer;transition:background .2s,transform .2s}.ds-node:hover{background:var(--sui-surface-2,#f5f6f7);transform:translateX(3px)}.ds-node[aria-pressed=true]{background:var(--sui-color-primary-soft,color-mix(in srgb,#a94210 14%,transparent))}.ds-node:focus-visible{outline:3px solid var(--sui-color-primary,#a94210);outline-offset:4px}.ds-name{font-size:20px;font-weight:650}.ds-id{display:block;font-size:12px;font-weight:400;color:var(--sui-text-secondary,#515e6a);margin-top:6px}.ds-state{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sui-color-warning,#805400)}.ds-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}.ds-number{text-align:right;font-size:26px;font-variant-numeric:tabular-nums}.ds-number small{display:block;font-size:11px;margin-top:4px;color:var(--sui-text-secondary,#515e6a)}@media(max-width:600px){.ds-node{gap:8px;padding:18px 8px;grid-template-columns:1fr 1fr .7fr}.ds-name{font-size:18px}.ds-state{font-size:12px}.ds-number{font-size:23px}}@media(prefers-reduced-motion:reduce){.ds-node{transition:none}}"
+    },
+    {
+      "name": "Detalhe tonal",
+      "kind": "card",
+      "refersTo": "detail",
+      "description": "Contêiner de inspeção sem sombra; exemplo sem métricas inventadas.",
+      "html": "<section class=\"ds-detail\"><h2>Apoint</h2><p>Nenhuma coleta válida recebida</p><dl><div><dt>Chamadas ativas</dt><dd>—</dd></div><div><dt>Conexão AMI</dt><dd class=\"ds-text-value\">Desconhecida</dd></div></dl></section>",
+      "css": ".ds-detail{padding:26px;border-radius:14px;background:var(--sui-surface-2,#f5f6f7);color:var(--sui-text-primary,#20252b);font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif)}.ds-detail h2{font-size:22px;font-weight:650;margin:0 0 12px}.ds-detail p{color:var(--sui-text-secondary,#515e6a);line-height:1.6;margin:0 0 16px}.ds-detail dl{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:24px 0}.ds-detail dt{font-size:13px;color:var(--sui-text-secondary,#515e6a)}.ds-detail dd{font-size:27px;font-variant-numeric:tabular-nums;margin:8px 0 0}.ds-detail .ds-text-value{font-size:19px;padding-top:7px}@media(max-width:600px){.ds-detail{padding:20px}.ds-detail dd{font-size:23px}.ds-detail .ds-text-value{font-size:19px}}"
+    },
+    {
+      "name": "Estado vazio do histórico",
+      "kind": "custom",
+      "description": "Ausência de amostras tem mensagem própria, sem linha zerada.",
+      "html": "<div class=\"ds-empty\">Nenhuma amostra neste período. Selecione outro período ou atualize.</div>",
+      "css": ".ds-empty{padding:64px 24px;text-align:center;color:var(--sui-text-secondary,#515e6a);background:var(--sui-surface-2,#f5f6f7);margin-top:16px;border-radius:12px;font-family:var(--sui-font,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif)}"
+    },
+    {
+      "name": "Campo de empresa SUI",
+      "kind": "input",
+      "description": "Filtro opcional de empresa com rótulo persistente, placeholder legível e limite de 100 caracteres. O aplicativo usa SUITextField real e oferece buscar e limpar a empresa selecionada; esta amostra representa somente o campo.",
+      "html": "<div class=\"ds-client-field\"><label for=\"ds-client-input\">Empresa (opcional)</label><input class=\"ds-client-input\" id=\"ds-client-input\" placeholder=\"Nome ou identificador da empresa\" maxlength=\"100\" /></div>",
+      "css": ".ds-client-field{display:flex;flex-direction:column;gap:4px;min-width:0;font-family:var(--sui-font,-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif)}.ds-client-field label{font-size:.75rem;font-weight:600;color:var(--sui-text-secondary,#515e6a)}.ds-client-input{width:100%;min-width:0;height:var(--sui-control-h-md,36px);padding:0 12px;font-family:inherit;font-size:var(--sui-fs-field,.8125rem);font-weight:500;color:var(--sui-text-primary,#20252b);background:var(--sui-surface,#ffffff);border:1px solid var(--sui-border-strong,#8998a5);border-radius:8px;caret-color:var(--sui-color-primary,#a94210);transition:border-color 160ms cubic-bezier(.4,0,.2,1),box-shadow 160ms cubic-bezier(.4,0,.2,1)}.ds-client-input::placeholder{color:var(--sui-text-secondary,#515e6a);opacity:1}.ds-client-input:focus,.ds-client-input:focus-visible{outline:none;border-color:var(--sui-color-primary,#a94210);box-shadow:0 0 0 3px var(--sui-color-primary-soft,color-mix(in srgb,#a94210 14%,transparent))}.ds-client-input:disabled{background:var(--sui-surface-2,#f5f6f7);color:var(--sui-text-disabled,#94a3b8);cursor:not-allowed}.ds-client-input[aria-invalid=true]{border-color:var(--sui-color-error,#b02020)}@media(pointer:coarse),(max-width:599.98px){.ds-client-input{height:44px}}@media(prefers-reduced-motion:reduce){.ds-client-input{transition:none}}"
+    },
+    {
+      "name": "Navegação de recursos",
+      "kind": "nav",
+      "description": "Botões com aria-pressed, contagens tabulares e seleção primária. Amostra sintética da visão central, sem dados carregados: endpoints não são classificados como ramal ou tronco. A aba Troncos separada aparece no escopo de empresa; o aplicativo controla o estado em Blazor.",
+      "html": "<nav class=\"ds-resource-tabs\" aria-label=\"Tipo de recurso\"><button type=\"button\" aria-pressed=\"true\">Ramais e endpoints <span>0</span></button><button type=\"button\" aria-pressed=\"false\">Chamadas <span>0</span></button><button type=\"button\" aria-pressed=\"false\">Filas de atendimento <span>0</span></button></nav>",
+      "css": ".ds-resource-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;border-bottom:1px solid var(--sui-border,#d3dae1);font-family:var(--sui-font,-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif)}.ds-resource-tabs button{font:inherit;font-size:14px;background:transparent;color:var(--sui-text-secondary,#515e6a);border:0;border-bottom:2px solid transparent;padding:14px 12px;cursor:pointer}.ds-resource-tabs button[aria-pressed=true]{color:var(--sui-color-primary,#a94210);border-bottom-color:var(--sui-color-primary,#a94210);background:var(--sui-color-primary-soft,color-mix(in srgb,#a94210 14%,transparent))}.ds-resource-tabs button:hover{background:var(--sui-surface-2,#f5f6f7)}.ds-resource-tabs button:focus-visible{outline:3px solid var(--sui-color-primary,#a94210);outline-offset:4px}.ds-resource-tabs span{font-variant-numeric:tabular-nums;margin-left:8px}@media(max-width:600px){.ds-resource-tabs{gap:0}.ds-resource-tabs button{flex:1 0 45%;text-align:left}}"
+    },
+    {
+      "name": "Recurso expansível",
+      "kind": "custom",
+      "description": "Linha nativa details/summary com detalhe tonal e rolagem de tabela nomeada. Colunas independentes preservam registro SIP e último registro observado, sem confundi-los com alcance ou uso. Amostra explicitamente sintética, sem estado operacional afirmado.",
+      "html": "<details class=\"ds-resource\" open><summary><span class=\"ds-resource-title\">Recurso de demonstração<small>Endpoint · tipo não informado no evento</small></span><span class=\"ds-resource-status\">Sem estado observado</span><span class=\"ds-resource-expand\">Detalhes</span></summary><div class=\"ds-resource-body\"><p>Exemplo sintético de estrutura; não representa eventos recebidos.</p><p class=\"ds-scroll-hint\">Deslize para ver registro, alcance, uso e horários. No teclado, use as setas após focar a tabela.</p><div class=\"ds-resource-scroll\" role=\"region\" tabindex=\"0\" aria-label=\"Detalhes de demonstração, tabela com rolagem horizontal\"><table><thead><tr><th>Recurso</th><th>Estado observado</th><th>Registro SIP</th><th>Último registro observado</th><th>Servidor</th><th>Último evento</th></tr></thead><tbody><tr><td>—</td><td>Não informado</td><td>Não informado</td><td>Não informado</td><td>—</td><td>Não informado</td></tr></tbody></table></div></div></details>",
+      "css": ".ds-resource{margin:0;border-bottom:1px solid var(--sui-border,#d3dae1);font-family:var(--sui-font,-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif);color:var(--sui-text-primary,#20252b)}.ds-resource summary{display:flex;align-items:center;gap:20px;padding:22px 12px;list-style:none;cursor:pointer}.ds-resource summary::-webkit-details-marker{display:none}.ds-resource summary:hover{background:var(--sui-surface-2,#f5f6f7)}.ds-resource summary:focus-visible,.ds-resource-scroll:focus-visible{outline:3px solid var(--sui-color-primary,#a94210);outline-offset:4px}.ds-resource-title{flex:1;font-weight:600}.ds-resource-title small{display:block;margin-top:6px;font-weight:400;color:var(--sui-text-secondary,#515e6a)}.ds-resource-status{font-size:14px}.ds-resource-expand{color:var(--sui-color-primary,#a94210);font-size:13px}.ds-resource[open]{background:var(--sui-surface-2,#f5f6f7)}.ds-resource-body{padding:0 20px 24px;overflow-wrap:anywhere}.ds-resource-body p{font-size:13px;line-height:1.6;max-width:72ch;margin:0 0 16px;color:var(--sui-text-secondary,#515e6a)}.ds-resource-scroll{overflow-x:auto;max-width:100%}.ds-resource table{width:100%;border-collapse:collapse;font-size:14px}.ds-resource th{font-size:12px;font-weight:600;color:var(--sui-text-secondary,#515e6a)}.ds-resource th,.ds-resource td{text-align:left;padding:16px 12px;border-bottom:1px solid var(--sui-border,#d3dae1);vertical-align:top}.ds-resource td{min-width:100px;max-width:290px;overflow-wrap:anywhere}.ds-scroll-hint{display:none}@media(max-width:700px){.ds-scroll-hint{display:block}}@media(max-width:600px){.ds-resource summary{flex-wrap:wrap;gap:12px;padding:18px 8px}.ds-resource-title{flex-basis:100%}.ds-resource-status{flex:1}.ds-resource-body{padding:0 12px 20px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Observação operacional Sufficit",
+    "overview": "Identidade Sufficit com ações em laranja e superfícies neutras, brancas no tema claro e grafite no escuro. A hierarquia combina linhas de servidores comparáveis, números tabulares e um detalhe de leitura com fundo tonal; estados e horários têm prioridade sobre decoração.\n\nEsta documentação preserva o mundo visual já declarado em src/App.razor e implementado com Sufficit.Blazor.UI (SUI). O nome descritivo acima sintetiza esse contrato; não representa uma nova identidade aprovada em workshop. A interface é PT-BR e interna, restrita ao papel manager.",
+    "keyCharacteristics": [
+      "SUI como biblioteca de componentes e fonte de tokens.",
+      "Uma única cor de identidade; cores semânticas acompanhadas de texto.",
+      "Tema claro e escuro com a mesma hierarquia.",
+      "Movimento limitado à interação e à consulta; som opcional."
+    ],
+    "rules": [
+      {
+        "name": "The Evidence Rule",
+        "body": "Cor e movimento comunicam apenas estado observado; dados ausentes não equivalem a zero nem a sucesso.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tonal Depth Rule",
+        "body": "Superfícies operacionais se distinguem por tom e divisórias; elevação fica nos controles que já a utilizam.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar SUIThemeProvider, SUIButton, SUISelect e SUIAlert para manter os contratos existentes.",
+      "Do preservar horários, unidades, estados desconhecidos e lacunas nos dados.",
+      "Do manter tema claro/escuro, foco visível e navegação por teclado.",
+      "Do respeitar redução de movimento e ativação explícita do som.",
+      "Do identificar dados sintéticos como demonstração local."
+    ],
+    "donts": [
+      "Don't substituir SUI por MudBlazor neste painel.",
+      "Don't transformar ausência de coleta em zero, sucesso ou animação de atividade.",
+      "Don't conectar trechos de histórico através de períodos sem amostras.",
+      "Don't usar cor ou som como único portador de estado.",
+      "Don't interpretar capturas de fixtures como validação de login, deploy ou métricas reais."
+    ]
+  }
+}

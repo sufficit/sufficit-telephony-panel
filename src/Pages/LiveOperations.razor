@@ -1,0 +1,611 @@
+@implements IAsyncDisposable
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.EventsPanel
+@using Sufficit.Telephony.Monitor
+@inject OperationsAccess Access
+@inject IWebHostEnvironment Environment
+@inject IConfiguration Configuration
+@inject BoardConfigurationAccess BoardAccess
+@inject BoardInventoryAccess InventoryAccess
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<section class="live-panel @(Tab is "board" or "settings" ? "board-mode" : "")" aria-labelledby="live-title">
+    <div class="heading"><div><h1 id="live-title">@(BoardPage ? Text["Operator board"] : Text["Real-time telephony"])</h1><p class="muted">@Text["Exchange overview. Filter by company only when needed."]</p></div>
+        <div class="tools">
+        @if (!BoardPage) { <SUIButton Href="@BoardUrl" VariantValue="SUIVariant.Outlined">@Text["Open dedicated board"]</SUIButton> }
+        <SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton>
+        </div>
+    </div>
+    @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</SUIAlert> }
+    @if (!Demo && !Configuration.GetValue<bool>("Panel:RequestEntitlements"))
+    {
+        <p class="muted section-hint">@Text["The overview uses your manager access to the central stream. Company filtering and supervision depend on shared telephony entitlements from Identity, pending activation for this application."]</p>
+    }
+    <details class="company-filter" open="@(!BoardPage)"><summary>@Text.Format("Company: {0}", Context.HasValue ? ClientName : Text["entire exchange"])</summary>
+    <div class="client-picker">
+        <SUITextField T="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
+        <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
+        @if (Context.HasValue) { <SUIButton OnClick="ClearCompany" Disabled="@(Busy || ActionBusy)" VariantValue="SUIVariant.Text">@Text["Clear company · view exchange"]</SUIButton> }
+    </div>
+    @if (Searched)
+    {
+        <div class="client-results" aria-label="@Text["Matching customers"]">
+            @if (Clients.Length == 0) { <p>@Text["No customers found for this user. Try the full customer identifier."]</p> }
+            @foreach (var client in Clients) { <SUIButton OnClick="() => SelectClient(client.Id, client.Title)" Disabled="Busy" VariantValue="SUIVariant.Outlined">@client.Title</SUIButton> }
+        </div>
+    }
+    </details>
+    @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking permissions and resources"]" /> }
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)</SUIAlert> }
+    @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)</SUIAlert> }
+    <div class="operations-scope">
+        <div class="client-heading"><div><h2>@(Context.HasValue ? ClientName : Text["Entire exchange"])</h2><span class="muted identifier">@(Context.HasValue ? Context.Value.ToString("N") : Text["No company filter · manager access"])</span></div><span class="state-label @(Connected ? "good" : "warning")">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
+        @if (BoardPage) { <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary>@ObservationNote</details> }
+        else { @ObservationNote }
+        @if (Overflow || Observation.Limited) { <SUIAlert ToneValue="SUITone.Warning">@Text["Observation limit reached. Some resources may be missing. Reduce this customer's configured resource set or reconnect to start a new window."]</SUIAlert> }
+        @if (Tab != "settings")
+        {
+        @if (Tab != "board") { @BoardFilters }
+        }
+        <nav class="live-tabs @(BoardPage ? "board-navigation" : "")" aria-label="@Text["Resource type"]">
+            @foreach (var tab in Tabs.Where(t => (Context.HasValue || t.Key != "trunks") && (!BoardPage || t.Key is "board" or "settings"))) { <button type="button" class="@(Tab == tab.Key ? "active" : "")" aria-pressed="@(Tab == tab.Key)" @onclick="() => SetTab(tab.Key)">@(tab.Key == "extensions" && !Context.HasValue ? Text["Extensions and endpoints"] : tab.Label) <span>@Count(tab.Key)</span></button> }
+        </nav>
+        @if (BoardError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(BoardError)</SUIAlert> }
+        @if (SettingsOpened)
+        {
+            <div hidden="@(Tab != "settings")"><BoardSettings Configuration="BoardConfiguration" Source="RawBoardTiles" Demo="Demo" Saved="SetBoardConfiguration" /></div>
+        }
+        @if (Tab == "board")
+        {
+            <details class="board-retention" open="@(!BoardPage)"><summary>@Text["Remembered resources and cleanup"]</summary>
+            <div class="settings-toolbar">
+                <SUICheckbox Value="BoardConfiguration.RetainSeenResources" ValueChanged="SetRetention" Disabled="@(Busy || InventoryBusy || Error is not null)" Label="@Text["Keep previously seen resources"]" />
+                <SUIButton OnClick="() => ConfirmClearInventory = true" Disabled="@(Busy || InventoryBusy || Error is not null)" VariantValue="SUIVariant.Text">@Text["Clear remembered resources"]</SUIButton>
+                @if (Demo) { <SUIButton OnClick="SimulateMissingEvents" VariantValue="SUIVariant.Text">@Text["Simulate missing events"]</SUIButton> }
+            </div>
+            <p class="muted section-hint">@Text["Keeping previously seen resources is enabled by default and shared between managers. It retains existence, not old state. Disabling only hides resources without current observations; rules and filters still apply."]</p>
+            @if (InventoryError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(InventoryError)</SUIAlert> }
+            @if (InventoryMessage is not null) { <p role="status">@Text.Observed(InventoryMessage)</p> }
+            @if (ConfirmClearInventory)
+            {
+                <div class="settings-confirm" role="alert">
+                    <p>@Text.Format("Clear remembered resources for {0} for all managers? Current resources remain; new events may record them again. Extensions, queues, calls and rules are unchanged.", Context.HasValue ? Text["this company"] : Text["entire exchange"])</p>
+                    <SUIButton OnClick="ClearInventory" Disabled="InventoryBusy">@Text["Confirm cleanup"]</SUIButton>
+                    <SUIButton OnClick="() => ConfirmClearInventory = false" Disabled="InventoryBusy" VariantValue="SUIVariant.Text">@Text["Cancel cleanup"]</SUIButton>
+                </div>
+            }
+            </details>
+            @if (OnlyObservedChannels) { <p class="muted section-hint" role="status">@Text["Filter enabled: only resources with observed channels. No channels does not prove a resource is idle."]</p> }
+            <div class="board-focus" id="board-focus">
+            @if (Demo) { <span class="board-demo-label">@Text["Local demo"]</span> }
+            <div class="board-focus-toolbar"><strong>@Text["Operator board"]</strong><span class="muted">@(Context.HasValue ? ClientName : Text["Entire exchange"])</span><span class="board-focus-spacer"></span><LanguagePicker /><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
+            @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
+            @BoardFilters
+            <OperatorBoard Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Page="Page" PageChanged="SetBoardPage" />
+            @if (SelectedTile is { } tile)
+            {
+                <section class="board-inspector" tabindex="-1" @ref="TileInspector" aria-labelledby="tile-heading">
+                    <div class="heading"><h3 id="tile-heading">@tile.Title · @tile.Node</h3><SUIButton VariantValue="SUIVariant.Text" OnClick="CloseTile">@Text["Close details"]</SUIButton></div>
+                    <p>@Text.Observed(tile.Status.Label) · @(tile.Remembered ? Text["Saved last observation (approximate)"] : Text["Last observation"]): @Timestamp(tile.Updated)</p>
+                    <p>@Text.Observed(tile.Peer?.RegistrationLabel ?? Text["Registration not reported"]) · @Text.Observed(tile.Peer?.ReachabilityLabel ?? Text["Reachability not reported"]) · @Text.Observed(tile.Peer?.DeviceLabel ?? Text["Device usage not reported"])</p>
+                    <p>@Text.Format("Last observed registration: {0}. Unknown states do not mean the extension is idle.", Timestamp(tile.Peer?.LastRegisteredObservedAt))</p>
+                    @if (tile.Channels.Length > 0) { @RenderChannels(tile.Channels.Take(100).ToArray()) }
+                    else { <p>@Text["No observed channels for this resource."]</p> }
+                    @if (tile.Channels.Length > 100) { <p>@Text["First 100 channels. Refine the Channels tab to view the others."]</p> }
+                </section>
+            }
+            </div>
+        }
+        else if (Tab == "settings") { }
+        else if (Tab == "calls")
+        {
+            var groups = VisibleGroups;
+            <p class="muted section-hint">@Text.Format("{0} correlated calls · {1} observed channels · {2} uncorrelated. Calls group channels with the same Linkedid on one server; there is no cross-server deduplication.", groups.Count(g => g.Correlated), groups.Sum(g => g.Channels.Length), groups.Count(g => !g.Correlated))</p>
+            <p class="muted section-hint">@Text["Expand to inspect channels. State belongs to each channel, not the entire call: “Inactive in event” does not prove the call ended. Elapsed time starts at the first available observation."]</p>
+            @if (groups.Length == 0) { <div class="operation-empty">@Text["No groups observed with these filters. Wait for new events or check the connection."]</div> }
+            else
+            {
+                <div class="resource-list">
+                @foreach (var group in groups.Skip(Page * PageSize).Take(PageSize))
+                {
+                    <details class="resource call-group" @key="(group.Node, group.LinkedId, group.Correlated ? string.Empty : group.Channels[0].Id)">
+                        <summary><span class="resource-title">@(group.Correlated ? Text["Correlated call"] : Text["Uncorrelated channel"])<small>@(group.Correlated ? $"Linkedid: {group.LinkedId}" : group.Channels[0].Key)</small></span><span class="resource-status">@group.Node · @Text.Format("{0} channels", group.Channels.Length)<small>@Text.Format("Observed for {0} · last event {1}", Duration(group.FirstSeen), group.Updated.ToLocalTime().ToString("T", Text.Culture))</small></span><span class="resource-expand">@Text["View channels"]</span></summary>
+                        <div class="resource-body">
+                            @if (!group.Correlated) { <p>@Text["Linkedid not received. This channel is excluded from correlated call counts."]</p> }
+                            @if (group.Channels.Length > 100) { <p>@Text.Format("Showing 100 of {0} channels in this group. Use Channels to view all.", group.Channels.Length)</p> }
+                            @RenderChannels(group.Channels.Take(100).ToArray())
+                        </div>
+                    </details>
+                }
+                </div>
+            }
+        }
+        else if (Tab == "channels")
+        {
+            <p class="muted section-hint">@Text["Each row is a channel, not a separate call. SIP/PJSIP channels and Local legs may belong to the same call."]</p>
+            @if (VisibleChannels.Length == 0) { <div class="operation-empty">@Text["No channels observed with these filters."]</div> }
+            else { @RenderChannels(VisibleChannels.Skip(Page * PageSize).Take(PageSize).ToArray()) }
+        }
+        else
+        {
+            @if (!Context.HasValue) { <p class="muted section-hint">@Text["Resources found in the central stream, including those not configured as portal cards. Extension and trunk endpoints appear together because events do not identify their classification. Absence from this list does not prove an extension is offline."]</p> }
+            @if (VisibleCards.Length == 0) { <div class="operation-empty">@Text["No authorized resource matches the filters. Extension, trunk and queue configurations are maintained in the portal."]</div> }
+            else
+            {
+                <div class="resource-list">
+                @foreach (var card in VisibleCards.Skip(Page * PageSize).Take(PageSize))
+                {
+                    var related = Related(card);
+                    var callCount = related.Count(x => x.Kind == "call");
+                    <details class="resource" @key="CardKey(card)">
+                        <summary><span class="resource-title">@card.Label <small>@(!Context.HasValue && card.Kind == EventsPanelCardKind.PEER ? Text["Endpoint · type not reported by event"] : KindLabel(card.Kind))</small></span><span class="resource-status">@ResourceSummary(related)</span><span class="resource-expand">@Text["Details"]</span></summary>
+                        <div class="resource-body">
+                            <p class="muted">@Text.Format("Identifiers: {0}. Resources shared across servers appear separately per node.", string.Join(" · ", card.Channels))</p>
+                            @if (related.Length == 0) { <p>@Text["Waiting for events since connection. This resource may be in use without sending an event during this window."]</p> }
+                            else
+                            {
+                                <p class="scroll-hint">@Text["Scroll to inspect registration, reachability, usage and timestamps. With a keyboard, focus the table and use arrow keys."]</p>
+                                <div class="live-table-wrap" role="region" tabindex="0" aria-label="@Text.Format("Details for {0}, horizontally scrollable table", card.Label)"><table class="live-table"><thead><tr><th>@Text["Resource"]</th><th>@Text["Observed state"]</th><th>@Text["SIP registration"]</th><th>@Text["Last observed registration"]</th><th>@Text["Server"]</th><th>@Text["Last event"]</th></tr></thead><tbody>
+                                @foreach (var row in related.Take(100))
+                                {
+                                    <tr @key="row.Id"><td>@row.Key<small>@(row.Kind == "waiting" ? Text.Format("Waiting since {0}", row.FirstSeen.ToLocalTime().ToString("T", Text.Culture)) : Display(row.Caller))</small></td><td>@ResourceState(row)
+                                        @if (row.Peer is { } peer) { <small>@Text.Observed(peer.DeviceLabel)</small><small>@Text.Format("Reachability observed: {0}", Timestamp(peer.ReachabilityObservedAt))</small>@if (peer.RoundTripMilliseconds is { } rtt) { <small>@Text.Format("Response: {0} ms", rtt.ToString("0.###", Text.Culture))</small> }@if (peer.LastReachabilityIsContact) { <small>@Text["Last observed contact; does not aggregate all devices."]</small> } }
+                                        @if (row.Details.Count > 0) { <small>@string.Join(" · ", row.Details.Where(p => p.Key is not ("uniqueid" or "linkedid" or "queue")).Select(p => $"{DetailLabel(p.Key)}: {DetailValue(p.Value)}"))</small> }
+                                    </td><td>@Text.Observed(row.Peer?.RegistrationLabel ?? Text["Not reported"])<small>@Timestamp(row.Peer?.RegistrationObservedAt)</small></td><td>@Timestamp(row.Peer?.LastRegisteredObservedAt)</td><td>@row.Node</td><td>@Timestamp(row.Updated)<small>@row.Peer?.LastEventType</small></td></tr>
+                                }
+                                </tbody></table></div>
+                                @if (related.Length > 100) { <p>@Text["Showing the first 100 resource events. Refine by server."]</p> }
+                            }
+                        </div>
+                    </details>
+                }
+                </div>
+            }
+        }
+        @if (Tab is "calls" or "channels") { <p class="muted section-hint">@(Supervisor is { } supervisor ? Text.Format("Your supervision extension: {0}.", supervisor.Title) : Text["Set your preferred extension in the portal to enable supervision."]) @Text["Select the correct channel to listen or whisper. Actions require a recent event and verified company association."]</p> }
+        @if (Tab is not ("board" or "settings")) { <div class="live-pagination"><span>@Text.Format("{0} results with current filters · page {1} of {2}", TotalVisible, Page + 1, Pages)</span><div><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page == 0)" OnClick="Previous">@Text["Previous"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page + 1 >= Pages)" OnClick="Next">@Text["Next"]</SUIButton></div></div> }
+        @if (Pending is { } target)
+        {
+            <section class="monitor-confirm" role="region" aria-labelledby="confirm-title" tabindex="-1" @ref="Confirmation">
+                <h2 id="confirm-title">@(Mode == TelephonyMonitorActionMode.Listen ? Text["Confirm listening"] : Text["Confirm whispering"])</h2>
+                <p>@Text["Customer"] <strong>@(Context.HasValue ? ClientName : target.Account)</strong> · @target.Key · @target.Node</p>
+                <p>@(Mode == TelephonyMonitorActionMode.Listen ? Text["You will hear the call without speaking to its participants."] : Text["You will be able to speak to the agent during monitoring."]) @Text.Format("Your extension {0} will be called. Answer it to begin. Use only with operational authorization.", Supervisor?.Title)</p>
+                <div class="tools"><SUIButton OnClick="Confirm" Disabled="ActionBusy" VariantValue="SUIVariant.Filled">@(ActionBusy ? Text["Sending…"] : Text["Confirm and call my extension"])</SUIButton><SUIButton OnClick="CancelAction" Disabled="ActionBusy" VariantValue="SUIVariant.Text">@Text["Cancel"]</SUIButton></div>
+            </section>
+        }
+        @if (ActionMessage is not null) { <SUIAlert ToneValue="SUITone.Info">@Text.Observed(ActionMessage)</SUIAlert> }
+        <details class="live-help"><summary>@Text["How to read this panel"]</summary><p>@Text["The overview shows the manager-authorized stream; company filtering uses resources authorized by the portal. Reconnecting discards old states. Current observation is limited to 5,000 resources and two hours without updates, not a full inventory. Keep previously seen resources retains the existence of extensions, trunks and queues separately, without automatic expiration or old channels. The saved last observation is approximate. Clearing remembered resources removes that history from the selected view; new events can record them again."]</p><p>@Text["SIP registration, reachability and device usage are independent. An extension may be registered but not respond. A static contact may respond without registering. Qualify does not prove the phone's WebSocket/TCP connection. Registration time here is when the panel received a registration event, not the PBX's historical timestamp. Events before connection are unavailable."]</p><p>@Text["Call queues distribute calls among agents. ACD stands for automatic call distribution. This monitor does not create queues or replace their management screen."]</p></details>
+    </div>
+</section>
+
+@code {
+    [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
+    private RenderFragment BoardFilters => @<header class="board-filter-header">
+        <div class="live-filters">
+            <SUITextField T="string" Label="@Text["Filter resources"]" Value="@Filter" ValueChanged="SetFilter" Immediate="true" MaxLength="100" Clearable="true" Placeholder="@Text["Extension, name, number or channel"]" />
+            <SUISelect T="string" Label="@Text["Observed server"]" Value="@Node" ValueChanged="SetNode"><SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>@foreach (var node in Rows.Select(x => x.Node).Concat(BoardTiles.Select(t => t.Node)).Distinct().Order()) { <SUISelectItem Value="@node">@node</SUISelectItem> }</SUISelect>
+            <SUISelect T="string" Label="@Text["Observed state"]" Value="@StatusFilter" ValueChanged="SetStatus"><SUISelectItem Value="@("all")">@Text["All states"]</SUISelectItem><SUISelectItem Value="@("online")">@Text["Reachable in qualify test"]</SUISelectItem><SUISelectItem Value="@("offline")">@Text["No response to qualify test"]</SUISelectItem><SUISelectItem Value="@("registered")">@Text["Registered"]</SUISelectItem><SUISelectItem Value="@("unregistered")">@Text["Unregistered"]</SUISelectItem><SUISelectItem Value="@("busy")">@Text["In use / ringing"]</SUISelectItem><SUISelectItem Value="@("unknown")">@Text["No registration information"]</SUISelectItem></SUISelect>
+        </div>
+        @if (Tab == "board")
+        {
+            <div class="board-filter-options">
+                <fieldset class="text-targets"><legend>@Text["Apply text to"]</legend>
+                    <SUICheckbox Label="@Text["Extensions"]" Value="@(TextKinds.Contains("peers"))" ValueChanged="@((bool value) => SetTextKind("peers", value))" />
+                    <SUICheckbox Label="@Text["Trunks"]" Value="@(TextKinds.Contains("trunks"))" ValueChanged="@((bool value) => SetTextKind("trunks", value))" />
+                    <SUICheckbox Label="@Text["Queues"]" Value="@(TextKinds.Contains("queues"))" ValueChanged="@((bool value) => SetTextKind("queues", value))" />
+                </fieldset>
+                <SUIButton OnClick="ToggleObservedChannels" VariantValue="@(OnlyObservedChannels ? SUIVariant.Filled : SUIVariant.Outlined)" aria-pressed="@(OnlyObservedChannels ? "true" : "false")">@Text["Only with observed channels"]</SUIButton>
+                <SUIButton OnClick="ResetFilters" VariantValue="SUIVariant.Text">@Text["Clear filters"]</SUIButton>
+            </div>
+        }
+        </header>;
+    private RenderFragment RenderChannels(ObservedResource[] channels) => @<div class="live-table-wrap" role="region" tabindex="0" aria-label="@Text["Observed channels, horizontally scrollable table"]">
+        <table class="live-table"><thead><tr><th>@Text["Channel"]</th><th>@Text["Channel state"]</th><th>@Text["Source → destination"]</th><th>@Text["Observed for"]</th><th>@Text["Server"]</th><th>@Text["Channel supervision"]</th></tr></thead><tbody>
+        @foreach (var channel in channels)
+        {
+            <tr @key="channel.Id"><td><strong>@LabelFor(channel)</strong><small>@channel.Key</small><small>@(string.IsNullOrWhiteSpace(channel.Details.GetValueOrDefault("linkedid")) ? Text["Uncorrelated"] : $"Linkedid: {channel.Details["linkedid"]}")</small></td><td>@State(channel.State)<small>@Text.Format("Event {0}", channel.Updated.ToLocalTime().ToString("T", Text.Culture))</small></td><td>@Display(channel.Caller) → @Display(channel.Destination)</td><td class="numeric">@Duration(channel.FirstSeen)</td><td>@channel.Node</td><td><div class="call-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(!CanMonitor(channel))" OnClick="() => Prepare(channel, TelephonyMonitorActionMode.Listen)">@Text["Listen"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(!CanMonitor(channel))" OnClick="() => Prepare(channel, TelephonyMonitorActionMode.Whisper)">@Text["Whisper"]</SUIButton></div></td></tr>
+        }
+        </tbody></table>
+    </div>;
+    [Parameter] public bool Preview { get; set; }
+    private RenderFragment ObservationNote => @<p class="observation-note">@Text.Format("Partial observation {0}. Calls before connection may be absent. No event does not mean idle or disconnected. {1}", Since is null ? Text["not started yet"] : Text.Format("since {0}", Since.Value.ToLocalTime().ToString("T", Text.Culture)), LastEvent is null ? Text["No events received on this connection."] : Text.Format("Last stream event: {0}.", LastEvent.Value.ToLocalTime().ToString("T", Text.Culture)))</p>;
+    [Parameter] public bool BoardPage { get; set; }
+    private string[] TextKinds = BoardViewQuery.Kinds.ToArray();
+    private bool UrlReady;
+    private bool urlPending, replaceUrl;
+    private string lastWrittenUrl = "";
+    private string BoardUrl => Navigation.GetUriWithQueryParameters(new Uri(new Uri(Navigation.BaseUri), "board").ToString(), new Dictionary<string, object?>(CurrentQuery.Parameters()) { ["preview"] = Demo ? "true" : null, ["tab"] = null });
+    private BoardViewQuery CurrentQuery => new() { Company = Context, Text = Filter, Node = Node, State = StatusFilter, TextKinds = TextKinds, Channels = OnlyObservedChannels, Tab = Tab, Page = Page };
+    private void WriteUrl(bool replace = false)
+    {
+        if (!UrlReady) return;
+        urlPending = true; replaceUrl = replace;
+    }
+    private void FlushUrl()
+    {
+        if (!urlPending || !UrlReady) return;
+        urlPending = false;
+        var uri = Navigation.GetUriWithQueryParameters(CurrentQuery.Parameters());
+        if (uri == Navigation.Uri) return;
+        lastWrittenUrl = uri;
+        Navigation.NavigateTo(uri, replace: replaceUrl);
+    }
+    private async void LocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        if (!UrlReady || args.Location == lastWrittenUrl) { lastWrittenUrl = ""; return; }
+        try { await InvokeAsync(async () => { await ApplyUrl(); if (UrlReady) StateHasChanged(); }); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (ObjectDisposedException) when (!UrlReady) { }
+    }
+    private async Task ApplyUrl()
+    {
+        var query = BoardViewQuery.Parse(Navigation.Uri);
+        if (query.Company != Context) await SelectClient(query.Company, query.Company?.ToString("N") ?? Text["Entire exchange"], false);
+        Filter = query.Text; Node = query.Node; StatusFilter = query.State; TextKinds = query.TextKinds;
+        OnlyObservedChannels = query.Channels; Page = query.Page;
+        Tab = BoardPage && query.Tab != "settings" ? "board" : query.Tab;
+        if (Tab == "trunks" && !Context.HasValue) Tab = "extensions";
+        SettingsOpened |= Tab == "settings";
+        SelectedTileId = null; Pending = null;
+    }
+    private bool FullscreenError;
+    private async Task ToggleFullscreen() { FullscreenError = !await JS.InvokeAsync<bool>("telephonyPanel.fullscreen", "board-focus"); }
+    private void SetTextKind(string kind, bool value)
+    {
+        TextKinds = value ? TextKinds.Append(kind).Distinct().ToArray() : TextKinds.Where(k => k != kind).ToArray();
+        Page = 0; WriteUrl();
+    }
+    private void SetBoardPage(int value) { Page = value; WriteUrl(); }
+    private async Task ResetFilters() { Filter = ""; Node = "all"; StatusFilter = "all"; OnlyObservedChannels = false; TextKinds = BoardViewQuery.Kinds.ToArray(); Page = 0; if (Context.HasValue) await ClearCompany(); WriteUrl(); }
+    private bool Demo => Preview && Environment.IsDevelopment();
+    private Guid? Context;
+    private string ClientName = "", SearchText = "", Filter = "", Node = "all", Tab = "board";
+    private string? SelectedTileId;
+    private ElementReference TileInspector;
+    private bool FocusTile;
+    private OperatorTile[] demoTiles = [];
+    private EventsPanelCardInfo[]? boardCards;
+    private AuthorizedObservation? boardObservation;
+    private OperatorTile[] cachedTiles = [];
+    private BoardConfiguration BoardConfiguration = new();
+    private OperatorTile[]? inventoryTiles;
+    private bool InventoryBusy, ConfirmClearInventory;
+    private string? InventoryError, InventoryMessage;
+    private string? BoardError;
+    private bool SettingsOpened;
+    private OperatorTile[]? classifiedSource;
+    private string? classifiedRevision;
+    private OperatorTile[] classifiedTiles = [];
+    private OperatorTile[] BoardTiles
+    {
+        get
+        {
+            var source = BoardConfiguration.RetainSeenResources ? inventoryTiles ?? RawBoardTiles : RawBoardTiles;
+            if (!ReferenceEquals(source, classifiedSource) || classifiedRevision != BoardConfiguration.Revision)
+            {
+                classifiedSource = source; classifiedRevision = BoardConfiguration.Revision;
+                classifiedTiles = BoardRuleEngine.Apply(source, BoardConfiguration);
+            }
+            return classifiedTiles;
+        }
+    }
+    private void SetBoardConfiguration(BoardConfiguration value) { BoardConfiguration = value; BoardError = null; }
+    private async Task SetRetention(bool value)
+    {
+        if (InventoryBusy) return;
+        InventoryBusy = true; InventoryError = null; InventoryMessage = null;
+        try
+        {
+            var draft = BoardConfiguration with { RetainSeenResources = value };
+            SetBoardConfiguration(Demo ? draft with { Revision = Guid.CreateVersion7().ToString("N") }
+                : await BoardAccess.Save(draft, lifetime.Token));
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        { InventoryError = Text["Could not save retention. Reload configuration and try again. "] + (e is InvalidOperationException ? e.Message : Text["Check your session and panel storage."]); }
+        finally { InventoryBusy = false; }
+    }
+    private async Task RefreshInventory()
+    {
+        if (Demo) return;
+        var version = selectionVersion;
+        try
+        {
+            var updated = await InventoryAccess.Observe(Context, RawBoardTiles, Cards, true, lifetime.Token);
+            if (version == selectionVersion) { inventoryTiles = updated; InventoryError = null; }
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            if (version == selectionVersion) { inventoryTiles = null; InventoryError = Text["Could not retain resources. The board shows only current observations; inventory was not deleted. Check panel storage."]; }
+        }
+    }
+    private async Task ClearInventory()
+    {
+        if (InventoryBusy) return;
+        InventoryBusy = true; InventoryError = null;
+        try
+        {
+            if (!Demo) await InventoryAccess.Clear(Context, lifetime.Token);
+            inventoryTiles = null; ConfirmClearInventory = false;
+            await RefreshInventory();
+            InventoryMessage = Text["Remembered resources cleared. Current resources remain and new events will be remembered."];
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        { InventoryError = Text["Cleanup did not complete. Check your session and panel storage, then retry."]; }
+        finally { InventoryBusy = false; }
+    }
+    private void SimulateMissingEvents()
+    {
+        if (!Demo) return;
+        inventoryTiles = (inventoryTiles ?? demoTiles).Select(t => t with { LastSeen = t.Updated ?? DateTimeOffset.UtcNow, Rows = [] }).ToArray();
+        demoTiles = []; Rows = []; Observation = new(); Cards = [];
+    }
+    private async Task ReadBoardConfiguration()
+    {
+        if (Demo) return;
+        try { SetBoardConfiguration(await BoardAccess.Read(lifetime.Token)); }
+        catch (Exception e) when (e is not OperationCanceledException)
+        { BoardError = Text["Could not load board rules. This session's last configuration was kept; use Reload configuration to try again."]; }
+    }
+    private OperatorTile[] RawBoardTiles
+    {
+        get
+        {
+            if (Demo) return demoTiles;
+            if (!ReferenceEquals(boardCards, Cards) || !ReferenceEquals(boardObservation, Observation))
+            {
+                boardCards = Cards; boardObservation = Observation;
+                cachedTiles = OperatorTile.Create(Cards, Observation.ByCard);
+            }
+            return cachedTiles;
+        }
+    }
+    private OperatorTile[] VisibleTiles => BoardTiles
+        .Where(t => (!OnlyObservedChannels || t.Channels.Length > 0) && (Node == "all" || t.Node == Node) && (StatusFilter == "all" || StatusFilter == "unknown" && t.Rows.Length == 0 || t.Rows.Any(MatchStatus))
+            && (!TextKinds.Contains(t.Kind == EventsPanelCardKind.TRUNK ? "trunks" : t.Kind == EventsPanelCardKind.QUEUE ? "queues" : "peers") || MatchText(t.Title + " " + t.Node + " " + string.Join(" ", t.Keys) + " " + string.Join(" ", t.Rows.Select(r => r.Key + " " + r.Caller + " " + r.Destination)))))
+        .ToArray();
+    private OperatorTile? SelectedTile => VisibleTiles.FirstOrDefault(t => t.Id == SelectedTileId);
+    private void SelectTile(OperatorTile tile) { SelectedTileId = tile.Id; FocusTile = true; Pending = null; }
+    private void CloseTile() { SelectedTileId = null; Pending = null; }
+    private bool Busy, Searched, ActionBusy, FocusConfirmation;
+    private string? Error, SearchError, ActionMessage;
+    private string StatusFilter = "all";
+    private bool OnlyObservedChannels;
+    private void ToggleObservedChannels() { OnlyObservedChannels = !OnlyObservedChannels; Page = 0; SelectedTileId = null; Pending = null; WriteUrl(); }
+    private (Guid Id, string Title)[] Clients = [];
+    private (Guid Id, string Title)? Supervisor;
+    private EventsPanelCardInfo[] Cards = [];
+    private ObservedResource[] rows = [];
+    private ObservedCallGroup[] callGroups = [];
+    private ObservedResource[] Rows
+    {
+        get => rows;
+        set { rows = value; callGroups = ObservedCallGroup.Create(value); }
+    }
+    private OperationsConnection? Connection;
+    private AuthorizedObservation Observation = new();
+    private int selectionVersion;
+    private ObservedResource? Pending;
+    private TelephonyMonitorActionMode Mode;
+    private ElementReference Confirmation;
+    private readonly CancellationTokenSource lifetime = new();
+    private Task? loop;
+    private DateTimeOffset AuthorizationChecked;
+    private const int PageSize = 30;
+    private int Page;
+    private (string Key, string Label)[] Tabs => [("board", Text["Operation board"]), ("extensions", Text["Extensions"]), ("calls", Text["Calls"]), ("channels", Text["Channels"]), ("trunks", Text["Trunks"]), ("queues", Text["Call queues"]), ("settings", Text["Configure board"])];
+    private ObservedCallGroup[] CallGroups => callGroups;
+    private ObservedCallGroup[] VisibleGroups => ObservedCallGroup.Filter(CallGroups, MatchesChannel);
+    private bool Connected => Demo || Connection?.Connected == true;
+    private DateTimeOffset? Since => Demo ? DateTimeOffset.UtcNow.AddMinutes(-8) : Connection?.ConnectedAt;
+    private DateTimeOffset? LastEvent => Demo ? DateTimeOffset.UtcNow : Connection?.Projection.LastEvent;
+    private bool Overflow => Connection?.Projection.Overflow == true;
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private bool MatchText(string text) => string.IsNullOrWhiteSpace(Filter) || text.Contains(Filter, StringComparison.OrdinalIgnoreCase);
+    private bool MatchNode(ObservedResource row) => Node == "all" || row.Node == Node;
+    private EventsPanelCardInfo[] VisibleCards => Cards.Where(c => c.Kind == TabKind(Tab) && MatchText(c.Label + " " + string.Join(" ", c.Channels)) && ((Node == "all" && StatusFilter == "all") || Related(c).Any(MatchStatus))).OrderBy(c => c.Order).ThenBy(c => c.Label).ToArray();
+    private bool MatchesChannel(ObservedResource r) => MatchNode(r) && MatchStatus(r) && MatchText(r.Key + " " + r.Caller + " " + r.Destination + " " + r.Account + " " + LabelFor(r) + " " + r.Details.GetValueOrDefault("linkedid"));
+    private ObservedResource[] VisibleChannels => Rows.Where(r => r.Kind == "call" && MatchesChannel(r)).OrderByDescending(r => r.FirstSeen).ToArray();
+    private bool MatchStatus(ObservedResource row) => StatusFilter switch { "all" => true, "online" or "offline" => row.Peer?.Reachability == StatusFilter, "registered" or "unregistered" => row.Peer?.Registration == StatusFilter, "unknown" => row.Kind == "peer" && (row.Peer is null || row.Peer.Registration == "unknown"), "busy" => row.Kind == "call" || row.Peer?.DeviceLabel is "Em uso" or "Ocupado" or "Tocando" or "Tocando em uso", _ => false };
+    private static string CardKey(EventsPanelCardInfo card) => card.Kind + "|" + card.Label + "|" + string.Join(";", card.Channels);
+    private string Timestamp(DateTimeOffset? value) => value?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not reported"];
+    private int TotalVisible => Tab == "calls" ? VisibleGroups.Length : Tab == "channels" ? VisibleChannels.Length : VisibleCards.Length;
+    private int Pages => Math.Max(1, (TotalVisible + PageSize - 1) / PageSize);
+    private ObservedResource[] Related(EventsPanelCardInfo card) => Observation.ByCard.TryGetValue(card, out var values) ? values.Where(MatchNode).ToArray() : [];
+    private string LabelFor(ObservedResource row) => Observation.Labels.GetValueOrDefault(row.Id, row.Key);
+    private int Count(string tab) => tab == "settings" ? BoardConfiguration.Rules.Length : tab == "board" ? VisibleTiles.Length : tab == "calls" ? VisibleGroups.Count(g => g.Correlated) : tab == "channels" ? VisibleChannels.Length : Cards.Count(c => c.Kind == TabKind(tab));
+    private static EventsPanelCardKind TabKind(string tab) => tab switch { "trunks" => EventsPanelCardKind.TRUNK, "queues" => EventsPanelCardKind.QUEUE, _ => EventsPanelCardKind.PEER };
+    private string KindLabel(EventsPanelCardKind kind) => kind switch { EventsPanelCardKind.TRUNK => Text["Trunk"], EventsPanelCardKind.QUEUE => Text["Call queue"], _ => Text["Extension"] };
+    private static string Duration(DateTimeOffset from) => (DateTimeOffset.UtcNow - from).ToString(@"hh\:mm\:ss");
+    private string ResourceSummary(ObservedResource[] related)
+    {
+        if (related.Length == 0) return Text["No observed state"];
+        if (Tab == "queues") return Text.Format("Waiting: {0} · Agents: {1} (observed)", related.Count(r => r.Kind == "waiting"), related.Count(r => r.Kind == "agent"));
+        var peer = related.Where(r => r.Kind == "peer").OrderByDescending(r => r.Updated).FirstOrDefault();
+        var calls = related.Count(r => r.Kind == "call");
+        return (peer is null ? Text["Registration not reported"] + " · " : peer.Node + ": " + Text.Observed(peer.Peer?.RegistrationLabel ?? Text["Registration not reported"]) + " · " + ResourceState(peer) + " · ") + Text.Format("Observed channels: {0}", calls);
+    }
+    private string DetailValue(string value) => value switch { "true" => Text["yes"], "false" => Text["no"], _ => value };
+    private string ResourceState(ObservedResource row) => row.Kind == "agent" ? row.State.ToLowerInvariant() switch
+    {
+        "1" or "notinuse" or "not_inuse" => Text["Idle in event"], "2" or "inuse" => Text["In use"], "3" or "busy" => Text["Busy"],
+        "4" or "invalid" => Text["Invalid"], "5" or "unavailable" => Text["Unavailable"], "6" or "ringing" => Text["Ringing"], "7" or "ringinuse" => Text["Ringing while in use"], "8" or "onhold" => Text["On hold"], "0" => Text["Unknown state"], _ => State(row.State)
+    } : Text.Observed(row.Peer?.ReachabilityLabel ?? State(row.State));
+    private string State(string value) => value.ToLowerInvariant() switch { "up" or "6" => Text["In conversation"], "ringing" or "5" => Text["Ringing"], "ring" or "4" => Text["Calling"], "down" or "0" => Text["Inactive in event"], "reachable" or "registered" => Text["Available in event"], "unreachable" or "unregistered" => Text["Unavailable in event"], "unknown" or "" => Text["Not reported"], _ => value };
+    private string DetailLabel(string key) => key switch { "paused" => Text["paused"], "calls" => Text["Calls"], "completed" => Text["answered"], "abandoned" => Text["abandoned"], "holdtime" => Text["wait (s)"], "talktime" => Text["talk (s)"], "penalty" => Text["priority"], "strategy" => Text["strategy"], "membername" => Text["agent"], "interface" => "interface", "status" => "status", _ => key };
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        FlushUrl();
+        if (FocusTile && SelectedTile is not null) { FocusTile = false; await TileInspector.FocusAsync(); }
+        if (FocusConfirmation) { FocusConfirmation = false; await Confirmation.FocusAsync(); }
+        if (!first) return;
+        if (BoardPage) await JS.InvokeVoidAsync("telephonyPanel.fitBoard");
+        Navigation.LocationChanged += LocationChanged;
+        var initial = BoardViewQuery.Parse(Navigation.Uri);
+        await SelectClient(initial.Company, initial.Company?.ToString("N") ?? Text["Entire exchange"], false);
+        await ApplyUrl();
+        UrlReady = true;
+        await ReadBoardConfiguration();
+        StateHasChanged();
+        loop = Poll();
+        await Task.CompletedTask;
+    }
+    private async Task Search()
+    {
+        Busy = true; SearchError = null; Clients = []; Searched = false;
+        try
+        {
+            if (Guid.TryParse(SearchText, out var id) && id != Guid.Empty) { await SelectClient(id, SearchText); return; }
+            Clients = Demo ? [(Guid.Parse("11111111-1111-7111-8111-111111111111"), "Cliente demonstração")] : await Access.Search(SearchText, lifetime.Token);
+            Searched = true;
+        }
+        catch (Exception e) { SearchError = ErrorText(e); }
+        finally { Busy = false; }
+    }
+    private async Task SelectClient(Guid? id, string title, bool writeUrl = true)
+    {
+        if (ActionBusy || InventoryBusy) return;
+        var version = ++selectionVersion;
+        inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
+        Busy = true; Error = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; Supervisor = null; Clients = []; Searched = false;
+        Context = id; ClientName = title; SelectedTileId = null;
+        if (writeUrl) WriteUrl();
+        if (!id.HasValue && Tab == "trunks") Tab = "extensions";
+        try
+        {
+            if (Demo) { LoadDemo(); return; }
+            var cards = id.HasValue ? await Access.Cards(id, lifetime.Token) : [];
+            if (version != selectionVersion) return;
+            Cards = cards;
+            AuthorizationChecked = DateTimeOffset.UtcNow;
+            var connection = await Access.Connection(lifetime.Token);
+            if (version != selectionVersion) return;
+            Connection = connection;
+            await connection.Connect(lifetime.Token);
+            if (version != selectionVersion) return;
+            try
+            {
+                var supervisor = Configuration.GetValue<bool>("Panel:RequestEntitlements") ? await Access.Supervisor(lifetime.Token) : null;
+                if (version != selectionVersion) return;
+                Supervisor = supervisor;
+            }
+            catch (Exception e) when (e is HttpRequestException or UnauthorizedAccessException) { /* Manager-wide observation does not depend on supervision rights. */ }
+            if (version == selectionVersion) await ReadRows();
+        }
+        catch (Exception e) { if (version == selectionVersion) { inventoryTiles = null; Cards = []; Rows = []; Observation = new(); Connection = null; Error = ErrorText(e); } }
+        finally { if (version == selectionVersion) Busy = false; }
+    }
+    private Task Reload() => SelectClient(Context, ClientName);
+    private Task ClearCompany() { SearchText = ""; return SelectClient(null, Text["Entire exchange"]); }
+    private async Task Poll()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(lifetime.Token)) await InvokeAsync(async () =>
+            {
+                if (Busy || Demo || Error is not null) return;
+                var version = selectionVersion;
+                try
+                {
+                    var context = Context;
+                    var connection = await Access.Connection(lifetime.Token);
+                    if (version != selectionVersion) return;
+                    Connection = connection;
+                    if (context.HasValue && DateTimeOffset.UtcNow - AuthorizationChecked > TimeSpan.FromSeconds(60))
+                    {
+                        var cards = await Access.Cards(context, lifetime.Token);
+                        if (version != selectionVersion) return;
+                        Cards = cards;
+                        AuthorizationChecked = DateTimeOffset.UtcNow;
+                    }
+                    await ReadRows();
+                    await ReadBoardConfiguration();
+                }
+                catch (Exception e) { if (version == selectionVersion) { inventoryTiles = null; Rows = []; Cards = []; Observation = new(); Pending = null; Connection = null; Error = ErrorText(e); } }
+                Page = Math.Min(Page, Pages - 1); StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    }
+    private async Task ReadRows()
+    {
+        // The pool revalidates exact manager access. Selected tenants still require scoped API cards.
+        var source = Connection?.Connected == true ? Connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
+        Observation = Context is { } context ? AuthorizedObservation.Create(Cards, source, context) : AuthorizedObservation.ForManager(source);
+        if (!Context.HasValue) Cards = Observation.Cards;
+        Rows = Observation.Rows;
+        await RefreshInventory();
+    }
+    private Guid TargetContext(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
+    private bool CanMonitor(ObservedResource row) => !ActionBusy && Supervisor.HasValue && (Demo || MonitorActionGuard.Allows(row, TargetContext(row), Connected, DateTimeOffset.UtcNow));
+    private void Prepare(ObservedResource row, TelephonyMonitorActionMode mode)
+    {
+        Pending = row; Mode = mode; ActionMessage = null; FocusConfirmation = true;
+    }
+    private void CancelAction() => Pending = null;
+    private async Task Confirm()
+    {
+        if (ActionBusy || Pending is null) return;
+        ActionBusy = true; ActionMessage = null;
+        var target = Pending; Pending = null;
+        try
+        {
+            if (Demo) { ActionMessage = Text["Demonstration: confirmation validated. No call was sent."]; return; }
+            await Access.Monitor(TargetContext(target), target.Id, Mode, lifetime.Token);
+            ActionMessage = Text["Request accepted by the exchange. Answer your extension. This does not confirm audio is connected yet."];
+        }
+        catch (Exception e) { ActionMessage = ErrorText(e) + Text[" No automatic retry. If the response was lost, check your extension before retrying."]; }
+        finally { ActionBusy = false; }
+    }
+    private string ErrorText(Exception e) => e is UnauthorizedAccessException or InvalidOperationException ? e.Message : e is OperationCanceledException ? Text["The query timed out or was interrupted. Try refreshing."] : Text["Could not query the telephony service. Try refreshing; if it persists, check the connection and permissions."];
+    private void SetFilter(string? value) { Filter = value ?? ""; Page = 0; WriteUrl(true); }
+    private void SetNode(string value) { Node = value; Page = 0; WriteUrl(); }
+    private void SetStatus(string value) { StatusFilter = value; Page = 0; Pending = null; WriteUrl(); }
+    private void SetTab(string value) { Tab = value; Page = 0; Pending = null; SettingsOpened |= value == "settings"; WriteUrl(); }
+    private void Previous() { Page = Math.Max(0, Page - 1); WriteUrl(); }
+    private void Next() { Page = Math.Min(Pages - 1, Page + 1); WriteUrl(); }
+    private void LoadDemo()
+    {
+        Cards = [new() { Label = "Hugo · atendimento", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] }, new() { Label = "Recepção", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/1001"] }, new() { Label = "Comercial", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/1002"] }, new() { Label = "Operadora · saída", Kind = EventsPanelCardKind.TRUNK, Channels = ["PJSIP/trunk-demo"] }, new() { Label = "Atendimento geral", Kind = EventsPanelCardKind.QUEUE, Channels = ["fila-demo"] }];
+        var now = DateTimeOffset.UtcNow;
+        var tenant = Guid.Parse("11111111-1111-7111-8111-111111111111");
+        Rows = [new("demo-call", "eveo-voip", "call", "PJSIP/6007-000000ab", "Up", "Cliente demonstração", "6007", tenant.ToString("N"), now.AddMinutes(-3), now, new Dictionary<string,string> { ["linkedid"] = "demo-linked-1" }),
+            new("demo-local-1", "eveo-voip", "call", "Local/6007@from-queue-0001;1", "Down", "Cliente demonstração", "6007", tenant.ToString("N"), now.AddMinutes(-3), now, new Dictionary<string,string> { ["linkedid"] = "demo-linked-1" }),
+            new("demo-local-2", "eveo-voip", "call", "Local/6007@from-queue-0001;2", "Ring", "Cliente demonstração", "6007", tenant.ToString("N"), now.AddMinutes(-3), now, new Dictionary<string,string> { ["linkedid"] = "demo-linked-1" }),
+            new("demo-uncorrelated", "google-voip", "call", "SIP/exemplo-sem-correlacao-000000cd", "Down", "Origem não informada", "", null, now.AddMinutes(-1), now, new Dictionary<string,string>()),
+            new("demo-peer", "apoint-voip", "peer", "PJSIP/1001", "Registered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", RegistrationObservedAt = now, LastRegisteredObservedAt = now, LastEventType = "PeerStatusEvent" } },
+            new("demo-trunk", "google-voip", "peer", "PJSIP/trunk-demo", "Reachable", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Reachability = "online", ReachabilityObservedAt = now, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
+            new("demo-agent", "eveo-voip", "agent", "fila-demo/PJSIP/6007", Text["In conversation"], "", "", null, now, now, new Dictionary<string,string> { ["queue"] = "fila-demo", ["paused"] = "false", ["membername"] = "Hugo" }),
+            new("demo-wait", "eveo-voip", "waiting", "PJSIP/demo-000000ac", "Aguardando", "Cliente demonstração", "", tenant.ToString("N"), now.AddSeconds(-43), now, new Dictionary<string,string> { ["queue"] = "fila-demo" }),
+            new("demo-hugo", "eveo-voip", "peer", "PJSIP/6007", "Reachable", "", "", null, now.AddMinutes(-8), now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", Reachability = "online", Device = "2", RegistrationObservedAt = now.AddMinutes(-7), LastRegisteredObservedAt = now.AddMinutes(-7), ReachabilityObservedAt = now, DeviceObservedAt = now, RoundTripMilliseconds = 12.5m, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
+            new("demo-other", "google-voip", "peer", "PJSIP/2003", "Unregistered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "unregistered", Reachability = "offline", RegistrationObservedAt = now, LastRegisteredObservedAt = now.AddMinutes(-6), ReachabilityObservedAt = now, LastEventType = "PeerStatusEvent" } }];
+        var demoObservation = AuthorizedObservation.Create(Cards, Rows, tenant);
+        demoTiles = OperatorTile.Create(Cards, demoObservation.ByCard);
+        // Dense operator-board fixture only: never mixed into production observations
+        // or the call/channel counting fixture above.
+        demoTiles = demoTiles.Concat(Enumerable.Range(1, 72).Select(i =>
+        {
+            var node = i % 3 == 0 ? "google-voip" : i % 3 == 1 ? "eveo-voip" : "apoint-voip";
+            var number = (6100 + i).ToString();
+            var resource = new ObservedResource("board-demo-" + i, node, "peer", "PJSIP/" + number,
+                "unknown", "", "", null, now, now, new Dictionary<string, string>())
+            { Peer = new PeerEvidence { Registration = i % 9 == 0 ? "unregistered" : i % 5 == 0 ? "unknown" : "registered",
+                Reachability = i % 9 == 0 ? "offline" : i % 5 == 0 ? "unknown" : "online",
+                Device = i % 11 == 0 ? "6" : i % 7 == 0 ? "2" : "unknown",
+                RegistrationObservedAt = now, ReachabilityObservedAt = now } };
+            return new OperatorTile(resource.Id, $"{number} · {new[] { "Atendimento", "Comercial", "Suporte", "Recepção" }[i % 4]}", node, EventsPanelCardKind.PEER, [resource]);
+        })).ToArray();
+        Supervisor = (Guid.Parse("22222222-2222-7222-8222-222222222222"), "Hugo · demonstração");
+        Observation = Context is { } context ? AuthorizedObservation.Create(Cards, Rows, context) : AuthorizedObservation.ForManager(Rows);
+        if (!Context.HasValue) Cards = Observation.Cards;
+        Rows = Observation.Rows;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        UrlReady = false; Navigation.LocationChanged -= LocationChanged; lifetime.Cancel();
+        if (loop is not null) await loop;
+        if (BoardPage) { try { await JS.InvokeVoidAsync("telephonyPanel.stopFitBoard"); } catch (JSDisconnectedException) { } catch (TaskCanceledException) { } }
+        lifetime.Dispose();
+    }
+}

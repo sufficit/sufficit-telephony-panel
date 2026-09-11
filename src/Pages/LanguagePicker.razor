@@ -1,0 +1,13 @@
+@inject IJSRuntime JS
+<div class="language-picker"><SUISelect T="string" Value="Text.Language" ValueChanged="ChangeLanguage" aria-label="Language / Idioma">
+    <SUISelectItem Value="@("en")">English</SUISelectItem>
+    <SUISelectItem Value="@("pt-BR")">Português</SUISelectItem>
+</SUISelect></div>
+@code {
+    [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
+    private async Task ChangeLanguage(string value)
+    {
+        Text.SetLanguage(value);
+        await JS.InvokeVoidAsync("telephonyPanel.setLanguage", Text.Language);
+    }
+}

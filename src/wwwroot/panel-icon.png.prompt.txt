@@ -1,0 +1,9 @@
+Built-in image_gen, 2026-09-10. Project-specific generated icon, not the corporate logo.
+Use case: logo-brand. Asset type: application icon for Sufficit Telephony Panel,
+internal telecom PBX monitoring application. Create a crisp professional app symbol,
+no text or letters, no mockup, no border frame. A distinctive orange (#EE6321)
+continuous telephone handset contour integrated with three small connected signal
+nodes, conveying telephony and three-server observation. Bold simple geometry
+legible at 32px, flat vector-like rendering, graphite (#1F2226) complementary detail,
+generous clear padding, genuinely transparent background and preserved alpha.
+Square composition 1024x1024. No gradients, no bevel, no glow, no generic wifi arcs.

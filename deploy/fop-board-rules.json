@@ -1,0 +1,264 @@
+{
+  "schema": 1,
+  "revision": "",
+  "showUnmatched": true,
+  "updatedAt": null,
+  "rules": [
+    {
+      "id": "01a08d2c31807061bfe87f50e15ad289",
+      "label": "IN-GTGI",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-gtgi",
+        "SIP/in-gtgi-panel"
+      ]
+    },
+    {
+      "id": "01a08d2c318173eab5ec4c882342f4ef",
+      "label": "IN-DATORA",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-dtr",
+        "SIP/in-dtr-67",
+        "SIP/in-dtr-161",
+        "SIP/in-dtr-162",
+        "SIP/in-dtr-163",
+        "SIP/in-dtr-188",
+        "SIP/in-dtr-189"
+      ]
+    },
+    {
+      "id": "01a08d2c3181715e874c429f975899b0",
+      "label": "IN-TVN",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-tvn-01",
+        "SIP/in-tvn-02",
+        "SIP/in-tvn-03",
+        "SIP/in-tvn-04",
+        "SIP/in-tvn-05",
+        "SIP/in-tvn-06"
+      ]
+    },
+    {
+      "id": "01a08d2c318172eb939ead564c4c0119",
+      "label": "IN-TIP",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-tip-01",
+        "SIP/in-tip-02",
+        "SIP/in-tip-03",
+        "SIP/in-tip-04"
+      ]
+    },
+    {
+      "id": "01a08d2c31817e668f206fb92dc949d7",
+      "label": "IN-BRDID",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-tvn-brdid-01",
+        "SIP/in-tvn-brdid-02",
+        "SIP/in-tvn-brdid-03",
+        "SIP/in-tvn-brdid-04",
+        "SIP/in-tvn-brdid-05",
+        "SIP/in-tvn-brdid-06",
+        "SIP/in-tvn-brdid-07",
+        "SIP/in-tvn-brdid-08",
+        "SIP/in-tvn-brdid-09",
+        "SIP/in-tvn-brdid-10",
+        "SIP/in-tvn-brdid-11",
+        "SIP/in-tvn-brdid-12",
+        "SIP/in-tvn-brdid-13",
+        "SIP/in-tvn-brdid-14",
+        "SIP/in-tvn-brdid-15",
+        "SIP/ext-tip-01",
+        "SIP/ext-tip-02",
+        "SIP/ext-tip-03",
+        "SIP/ext-tip-04"
+      ]
+    },
+    {
+      "id": "01a08d2c3181755b938cd1ea2af67a2f",
+      "label": "IN-DIRECTCALL",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-directcall-a",
+        "SIP/in-directcall-b",
+        "SIP/in-directcall-c",
+        "SIP/in-directcall-d",
+        "SIP/in-directcall-e"
+      ]
+    },
+    {
+      "id": "01a08d2c31817631935416242c28bedb",
+      "label": "EXT-FLUX",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/ext-flux-01",
+        "SIP/ext-flux-02",
+        "SIP/ext-flux-03",
+        "SIP/ext-flux-04"
+      ]
+    },
+    {
+      "id": "01a08d2c31817adc8bcc2c1da96e5964",
+      "label": "MIXED-ALGAR",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/mixed-algar-a",
+        "SIP/mixed-algar-b",
+        "SIP/mixed-algar-c",
+        "SIP/mixed-algar-d"
+      ]
+    },
+    {
+      "id": "01a08d2c318175c183a9d2e491d70802",
+      "label": "WHATSAPP",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "PJSIP/gateway-whatsapp-official",
+        "PJSIP/gateway-whatsapp-quepasa-inbound"
+      ]
+    },
+    {
+      "id": "01a08d2c31817f71ae4a44eb4b1fa7f8",
+      "label": "INBOUND",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/in-cittatelecom",
+        "SIP/in-ctbc",
+        "SIP/in-didww-1",
+        "SIP/in-didww-2",
+        "SIP/in-didww-3",
+        "SIP/in-falesempremais",
+        "SIP/in-flylink",
+        "SIP/in-fonetalk",
+        "SIP/in-gp4telecom",
+        "SIP/in-ibl-1",
+        "SIP/in-ipcorp",
+        "SIP/in-nvoip",
+        "SIP/in-nwi",
+        "SIP/in-pantanal",
+        "SIP/in-redtelecom",
+        "SIP/in-reverhost",
+        "SIP/in-reverhost-01",
+        "SIP/in-reverhost-02",
+        "SIP/in-reverhost-alternate",
+        "SIP/in-skype",
+        "SIP/in-skype-1",
+        "SIP/in-tollfreeforwarding",
+        "SIP/in-transit",
+        "SIP/in-transitbackup",
+        "SIP/in-twilio",
+        "SIP/in-twilio-0",
+        "SIP/in-twilio-1",
+        "SIP/in-twilio-2",
+        "SIP/in-twilio-3",
+        "SIP/in-unifique",
+        "SIP/in-viacel",
+        "SIP/in-viacel-2",
+        "SIP/in-vivo",
+        "SIP/in-voipdobrasil-new",
+        "SIP/in-voipdobrasil-old",
+        "SIP/in-vono",
+        "SIP/in-vono-1",
+        "SIP/in-vono-2",
+        "SIP/in-vono-3",
+        "SIP/in-vono-4",
+        "SIP/in-vono-6",
+        "SIP/in-vono-7",
+        "SIP/in-vono-9",
+        "SIP/mixed-marvin-upbytes",
+        "SIP/in-*"
+      ]
+    },
+    {
+      "id": "01a08d2c3181728bbd49df7309b0dce3",
+      "label": "ROTABRASIL",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/rotabrasil-01"
+      ]
+    },
+    {
+      "id": "01a08d2c31817423898c1ea5860ff938",
+      "label": "MIXED",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/mixed-hojetelecom",
+        "SIP/mixed-marvin-upbytes"
+      ]
+    },
+    {
+      "id": "01a08d2c318171fb984560a9ff233e20",
+      "label": "OUTBOUND",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "SIP/out-avatomovel",
+        "SIP/out-ccs-gsm",
+        "SIP/out-ccs-gsm-i",
+        "SIP/out-ccs-itx",
+        "SIP/out-eai",
+        "SIP/out-falemaisvoip",
+        "SIP/out-flux",
+        "SIP/out-gtgi",
+        "SIP/out-hivoox",
+        "SIP/out-i360",
+        "SIP/out-i360-cli",
+        "SIP/out-i360-gsm",
+        "SIP/out-i360-tdm",
+        "SIP/out-syssvoip",
+        "SIP/out-tipbrasil",
+        "SIP/out-vittel",
+        "SIP/outdtr07",
+        "SIP/outdtr06",
+        "SIP/outdtr05",
+        "SIP/outdtr04",
+        "SIP/outdtr03",
+        "SIP/outdtr02",
+        "SIP/outdtr01",
+        "SIP/outhdtel",
+        "SIP/outtlffixo",
+        "SIP/outvoiicr",
+        "SIP/out*"
+      ]
+    },
+    {
+      "id": "01a08d2c3181761383dfdd0c5a53f594",
+      "label": "GATEWAYS",
+      "kind": "trunk",
+      "node": "",
+      "enabled": true,
+      "patterns": [
+        "IAX2/gateway-phonevox",
+        "IAX2/dundi-internal"
+      ]
+    }
+  ]
+}

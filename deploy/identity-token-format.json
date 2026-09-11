@@ -1,0 +1,11 @@
+{
+  "Sufficit": {
+    "Identity": {
+      "Tokens": {
+        "AccessTokenFormatsByClient": {
+          "sufficit-telephony-panel": "Jwt"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "clientId": "sufficit-telephony-panel",
+  "clientName": "Sufficit Telephony Panel",
+  "tokenEndpointAuthMethod": "none",
+  "grantTypes": ["authorization_code"],
+  "scopes": ["openid", "profile", "roles"],
+  "redirectUris": [
+    "https://panel.sufficit.com.br/telephony-panel/signin-oidc",
+    "https://eveo-apps.sufficit.com.br/telephony-panel/signin-oidc"
+  ]
+}

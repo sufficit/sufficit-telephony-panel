@@ -1,0 +1,232 @@
+@page "/"
+@page "/board"
+@implements IAsyncDisposable
+@inject PanelAccess Access
+@inject FleetMetrics Metrics
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>@Text["Telephony · Sufficit Panel"]</PageTitle>
+<CascadingValue Name="PanelLanguage" Value="Text.Language">
+<SUIThemeProvider Theme="@(new PanelTheme(Dark))">
+<div class="panel-shell @(BoardPage ? "dedicated-board" : "")">
+    <a class="skip-link" href="#main">@Text["Skip to monitoring"]</a>
+    <header class="panel-header">
+        <a class="brand" href="./"><img src="panel-icon.png" width="44" height="44" alt="" /><span>Sufficit <strong>Telephony Panel</strong></span></a>
+        <div class="header-actions">
+            <LanguagePicker />
+            @if (BoardPage) { <SUIButton Href="@(Preview ? "./?preview=true" : "./")" VariantValue="SUIVariant.Text">@Text["Back to panel"]</SUIButton> }
+            <SUIButton OnClick="ToggleTheme" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton>
+            @if (Allowed)
+            {
+                <form method="post" action="logout"><AntiforgeryToken /><button class="signout" type="submit">@Text["Sign out"]</button></form>
+            }
+        </div>
+    </header>
+    <main id="main" tabindex="-1">
+    @if (!Ready)
+    {
+        <h1>@Text["Preparing your panel"]</h1><SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking access"]" />
+    }
+    else if (!Allowed)
+    {
+        <section class="entry">
+            <div><h1>@Text["Telephony under observation."]</h1><p>@Text["An operational view of the Apoint, Eveo and Google PBXs. Connection, load and history together, with the source and age of each reading."]</p>
+            <SUIButton Href="@LoginUrl" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
+            <aside><h2>@Text["Internal access"]</h2><p>@Text["Available only to users with the manager role. Permissions are checked on the server."]</p>
+            @if (LoginFailed) { <SUIAlert ToneValue="SUITone.Warning">@Text["Sign-in could not be completed. Try again; if it persists, ask the team to check the application's Identity registration."]</SUIAlert> }
+            <p class="muted">@Text["Customer access is not enabled yet. Call supervision requires telephony permission and explicit confirmation."]</p></aside>
+        </section>
+    }
+    else
+    {
+        @if (!BoardPage) { <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
+            <SUIButton OnClick="() => Operational = true" VariantValue="@(Operational ? SUIVariant.Filled : SUIVariant.Text)">@Text["Live telephony"]</SUIButton>
+            <SUIButton OnClick="() => Operational = false" VariantValue="@(!Operational ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton>
+        </nav> }
+        @if (Operational || BoardPage)
+        {
+            <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" />
+        }
+        else
+        {
+        <section class="heading">
+            <div><h1>@Text["Telephony operations"]</h1><p class="muted">@Text["Three PBXs. One clear infrastructure view."]</p></div>
+            <div class="tools">
+                <SUIButton OnClick="ToggleSound" VariantValue="SUIVariant.Outlined">@(Sound ? Text["Mute alerts"] : Text["Enable sounds"])</SUIButton>
+                <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Filled" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
+            </div>
+        </section>
+        @if (Preview) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
+        <div class="freshness" role="status"><span class="pulse @(Busy ? "reading" : "")"></span><span>@(Busy ? Text["Querying the exchange…"] : Text["Automatically refreshed every 30 seconds"])</span><span class="muted">@(Snapshot is null ? Text["Waiting for the first reading"] : Text.Format("Query: {0}", Snapshot.FetchedAt.ToLocalTime().ToString("T", Text.Culture)))</span></div>
+        @if (Snapshot?.Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Snapshot.Error)</SUIAlert> }
+        <div class="operations">
+            <section class="fleet" aria-labelledby="fleet-heading">
+                <h2 id="fleet-heading">@Text["Servers"]</h2>
+                <p class="muted">@Text["Select a server to inspect its reading."]</p>
+                @foreach (var item in Snapshot?.Nodes ?? [])
+                {
+                    <button class="node-row @(Selected == item.Id ? "selected" : "")" @onclick="() => Select(item.Id)" aria-pressed="@(Selected == item.Id)">
+                        <span class="node-name">@item.Name<span class="muted node-id">@item.Id</span></span>
+                        <span class="node-state @(item.Fresh ? "good" : "warning")"><span class="status-dot"></span>@(item.Fresh ? Text["Current collection"] : Text["No current reading"])</span>
+                        <span class="node-number">@Number(item.Calls)<small>@Text["calls on this node"]</small></span>
+                    </button>
+                }
+                <div class="fleet-note"><p>@Text["A call between servers may appear on multiple nodes. Values are not added as unique customers."]</p></div>
+            </section>
+            <section class="detail" @key="Selected" aria-labelledby="detail-heading">
+                @if (Current is { } node)
+                {
+                    <div class="detail-heading"><h2 id="detail-heading">@node.Name</h2><span class="state-label @(node.Fresh ? "good" : "warning")">@(node.Fresh ? Text["Reading available"] : Text["Check collection"])</span></div>
+                    <p class="muted">@(node.ObservedAt is { } at ? Text.Format("Collected at {0} · {1} s ago", at.ToLocalTime().ToString("G", Text.Culture), Number(node.AgeSeconds)) : Text["No valid collection received"])</p>
+                    <dl class="readings">
+                        <div><dt>@Text["Active calls"]</dt><dd>@Number(node.Calls)</dd></div>
+                        <div><dt>@Text["Open channels"]</dt><dd>@Number(node.Channels)</dd></div>
+                        <div><dt>@Text["Asterisk memory"]</dt><dd>@(node.ResidentBytes.HasValue ? $"{node.ResidentBytes / 1048576:N0} MiB" : "—")</dd></div>
+                        <div><dt>@Text["AMI connection"]</dt><dd class="text-value">@(node.AmiUp switch { true => Text["Connected"], false => Text["Disconnected"], _ => Text["Unknown"] })</dd></div>
+                    </dl>
+                    <details class="internals"><summary>@Text["Asterisk internal work"]</summary><dl><div><dt>Threads</dt><dd>@Number(node.Threads)</dd></div><div><dt>@Text["Waiting tasks"]</dt><dd>@Number(node.Queued)</dd></div><div><dt>@Text["Stasis tasks"]</dt><dd>@Number(node.StasisQueued)</dd></div><div><dt>@Text["Processors at capacity"]</dt><dd>@Number(node.HighWater)</dd></div></dl><p>@Text["These are internal tasks, not people waiting in a call queue."]</p></details>
+                }
+            </section>
+        </div>
+        <section class="history" aria-labelledby="history-heading">
+            <div class="history-heading"><div><h2 id="history-heading">@Text["History"] · @Current?.Name</h2><p class="muted">@Text["Collected readings, not a forecast. Gaps indicate missing samples."]</p></div>
+                <div class="history-controls"><SUISelect T="string" Label="@Text["Indicator"]" Value="Metric" ValueChanged="ChangeMetric"><SUISelectItem Value="@("calls")">@Text["Active calls"]</SUISelectItem><SUISelectItem Value="@("memory")">@Text["Memory (MiB)"]</SUISelectItem><SUISelectItem Value="@("work")">@Text["Internal tasks"]</SUISelectItem></SUISelect>
+                <SUISelect T="int" Label="@Text["Period"]" Value="Hours" ValueChanged="ChangeHours"><SUISelectItem Value="1">@Text["Last hour"]</SUISelectItem><SUISelectItem Value="6">@Text["Last 6 hours"]</SUISelectItem><SUISelectItem Value="24">@Text["Last 24 hours"]</SUISelectItem></SUISelect></div>
+            </div>
+            @if (HistoryBusy) { <div class="empty-chart" role="status">@Text["Loading history…"]</div> }
+            else if (HistoryError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(HistoryError)</SUIAlert> }
+            else if (Points.Count == 0) { <div class="empty-chart">@Text["No samples in this period. Choose another period or refresh."]</div> }
+            else
+            {
+                <div class="chart-scale"><span>@ChartMax.ToString("N0", Text.Culture) @(Metric == "memory" ? "MiB" : "")</span><span>0</span></div>
+                <svg class="history-chart" viewBox="0 0 1000 180" role="img" aria-label="@Text.Format("History of {0} samples; minimum {1:N0}, maximum {2:N0}.", Points.Count, ChartMin, ChartMax)" preserveAspectRatio="none">
+                    <path d="M 0 179 H 1000 M 0 90 H 1000" class="chart-guide" />
+                    <path d="@ChartPath" class="chart-line" />
+                    @foreach (var point in Points) { <circle cx="@PlotX(point)" cy="@PlotY(point)" r="2" class="chart-point" /> }
+                </svg>
+                <div class="chart-times"><span>@HistoryStart.ToLocalTime().ToString("g", Text.Culture)</span><span>@HistoryEnd.ToLocalTime().ToString("g", Text.Culture)</span></div>
+                <details><summary>@Text["View recent samples in a table"]</summary><table class="sample-table"><thead><tr><th>@Text["Time"]</th><th>@Text["Value"] @(Metric == "memory" ? "(MiB)" : "")</th></tr></thead><tbody>@foreach (var point in Points.TakeLast(12).Reverse()) { <tr><td>@point.At.ToLocalTime().ToString("HH:mm:ss")</td><td>@Scale(point.Value).ToString("N1", Text.Culture)</td></tr> }</tbody></table></details>
+            }
+        </section>
+        <section class="alerts"><h2>@Text["Observed alerts"]</h2>
+            @if (Snapshot?.Error is not null || Snapshot?.Nodes.All(n => !n.Fresh) != false) { <p>@Text["Alert status is unconfirmed. Check collection availability."]</p> }
+            else if (Snapshot.Alerts.Count == 0) { <p class="good">@Text["No active alerts returned in the last query."]</p> }
+            else { @foreach (var alert in Snapshot.Alerts) { <div class="alert-row"><span class="warning">@(alert.State == "firing" ? Text["Active"] : Text["Pending"])</span><strong>@AlertTitle(alert.Name)</strong><span>@(string.IsNullOrEmpty(alert.Node) ? Text["Exchange"] : alert.Node)</span></div> } }
+            <p class="muted">@Text["Sounds announce new active alerts while this page is open. No notifications are sent to customers."]</p>
+        </section>
+        }
+    }
+    </main>
+    @if (!BoardPage) { <footer><span>@Text["Sufficit Telephony Panel · testing on Eveo"]</span><span>@Text["Internal manager access · per-customer permissions"]</span></footer> }
+</div>
+</SUIThemeProvider>
+</CascadingValue>
+
+@code {
+    private bool BoardPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/board", StringComparison.Ordinal);
+    private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
+    private bool Ready, Allowed, Busy, Sound, Dark, Preview, HistoryBusy;
+    private bool Operational = true;
+    private string Selected = "apoint-voip", Metric = "calls";
+    private int Hours = 1;
+    private FleetSnapshot? Snapshot;
+    private IReadOnlyList<HistoryPoint> Points = [];
+    private string? HistoryError;
+    private readonly CancellationTokenSource lifetime = new();
+    private Task? loop;
+    private int historyRequest;
+    private DateTimeOffset HistoryStart, HistoryEnd;
+    private HashSet<string> PreviousAlerts = [];
+    private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal);
+    private NodeSnapshot? Current => Snapshot?.Nodes.FirstOrDefault(n => n.Id == Selected);
+    private string Number(double? value) => value?.ToString("N0", Text.Culture) ?? "—";
+    private double Scale(double value) => Metric == "memory" ? value / 1048576 : value;
+    private double ChartMax => Points.Count > 0 ? Points.Max(p => Scale(p.Value)) : 0;
+    private double ChartMin => Points.Count > 0 ? Points.Min(p => Scale(p.Value)) : 0;
+    private string PlotX(HistoryPoint point) => ((point.At - HistoryStart).TotalSeconds / Math.Max((HistoryEnd - HistoryStart).TotalSeconds, 1) * 1000).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+    private string PlotY(HistoryPoint point) => (175 - Scale(point.Value) / Math.Max(ChartMax, 1) * 165).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+    private string ChartPath
+    {
+        get
+        {
+            if (Points.Count == 0) return "";
+            var path = new System.Text.StringBuilder();
+            DateTimeOffset? previous = null;
+            foreach (var point in Points)
+            {
+                var move = previous is null || (point.At - previous.Value).TotalSeconds > Math.Max(140, Hours * 15);
+                path.Append($"{(move ? "M" : "L")}{PlotX(point)},{PlotY(point)} ");
+                previous = point.At;
+            }
+            return path.ToString();
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (!first) return;
+        Text.Changed += LanguageChanged;
+        Text.SetLanguage(await JS.InvokeAsync<string>("telephonyPanel.language"));
+        await JS.InvokeVoidAsync("telephonyPanel.setLanguage", Text.Language);
+        Dark = await JS.InvokeAsync<bool>("telephonyPanel.dark");
+        Preview = Environment.IsDevelopment() && Navigation.Uri.Contains("preview=true", StringComparison.Ordinal);
+        await Refresh(); Ready = true; StateHasChanged();
+        loop = Poll();
+    }
+    private async Task Poll()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        try { while (await timer.WaitForNextTickAsync(lifetime.Token)) await InvokeAsync(Refresh); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    }
+    private async Task Refresh()
+    {
+        if (Busy) return;
+        Busy = true;
+        try
+        {
+            Allowed = Preview || await Access.AllowedAsync(lifetime.Token);
+            if (!Allowed) { Snapshot = null; Points = []; return; }
+            Snapshot = Preview ? PreviewSnapshot() : await Metrics.ReadAsync(lifetime.Token);
+            var active = Snapshot.Alerts.Where(a => a.State == "firing").Select(a => a.Name + a.Node).ToHashSet();
+            if (Sound && active.Except(PreviousAlerts).Any()) await JS.InvokeVoidAsync("telephonyPanel.alert");
+            PreviousAlerts = active;
+            await ReadHistory();
+        }
+        finally { Busy = false; StateHasChanged(); }
+    }
+    private async Task ReadHistory()
+    {
+        var request = ++historyRequest;
+        HistoryError = null; Points = []; HistoryBusy = true;
+        try
+        {
+            if (!Preview && !await Access.AllowedAsync(lifetime.Token)) { Allowed = false; Snapshot = null; return; }
+            var end = DateTimeOffset.UtcNow;
+            var series = Preview ? new HistorySeries(end.AddHours(-Hours), end, Enumerable.Range(0, 61).Select(i => new HistoryPoint(end.AddMinutes(i - 60), 14 + Math.Sin(i / 7.0) * 7)).ToArray())
+                : await Metrics.HistoryAsync(Selected, Metric, Hours, lifetime.Token);
+            if (request == historyRequest) { Points = series.Points; HistoryStart = series.Start; HistoryEnd = series.End; }
+        }
+        catch (Exception e) when (e is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException or OperationCanceledException or IOException)
+        { if (request == historyRequest) HistoryError = Text["History is unavailable right now. Try refreshing shortly."]; }
+        finally { if (request == historyRequest) HistoryBusy = false; }
+    }
+    private async Task Select(string node) { if (Busy) return; Selected = node; await ReadHistory(); }
+    private async Task ChangeMetric(string value) { Metric = value; await ReadHistory(); }
+    private async Task ChangeHours(int value) { Hours = value; await ReadHistory(); }
+    private async Task ToggleTheme() { Dark = !Dark; await JS.InvokeVoidAsync("telephonyPanel.theme", Dark); }
+    private async Task ToggleSound() { Sound = !Sound; if (Sound) await JS.InvokeVoidAsync("telephonyPanel.enableSound"); }
+    private string AlertTitle(string name) => name switch
+    {
+        "PbxAmiCollectorUnavailable" => Text["AMI collector unavailable"], "PbxAmiNodeDisconnected" => Text["AMI disconnected"],
+        "PbxAmiNodeMissing" => Text["Server missing from AMI collection"], "PbxAmiReceiveLimitExceeded" => Text["AMI receive limit exceeded"],
+        "PbxAmiReconnectChurn" => Text["Frequent AMI reconnections"], "PbxOperationalScrapeUnavailable" => Text["Operational collection unavailable"],
+        "PbxOperationalSampleInvalid" => Text["Invalid or stale operational sample"], "PbxTaskprocessorHighWater" => Text["Internal queue at capacity"], _ => name
+    };
+    private static FleetSnapshot PreviewSnapshot() => new(DateTimeOffset.UtcNow,
+        FleetMetrics.NodeIds.Select((id, i) => new NodeSnapshot(id, new[] { "Apoint", "Eveo", "Google" }[i], true, true, 12, 18 + i * 31, 36 + i * 62, (410 + i * 330) * 1048576, 84 + i * 20, 0, 0, 0, null, DateTimeOffset.UtcNow.AddSeconds(-12))).ToArray(), [], null);
+    private void LanguageChanged() => _ = InvokeAsync(StateHasChanged);
+    public async ValueTask DisposeAsync() { Text.Changed -= LanguageChanged; lifetime.Cancel(); if (loop is not null) await loop; lifetime.Dispose(); }
+}

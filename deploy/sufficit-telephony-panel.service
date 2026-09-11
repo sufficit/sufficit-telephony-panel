@@ -1,0 +1,48 @@
+[Unit]
+Description=Sufficit Telephony Panel (internal manager console)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+SyslogIdentifier=sufficit-telephony-panel
+User=sufftelpanel
+Group=sufftelpanel
+WorkingDirectory=/opt/sufficit-telephony-panel/current
+ExecStart=/usr/bin/dotnet /opt/sufficit-telephony-panel/current/Sufficit.Telephony.Panel.dll
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment="AllowedHosts=localhost;127.0.0.1;eveo-apps.sufficit.com.br;panel.sufficit.com.br"
+Environment=Panel__PathBase=
+Environment=Panel__Socket=/run/sufficit-telephony-panel/panel.sock
+Environment=Panel__KeyDirectory=/var/lib/sufficit-telephony-panel/keys
+# Enabled after the Identity manifest apply and successful scoped authorization probe.
+Environment=Panel__RequestEntitlements=true
+# Eveo LXC rejects systemd credential mounts (243/CREDENTIALS).
+# Root owns this file; only the dedicated service group has read access (0640).
+Environment=Metrics__PasswordFile=/etc/sufficit/telephony-panel/metrics-password
+RuntimeDirectory=sufficit-telephony-panel
+RuntimeDirectoryMode=0750
+StateDirectory=sufficit-telephony-panel
+StateDirectoryMode=0700
+ExecStartPre=+/usr/bin/setfacl -m u:www-data:rx /run/sufficit-telephony-panel
+ExecStartPre=+/usr/bin/setfacl -m d:u:www-data:rwX /run/sufficit-telephony-panel
+UMask=0007
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryHigh=384M
+MemoryMax=512M
+CPUQuota=100%
+TasksMax=256
+Environment=DOTNET_GCHeapHardLimit=0x10000000
+
+[Install]
+WantedBy=multi-user.target

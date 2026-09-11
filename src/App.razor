@@ -1,12 +1,26 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView>
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+@inject IConfiguration Configuration
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="@((Configuration["Panel:PathBase"] ?? "").TrimEnd('/') + "/")" />
+    <link rel="icon" type="image/png" href="@Assets["panel-icon.png"]" />
+    <link rel="stylesheet" href="@Assets["_content/Sufficit.Blazor.UI/sufficit-ui.css"]" />
+    <link rel="stylesheet" href="@Assets["panel.css"]" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+<body>
+<!-- THESIS: observe three real PBXs without confusing stale data with zero load.
+OWN-WORLD: user-pinned Sufficit SUI, orange identity, graphite operational surfaces.
+STORY: select an authorized client, inspect calls and queues; infrastructure remains a separate view.
+FIRST VIEWPORT: user-pinned operator mosaic, dense endpoint grid left, known trunks/channel rail right;
+optional company filter, text/state legend and per-node detail, protected confirmation for supervision.
+SETTINGS: SUI rule list and inline editor; ordered exact/prefix matches, draft preview and explicit shared save.
+FORM: established SUI operational world, not a new visual-world selection.
+FINISH: bounded motion, opt-in sound, desktop/mobile evidence and finish review. -->
+    <Routes @rendermode="InteractiveServer" />
+    <script src="@Assets["panel.js"]"></script>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
