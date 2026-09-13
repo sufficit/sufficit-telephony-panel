@@ -1,4 +1,10 @@
 html,body { margin:0; min-height:100%; } * { box-sizing:border-box; }
+@media(max-width:600px) {
+ .panel-shell:not(.board-only) .panel-header { flex-wrap:wrap; }
+ .panel-shell:not(.board-only) .header-actions { flex-wrap:wrap; gap:8px; }
+ .panel-shell:not(.board-only) .header-actions .sui-btn,
+ .panel-shell:not(.board-only) .header-actions .signout { flex-shrink:0; white-space:nowrap; }
+}
 html:has(.board-resource-dialog[open]) { overflow:hidden; }
 .board-resource-dialog { position:fixed; inset:0; margin:auto; width:min(1040px,calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 32px); padding:0; border:1px solid var(--sui-border-strong); border-radius:8px; background:var(--sui-surface); color:var(--sui-text-primary); font-family:var(--sui-font); overflow:hidden; }
 .board-resource-dialog[open] { display:flex; flex-direction:column; }

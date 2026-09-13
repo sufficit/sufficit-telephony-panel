@@ -1,0 +1,7 @@
+.acd-filters { display: flex; flex-wrap: wrap; gap: var(--sui-space-4); align-items: end; }
+.acd-filters ::deep .sui-field { flex: 1 1 240px; min-width: 0; }
+.acd-source { margin-top: var(--sui-space-8); }
+.acd-scope { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.acd-visits { margin-block: var(--sui-space-4); overflow-wrap: anywhere; }
+.acd-visits summary { cursor: pointer; }
+small { display: block; }

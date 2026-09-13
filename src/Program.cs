@@ -68,7 +68,7 @@ builder.Services.AddScoped<OperationsAccess>();
 builder.Services.AddHttpClient("acd-board", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(3);
-    client.MaxResponseContentBufferSize = 1024 * 1024;
+    client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton(sp => new AcdBoardReader(builder.Configuration.GetSection("Panel:AcdSources")
     .Get<AcdBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>()));

@@ -7,6 +7,7 @@ using Sufficit.Telephony.Panel.Monitoring;
 var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PanelTextChecks.Run(Check);
+RegistrationChecks.Run(Check);
 var clock = new FakeClock();
 var http = new FakeHttp { Body = "{\"sub\":\"operator-a\",\"role\":[\"manager\"]}" };
 using var sessions = new PanelSessions(http, clock);

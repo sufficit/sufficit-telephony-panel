@@ -1,0 +1,117 @@
+@implements IAsyncDisposable
+@using Sufficit.Telephony.Panel.Operations
+@inject AcdBoardAccess Access
+@inject NavigationManager Navigation
+@inject IWebHostEnvironment Environment
+
+<section class="acd-monitor" aria-labelledby="acd-title">
+    <div class="heading"><div><h1 id="acd-title">@Text["Queues and registration"]</h1>
+        <p class="muted">@Text["Observe queue stages and investigate extension registrations. Configuration stays in the management portal."]</p></div>
+        <SUIButton Href="@ManagementUrl" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage queues"]</SUIButton>
+    </div>
+    @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
+    <div class="acd-filters">
+        <SUISelect T="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
+            <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
+            @foreach (var context in Samples.Select(s => s.ContextId.ToString("N")).Distinct().Order())
+            { <SUISelectItem Value="@context">@context</SUISelectItem> }
+        </SUISelect>
+        <SUISelect T="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
+            <SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>
+            @foreach (var node in Samples.Select(s => s.Node).Distinct().Order())
+            { <SUISelectItem Value="@node">@node</SUISelectItem> }
+        </SUISelect>
+        <SUITextField T="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
+        <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
+    </div>
+    <p class="muted">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
+    @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
+    @if (!Busy && Error is null && !FilteredSamples.Any())
+    { <p class="operation-empty">@Text["No monitoring source matches these filters. Clear filters or check source configuration."]</p> }
+    @foreach (var sample in FilteredSamples)
+    {
+        var snapshot = sample.Snapshot;
+        var fresh = sample.Available && snapshot?.Fresh(DateTimeOffset.UtcNow) == true;
+        <section class="acd-source" @key="(sample.Node, sample.ContextId)">
+            <h2>@sample.Node <SUIChip SizeValue="SUISize.Small" ColorValue="@(fresh ? SUIColor.Success : SUIColor.Warning)">@Text[fresh ? "Current collection" : "No current data"]</SUIChip></h2>
+            <p class="muted acd-scope">@Text["Context"]: @sample.ContextId.ToString("N") · @Time(snapshot?.ObservedAt)</p>
+            @if (!sample.Available) { <SUIAlert ToneValue="SUITone.Warning">@Text["Source unavailable. Retained details are historical, not live state. Try refreshing."]</SUIAlert> }
+            @if (snapshot is not null)
+            {
+                <SUITable T="AcdBoardQueue" Items="snapshot.Queues.Where(q => Matches(q.Title + q.QueueId) && (QueueId.Length == 0 || q.QueueId == QueueId))" Dense="true" StackOnMobile="true" ColumnCount="7">
+                    <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
+                    <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title</SUITd>
+                        <SUITd DataLabel="@Text["Greeting"]">@Count(context.Greeting, fresh)</SUITd>
+                        <SUITd DataLabel="@Text["Waiting"]">@Count(Math.Max(0, context.Waiting - context.Greeting - context.Offering), fresh)
+                            @if (fresh && context.Announcing > 0) { <small>@Text.Format("{0} hearing an announcement", context.Announcing)</small> }</SUITd>
+                        <SUITd DataLabel="@Text["Offering"]">@Count(context.Offering, fresh)</SUITd>
+                        <SUITd DataLabel="@Text["In conversation"]">@Count(context.Connected, fresh)</SUITd>
+                        <SUITd DataLabel="@Text["Capacity"]">@context.Capacity</SUITd>
+                        <SUITd DataLabel="@Text["Longest wait"]">@(fresh && context.OldestEnteredAt is { } at ? $"{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
+                    <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
+                </SUITable>
+                <details class="acd-visits"><summary>@Text["Observed queue calls"] (@(snapshot.Visits?.Length ?? 0))</summary>
+                    @foreach (var visit in (snapshot.Visits ?? []).Where(v => (QueueId.Length == 0 || v.QueueId == QueueId) && Matches(v.Caller + v.ChannelName + snapshot.Queues.FirstOrDefault(q => q.QueueId == v.QueueId)?.Title)))
+                    { <p>@(snapshot.Queues.FirstOrDefault(q => q.QueueId == visit.QueueId)?.Title) · @visit.Caller · @Text[Phase(visit.Phase)] · @Time(visit.EnteredAt)<br /><code>@visit.ChannelName</code></p> }
+                </details>
+                <AcdRegistrationTable Agents="@((snapshot.Agents ?? []).Where(a => Matches(a.Extension + string.Join(" ", (a.Contacts ?? []).Select(c => c.IpAddress + " " + c.UserAgent)))).ToArray())" Fresh="fresh" />
+            }
+        </section>
+    }
+</section>
+
+@code {
+    [Parameter] public bool Preview { get; set; }
+    private bool Demo => Preview && Environment.IsDevelopment();
+    private AcdBoardSample[] Samples = [];
+    private string Context = "", Node = "all", Search = "", QueueId = "";
+    private bool Busy, Disposed;
+    private string? Error;
+    private readonly CancellationTokenSource Lifetime = new();
+    private Task? Loop;
+    private string SelectedNode => Node == "all" ? "all" : Samples.FirstOrDefault(s => s.MatchesNode(Node))?.Node ?? Node;
+    private IEnumerable<AcdBoardSample> FilteredSamples => Samples.Where(s => (Context.Length == 0 || s.ContextId.ToString("N") == Context) && s.MatchesNode(Node));
+    private string ManagementUrl => "https://blazor.sufficit.com.br/pages/telephony/acd" + (Context.Length > 0 ? "?contextid=" + Context : "");
+    protected override async Task OnInitializedAsync()
+    {
+        ReadUrl(); Navigation.LocationChanged += LocationChanged;
+        await Refresh(); Loop = Poll();
+    }
+    private void ReadUrl()
+    {
+        var query = BoardViewQuery.Parse(Navigation.Uri);
+        Context = query.ContextId?.ToString("N") ?? ""; Node = query.Node; Search = query.Text;
+        var raw = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        QueueId = raw.TryGetValue("queueid", out var value) && value.Count == 1 && Guid.TryParse(value[0], out var id) ? id.ToString("N") : "";
+        if (Guid.TryParse(Node, out var nodeId)) Node = nodeId.ToString("N");
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args) { ReadUrl(); _ = InvokeAsync(StateHasChanged); }
+    private void WriteUrl() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        { ["contextid"] = Context.Length == 0 ? null : Context, ["company"] = null, ["node"] = Node == "all" ? null : Node, ["q"] = Search.Length == 0 ? null : Search, ["queueid"] = QueueId.Length == 0 ? null : QueueId }), replace: true);
+    private void ChangeContext(string value) { Context = value; QueueId = ""; WriteUrl(); }
+    private void ChangeNode(string value) { Node = value; WriteUrl(); }
+    private void ChangeSearch(string value) { Search = value ?? ""; WriteUrl(); }
+    private bool Matches(string? value) => Search.Length == 0 || value?.Contains(Search, StringComparison.OrdinalIgnoreCase) == true;
+    private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
+    private static string Count(int value, bool fresh) => fresh ? value.ToString() : "—";
+    private static string Phase(string value) => value switch { "greeting" => "Greeting", "waiting" => "Waiting", "announcing" => "Announcement", "offering" => "Offering", "connected" => "In conversation", _ => "Unknown" };
+    private async Task Refresh()
+    {
+        if (Busy || Disposed) return;
+        Busy = true; Error = null;
+        try { Samples = Demo ? AcdMonitorFixture.Create() : await Access.Read(null, Lifetime.Token); }
+        catch (UnauthorizedAccessException) { Samples = []; Error = "Your access expired. Sign in again."; }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException)
+        { Samples = Samples.Select(s => s with { Available = false }).ToArray(); Error = "Monitoring is unavailable. Try refreshing."; }
+        finally { Busy = false; if (!Disposed) StateHasChanged(); }
+    }
+    private async Task Poll()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        try { while (await timer.WaitForNextTickAsync(Lifetime.Token)) await InvokeAsync(async () => { if (Error is null) await Refresh(); else StateHasChanged(); }); }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+    }
+    public async ValueTask DisposeAsync() { Disposed = true; Navigation.LocationChanged -= LocationChanged; Lifetime.Cancel(); if (Loop is not null) await Loop; Lifetime.Dispose(); }
+}

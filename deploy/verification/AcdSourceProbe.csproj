@@ -12,6 +12,7 @@
     <Compile Include="../../src/Operations/AcdBoardSource.cs" Link="AcdBoardSource.cs" />
     <Compile Include="../../src/Operations/AcdBoardSample.cs" Link="AcdBoardSample.cs" />
     <Compile Include="../../src/Operations/AcdBoardSnapshot.cs" Link="AcdBoardSnapshot.cs" />
+    <Compile Include="../../src/Operations/AcdAgentPresence.cs" Link="AcdAgentPresence.cs" />
     <Compile Include="../../src/Operations/AcdBoardQueue.cs" Link="AcdBoardQueue.cs" />
     <Compile Include="../../src/Operations/AcdBoardVisit.cs" Link="AcdBoardVisit.cs" />
   </ItemGroup>

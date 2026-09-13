@@ -67,18 +67,18 @@ public sealed class AcdBoardReader : IDisposable
             request.Headers.Authorization = new("Bearer", key);
             using var response = await clients.CreateClient("acd-board").SendAsync(request, budget);
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                return slot.Value = new(slot.Source.Node, slot.Context, null, false);
+                return slot.Value = new(slot.Source.Node, slot.Context, null, false, slot.Source.NodeId);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(budget);
-            if (json.Length > 1024 * 1024) throw new InvalidDataException("ACD snapshot exceeds its bound.");
+            if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("ACD snapshot exceeds its bound.");
             var snapshot = JsonSerializer.Deserialize<AcdBoardSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             if (snapshot is null || !ValidSnapshot(snapshot, slot.Context, slot.Source.NodeId)) throw new InvalidDataException("Invalid ACD snapshot scope or shape.");
-            return slot.Value = new(slot.Source.Node, slot.Context, snapshot, true);
+            return slot.Value = new(slot.Source.Node, slot.Context, snapshot, true, slot.Source.NodeId);
         }
         catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or JsonException or UnauthorizedAccessException or OperationCanceledException)
         {
             caller.ThrowIfCancellationRequested();
-            var failed = new AcdBoardSample(slot.Source.Node, slot.Context, slot.Value?.Snapshot, false);
+            var failed = new AcdBoardSample(slot.Source.Node, slot.Context, slot.Value?.Snapshot, false, slot.Source.NodeId);
             if (locked) { slot.Attempted = clock.GetUtcNow(); slot.Value = failed; }
             return failed;
         }
@@ -88,6 +88,17 @@ public sealed class AcdBoardReader : IDisposable
     {
         static bool Id(string? value) => Guid.TryParseExact(value, "N", out var id) && id != Guid.Empty;
         static bool Text(string? value, int max) => value is null || value.Length <= max && !value.Any(char.IsControl);
+        static bool Contacts(AcdContact[]? contacts) => contacts is null || contacts.Length <= 16 && contacts.All(c =>
+            c is not null && Text(c.Endpoint, 256) && Text(c.UserAgent, 160) &&
+            (c.IpAddress is null || IPAddress.TryParse(c.IpAddress, out _)) &&
+            (c.ViaAddress is null || IPAddress.TryParse(c.ViaAddress, out _)));
+        if (s.Agents is not null && (s.Agents.Length > 128 ||
+            s.Agents.Select(a => a?.Extension).Distinct().Count() != s.Agents.Length ||
+            s.Agents.Any(a => a is null || !Guid.TryParse(a.ContextId, out var scope) || scope != context ||
+                string.IsNullOrWhiteSpace(a.Extension) || !Text(a.Extension, 128) || !Contacts(a.Contacts) ||
+                a.RegistrationHistory is not null && (a.RegistrationHistory.Length > 20 || a.RegistrationHistory.Any(h =>
+                    h is null || h.Event is not ("observed" or "registered" or "renewed" or "unregistered" or "changed" or "unknown") ||
+                    !Contacts(h.Contacts)))))) return false;
         if (!Guid.TryParseExact(s.ContextId, "N", out var actualContext) || actualContext != context ||
             !Guid.TryParseExact(s.NodeId, "N", out var actualNode) || actualNode != node || s.Queues is null || s.Queues.Length > 2000 ||
             s.Queues.Any(q => q is null || !Id(q.QueueId) || string.IsNullOrWhiteSpace(q.Title) || !Text(q.Title, 256) ||

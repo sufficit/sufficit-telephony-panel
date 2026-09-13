@@ -78,6 +78,16 @@ else
             @BoardContent
         }
         else if (Tab == "settings") { }
+        else if (Tab == "events")
+        {
+            <p class="muted">@Text["Latest observed event per resource. This diagnostic view is bounded, not a complete AMI event log."]</p>
+            <SUITable T="ObservedResource" Items="VisibleEvents.Skip(Page * PageSize).Take(PageSize)" Dense="true" StackOnMobile="true" ColumnCount="5">
+                <HeaderContent><SUITh>@Text["Server"]</SUITh><SUITh>@Text["Resource"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Last event"]</SUITh><SUITh>@Text["Details"]</SUITh></HeaderContent>
+                <RowTemplate><SUITd DataLabel="@Text["Server"]">@context.Node</SUITd><SUITd DataLabel="@Text["Resource"]">@context.Key</SUITd><SUITd DataLabel="@Text["Observed state"]">@ResourceState(context)</SUITd><SUITd DataLabel="@Text["Last event"]">@Timestamp(context.Updated)<br />@context.Peer?.LastEventType</SUITd>
+                    <SUITd DataLabel="@Text["Details"]"><details><summary>@Text["View details"]</summary>@foreach (var pair in context.Details) { <p>@pair.Key: @pair.Value</p> }</details></SUITd></RowTemplate>
+                <NoRecordsContent>@Text["No observed events match these filters."]</NoRecordsContent>
+            </SUITable>
+        }
         else if (Tab == "calls")
         {
             var groups = VisibleGroups;
@@ -476,7 +486,7 @@ else
     private DateTimeOffset AuthorizationChecked;
     private const int PageSize = 30;
     private int Page;
-    private (string Key, string Label)[] Tabs => [("board", Text["Operation board"]), ("extensions", Text["Extensions"]), ("calls", Text["Calls"]), ("channels", Text["Channels"]), ("trunks", Text["Trunks"]), ("queues", Text["Call queues"]), ("settings", Text["Configure board"])];
+    private (string Key, string Label)[] Tabs => [("board", Text["Operation board"]), ("extensions", Text["Extensions"]), ("calls", Text["Calls"]), ("channels", Text["Channels"]), ("trunks", Text["Trunks"]), ("queues", Text["Call queues"]), ("settings", Text["Configure board"]), ("events", Text["Events"])];
     private ObservedCallGroup[] CallGroups => callGroups;
     private ObservedCallGroup[] VisibleGroups => ObservedCallGroup.Filter(CallGroups, MatchesChannel);
     private bool Connected => Demo || Connection?.Connected == true;
@@ -492,11 +502,12 @@ else
     private bool MatchStatus(ObservedResource row) => StatusFilter switch { "all" => true, "online" or "offline" => row.Peer?.Reachability == StatusFilter, "registered" or "unregistered" => row.Peer?.Registration == StatusFilter, "unknown" => row.Kind == "peer" && (row.Peer is null || row.Peer.Registration == "unknown"), "busy" => row.Kind == "call" || row.Peer?.DeviceLabel is "Em uso" or "Ocupado" or "Tocando" or "Tocando em uso", _ => false };
     private static string CardKey(EventsPanelCardInfo card) => card.Kind + "|" + card.Label + "|" + string.Join(";", card.Channels);
     private string Timestamp(DateTimeOffset? value) => value?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not reported"];
-    private int TotalVisible => Tab == "calls" ? VisibleGroups.Length : Tab == "channels" ? VisibleChannels.Length : VisibleCards.Length;
+    private ObservedResource[] VisibleEvents => Observation.Rows.Where(r => MatchNode(r) && MatchStatus(r) && MatchText(r.Key + " " + r.Caller + " " + r.State)).OrderByDescending(r => r.Updated).ToArray();
+    private int TotalVisible => Tab == "events" ? VisibleEvents.Length : Tab == "calls" ? VisibleGroups.Length : Tab == "channels" ? VisibleChannels.Length : VisibleCards.Length;
     private int Pages => Math.Max(1, (TotalVisible + PageSize - 1) / PageSize);
     private ObservedResource[] Related(EventsPanelCardInfo card) => Observation.ByCard.TryGetValue(card, out var values) ? values.Where(MatchNode).ToArray() : [];
     private string LabelFor(ObservedResource row) => Observation.Labels.GetValueOrDefault(row.Id, row.Key);
-    private int Count(string tab) => tab == "settings" ? BoardConfiguration.Rules.Length : tab == "board" ? VisibleTiles.Length : tab == "calls" ? VisibleGroups.Count(g => g.Correlated) : tab == "channels" ? VisibleChannels.Length : Cards.Count(c => c.Kind == TabKind(tab));
+    private int Count(string tab) => tab == "events" ? VisibleEvents.Length : tab == "settings" ? BoardConfiguration.Rules.Length : tab == "board" ? VisibleTiles.Length : tab == "calls" ? VisibleGroups.Count(g => g.Correlated) : tab == "channels" ? VisibleChannels.Length : Cards.Count(c => c.Kind == TabKind(tab));
     private static EventsPanelCardKind TabKind(string tab) => tab switch { "trunks" => EventsPanelCardKind.TRUNK, "queues" => EventsPanelCardKind.QUEUE, _ => EventsPanelCardKind.PEER };
     private string KindLabel(EventsPanelCardKind kind) => kind switch { EventsPanelCardKind.TRUNK => Text["Trunk"], EventsPanelCardKind.QUEUE => Text["Call queue"], _ => Text["Extension"] };
     private static string Duration(DateTimeOffset from) => (DateTimeOffset.UtcNow - from).ToString(@"hh\:mm\:ss");

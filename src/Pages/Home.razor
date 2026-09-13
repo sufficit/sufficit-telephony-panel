@@ -1,5 +1,6 @@
 @page "/"
 @page "/board"
+@page "/queues"
 @implements IAsyncDisposable
 @inject PanelAccess Access
 @inject FleetMetrics Metrics
@@ -46,10 +47,15 @@
     else
     {
         @if (!BoardPage) { <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
-            <SUIButton OnClick="() => Operational = true" VariantValue="@(Operational ? SUIVariant.Filled : SUIVariant.Text)">@Text["Live telephony"]</SUIButton>
-            <SUIButton OnClick="() => Operational = false" VariantValue="@(!Operational ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton>
+            <SUIButton Href="@AreaUrl(false)" OnClick="() => Operational = true" VariantValue="@(Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Live telephony"]</SUIButton>
+            <SUIButton Href="@("queues" + new Uri(Navigation.Uri).Query)" VariantValue="@(QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Queues and registration"]</SUIButton>
+            <SUIButton Href="@AreaUrl(true)" OnClick="() => Operational = false" VariantValue="@(!Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton>
         </nav> }
-        @if (Operational || BoardPage)
+        @if (QueuePage)
+        {
+            <AcdMonitor Preview="Preview" />
+        }
+        else if (Operational || BoardPage)
         {
             <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" Dark="Dark" ThemeChanged="ToggleTheme" />
         }
@@ -130,6 +136,7 @@
 
 @code {
     private bool BoardPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/board", StringComparison.Ordinal);
+    private bool QueuePage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/queues", StringComparison.Ordinal);
     private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
     private bool Ready, Allowed, Busy, Sound, Dark, Preview, HistoryBusy;
     private bool Operational = true;
@@ -144,6 +151,7 @@
     private DateTimeOffset HistoryStart, HistoryEnd;
     private HashSet<string> PreviousAlerts = [];
     private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal);
+    private string AreaUrl(bool infrastructure) => "./" + new Uri(Navigation.GetUriWithQueryParameter("area", infrastructure ? "infrastructure" : (string?)null)).Query;
     private NodeSnapshot? Current => Snapshot?.Nodes.FirstOrDefault(n => n.Id == Selected);
     private string Number(double? value) => value?.ToString("N0", Text.Culture) ?? "—";
     private double Scale(double value) => Metric == "memory" ? value / 1048576 : value;
@@ -175,6 +183,7 @@
         await JS.InvokeVoidAsync("telephonyPanel.setLanguage", Text.Language);
         Dark = await JS.InvokeAsync<bool>("telephonyPanel.dark");
         Preview = Environment.IsDevelopment() && Navigation.Uri.Contains("preview=true", StringComparison.Ordinal);
+        Operational = !Navigation.Uri.Contains("area=infrastructure", StringComparison.Ordinal);
         await Refresh(); Ready = true; StateHasChanged();
         loop = Poll();
     }
@@ -192,6 +201,7 @@
         {
             Allowed = Preview || await Access.AllowedAsync(lifetime.Token);
             if (!Allowed) { Snapshot = null; Points = []; return; }
+            if (QueuePage) return;
             Snapshot = Preview ? PreviewSnapshot() : await Metrics.ReadAsync(lifetime.Token);
             var active = Snapshot.Alerts.Where(a => a.State == "firing").Select(a => a.Name + a.Node).ToHashSet();
             if (Sound && active.Except(PreviousAlerts).Any()) await JS.InvokeVoidAsync("telephonyPanel.alert");

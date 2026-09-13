@@ -35,7 +35,7 @@ public sealed record BoardViewQuery
             State = new[] { "online", "offline", "registered", "unregistered", "busy", "unknown" }.Contains(state) ? state : "all",
             TextKinds = scope == "none" ? [] : kinds.Length > 0 ? kinds : Kinds.ToArray(),
             Channels = Get("channels") == "true",
-            Tab = new[] { "extensions", "calls", "channels", "trunks", "queues", "settings" }.Contains(tab) ? tab : "board",
+            Tab = new[] { "extensions", "calls", "channels", "trunks", "queues", "settings", "events" }.Contains(tab) ? tab : "board",
             Page = int.TryParse(Get("page"), out var page) ? Math.Clamp(page, 0, 1000) : 0
         };
     }

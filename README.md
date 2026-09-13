@@ -8,6 +8,11 @@ was provisioned on 2026-09-10 and the login redirect verified. Real manager logi
 and live revocation validation remain pending (see PLAN-telephony-panel.md).
 
 ## Scope
+
+[Monitoring ownership and migration routes](docs/monitoring-ownership.md): Panel is
+the telephony observation UI; Blazor retains configuration and management. Queue
+stages and registration diagnostics are available at `/queues`.
+
 - Only users with the current Sufficit Identity `manager` role.
 - Three PBXs: Apoint, Eveo and Google, using already deployed central collectors.
 - Per-node calls/channels, Asterisk RSS, AMI connectivity and internal work queues.

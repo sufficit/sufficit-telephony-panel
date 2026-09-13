@@ -1,0 +1,68 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+(async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    const origin = process.env.PANEL_PREVIEW_URL || 'http://127.0.0.1:5168';
+    await page.goto(origin + '/queues?preview=true');
+    await page.getByRole('heading', { name: 'Queues and registration', exact: true }).waitFor();
+    await page.getByText('Synthetic Phone 1.2', { exact: true }).first().waitFor();
+    assert.equal(await page.locator('.board-grid').count(), 0);
+    const history = page.locator('.acd-diagnostics details').first();
+    await history.locator('summary').click();
+    await page.waitForTimeout(6200);
+    assert.equal(await history.getAttribute('open'), '');
+    assert((await page.locator('.acd-diagnostics').innerText()).includes('Renewal observed'));
+    const search = page.getByRole('textbox', { name: 'Search queue, extension, IP or device' });
+    await search.fill('192.0.2.7');
+    await page.waitForURL(/q=192/);
+    assert.equal(await page.locator('.acd-diagnostics td[data-label="Extension"]').count(), 1);
+    await page.reload();
+    await page.getByRole('textbox', { name: 'Search queue, extension, IP or device' }).waitFor();
+    assert.equal(await page.getByRole('textbox', { name: 'Search queue, extension, IP or device' }).inputValue(), '192.0.2.7');
+    await page.getByRole('textbox', { name: 'Search queue, extension, IP or device' }).fill('');
+    await page.waitForURL(url => !url.searchParams.has('q'));
+    await page.locator('.acd-diagnostics details summary').first().click();
+    await page.waitForTimeout(1000);
+    await page.locator('footer').scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.waitForTimeout(300);
+    fs.mkdirSync('.impeccable/review', { recursive: true });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: '.impeccable/review/monitoring-migration-desktop.png', fullPage: true });
+    await page.evaluate(() => { localStorage.setItem('telephony-panel-language', 'pt-BR'); localStorage.setItem('telephony-panel-theme', 'dark'); });
+    await page.setViewportSize({ width: 390, height: 844 }); await page.reload();
+    await page.getByRole('heading', { name: 'Filas e registros', exact: true }).waitFor();
+    await page.locator('.acd-diagnostics details summary').first().click();
+    await page.waitForTimeout(1000);
+    await page.locator('footer').scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.waitForTimeout(300);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: '.impeccable/review/monitoring-migration-mobile.png', fullPage: true });
+    const scope = 'contextid=11111111111141118111111111111111&node=55555555-5555-4555-8555-555555555555&q=sample';
+    await page.goto(origin + '/queues?preview=true&' + scope);
+    await page.locator('.acd-source h2').filter({ hasText: 'apoint-voip' }).waitFor();
+    assert.equal(await page.locator('.acd-source').count(), 1);
+    assert((await page.getByRole('combobox', { name: 'Servidor', exact: true }).innerText()).includes('apoint-voip'));
+    for (const label of ['Telefonia ao vivo', 'Infraestrutura e histórico']) {
+      await page.goto(origin + '/queues?preview=true&' + scope);
+      await page.getByRole('link', { name: label, exact: true }).click();
+      await page.waitForURL(url => url.pathname === '/');
+      for (const [key, value] of new URLSearchParams(scope)) assert.equal(new URL(page.url()).searchParams.get(key), value);
+      await page.reload();
+      for (const [key, value] of new URLSearchParams(scope)) assert.equal(new URL(page.url()).searchParams.get(key), value);
+    }
+    await page.goto(origin + '/?preview=true&tab=events');
+    await page.getByText('Último evento observado por recurso.', { exact: false }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('tab'), 'events');
+    await page.goto(origin + '/board?preview=true');
+    await page.locator('.board-grid .board-tile').first().waitFor();
+    assert.equal(await page.locator('.acd-monitor,.panel-navigation,.panel-header').count(), 0);
+    assert.deepEqual(errors, []);
+    console.log('PASS: queue diagnostic URL filters, history polling, English/Portuguese, desktop/mobile, events tab and mosaic-only board. Synthetic fixture only.');
+  } finally { await browser.close(); }
+})().catch(e => { console.error(e); process.exit(1); });

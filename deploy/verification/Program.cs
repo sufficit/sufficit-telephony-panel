@@ -6,14 +6,18 @@ using Sufficit.Telephony.Panel.Operations;
 // No credentials, caller identities or queue titles are printed.
 var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 var sources = config.GetSection("Panel:AcdSources").Get<AcdBoardSource[]>() ?? [];
-if (sources.Length != 1) throw new InvalidOperationException("Expected configured Google source.");
+if (sources.Length is < 1 or > 3) throw new InvalidOperationException("Expected approved sources.");
 var services = new ServiceCollection();
-services.AddHttpClient("acd-board", client => client.Timeout = TimeSpan.FromSeconds(3))
+services.AddHttpClient("acd-board", client => { client.Timeout = TimeSpan.FromSeconds(3); client.MaxResponseContentBufferSize = 4 * 1024 * 1024; })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 using var provider = services.BuildServiceProvider();
 using var reader = new AcdBoardReader(sources, provider.GetRequiredService<IHttpClientFactory>(), TimeProvider.System);
 var samples = await reader.Read(null, CancellationToken.None);
-if (samples.Length != 1 || !samples[0].Available || samples[0].Snapshot is not { } snapshot ||
-    !snapshot.Queues.Any(q => q.QueueId == "01a091d2251c7f30a962045bef466dcc") || snapshot.Visits is null)
+if (samples.Length != sources.Length || samples.Any(s => !s.Available || s.Snapshot is not { ControllerConnected: true, Visits: not null }))
     throw new InvalidOperationException("Live ACD source failed validation or pilot queue is missing.");
-Console.WriteLine($"PASS: configured reader accepted live Google snapshot, {snapshot.Queues.Length} queues, visit export present.");
+foreach (var sample in samples)
+{
+    if (sample.Node != "google-voip" && !sample.Snapshot!.Agents!.Any(a => a.RegistrationHistory is { Length: > 0 }))
+        throw new InvalidOperationException("Lab registration history missing.");
+    Console.WriteLine($"PASS: {sample.Node} snapshot accepted, {sample.Snapshot!.Queues.Length} queues, {sample.Snapshot.Agents?.Length ?? 0} agent observations.");
+}
