@@ -40,10 +40,19 @@ Via IP, declared User-Agent and expiry may be absent. User-Agent is self-declare
 it does not verify a hardware model. No historical records can be reconstructed
 before collection began. No recording or call audio is stored by these diagnostics.
 
-At the initial migration, Google supplies queue snapshots without agent history;
-the approved Eveo/Apoint test controllers supply presence/contact/history. Source
-coverage is limited to identities configured in their collectors, not every PBX
-endpoint. Extending Google history requires a separately validated collector change.
+Google now supplies history for approved Sufficit extensions6001/6007 through an
+isolated private snapshot facade; Eveo/Apoint each supply four test identities.
+Coverage is explicit, not every PBX endpoint. Google remains on its original0.9.0
+controller without restart or dispatch changes. The facade merges diagnostic agents
+without altering its queue snapshot. SIP registration may differ from PJSIP aliases:
+6007 was observed registered using chan_sip, with a declared CiscoCP8941 User-Agent.
+Unknown busy state is not equivalent to available. Missing registration evidence
+for6001 remains unknown, not a fabricated offline state.
+
+For legacy SIP, contact IP is the peer's current socket address; expiry/Via may be
+absent. Its internal scheduler identifier is NOT renewal evidence and is excluded
+from history. Only observed state/IP/device changes are retained; identical SIP
+renewals cannot be reconstructed. PJSIP expiration changes remain observable.
 
 ## Service boundaries
 
@@ -57,3 +66,10 @@ Deployment order is Panel first, then Blazor legacy redirects. Roll back the Pan
 release pointer if its health fails; source configuration is independently managed.
 The additional lab source drop-in is `deploy/70-acd-labs.conf`. Never publish its
 private key contents. No Google/Asterisk restart is required for this migration.
+
+Google diagnostics use `deploy/80-google-registration.conf`; its private key path
+is `/etc/sufficit/telephony-panel/google-registration-monitor.key`. The guarded
+`deploy/enable-google-registration.py` checks the authenticated fixed snapshot,
+denied writes/resources, and all three sources as the actual Panel Unix user before
+changing its drop-in. Only Panel restarts to load this configuration. On health
+failure the new drop-in is renamed and the previous source restored.
