@@ -3,6 +3,7 @@
 @using Sufficit.Telephony.EventsPanel
 @using Sufficit.Telephony.Monitor
 @inject OperationsAccess Access
+@inject AcdBoardAccess AcdAccess
 @inject IWebHostEnvironment Environment
 @inject IConfiguration Configuration
 @inject BoardConfigurationAccess BoardAccess
@@ -10,6 +11,15 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
+@if (BoardPage)
+{
+    <section class="live-panel board-mode" aria-label="@Text["Operator board"]">
+        <h1 class="sr-only">@Text["Operator board"]</h1>
+        @BoardContent
+    </section>
+}
+else
+{
 <section class="live-panel @(Tab is "board" or "settings" ? "board-mode" : "")" aria-labelledby="live-title">
     <div class="heading"><div><h1 id="live-title">@(BoardPage ? Text["Operator board"] : Text["Real-time telephony"])</h1><p class="muted">@Text["Exchange overview. Filter by company only when needed."]</p></div>
         <div class="tools">
@@ -22,23 +32,11 @@
     {
         <p class="muted section-hint">@Text["The overview uses your manager access to the central stream. Company filtering and supervision depend on shared telephony entitlements from Identity, pending activation for this application."]</p>
     }
-    <details class="company-filter" open="@(!BoardPage)"><summary>@Text.Format("Company: {0}", Context.HasValue ? ClientName : Text["entire exchange"])</summary>
-    <div class="client-picker">
-        <SUITextField T="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
-        <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
-        @if (Context.HasValue) { <SUIButton OnClick="ClearCompany" Disabled="@(Busy || ActionBusy)" VariantValue="SUIVariant.Text">@Text["Clear company · view exchange"]</SUIButton> }
-    </div>
-    @if (Searched)
-    {
-        <div class="client-results" aria-label="@Text["Matching customers"]">
-            @if (Clients.Length == 0) { <p>@Text["No customers found for this user. Try the full customer identifier."]</p> }
-            @foreach (var client in Clients) { <SUIButton OnClick="() => SelectClient(client.Id, client.Title)" Disabled="Busy" VariantValue="SUIVariant.Outlined">@client.Title</SUIButton> }
-        </div>
-    }
-    </details>
+    @CompanyFilter
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking permissions and resources"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)</SUIAlert> }
     @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)</SUIAlert> }
+    @if (AcdError is not null) { <SUIAlert ToneValue="SUITone.Warning">@AcdError</SUIAlert> }
     <div class="operations-scope">
         <div class="client-heading"><div><h2>@(Context.HasValue ? ClientName : Text["Entire exchange"])</h2><span class="muted identifier">@(Context.HasValue ? Context.Value.ToString("N") : Text["No company filter · manager access"])</span></div><span class="state-label @(Connected ? "good" : "warning")">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
         @if (BoardPage) { <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary>@ObservationNote</details> }
@@ -77,25 +75,7 @@
             }
             </details>
             @if (OnlyObservedChannels) { <p class="muted section-hint" role="status">@Text["Filter enabled: only resources with observed channels. No channels does not prove a resource is idle."]</p> }
-            <div class="board-focus" id="board-focus">
-            @if (Demo) { <span class="board-demo-label">@Text["Local demo"]</span> }
-            <div class="board-focus-toolbar"><strong>@Text["Operator board"]</strong><span class="muted">@(Context.HasValue ? ClientName : Text["Entire exchange"])</span><span class="board-focus-spacer"></span><LanguagePicker /><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
-            @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
-            @BoardFilters
-            <OperatorBoard Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Page="Page" PageChanged="SetBoardPage" />
-            @if (SelectedTile is { } tile)
-            {
-                <section class="board-inspector" tabindex="-1" @ref="TileInspector" aria-labelledby="tile-heading">
-                    <div class="heading"><h3 id="tile-heading">@tile.Title · @tile.Node</h3><SUIButton VariantValue="SUIVariant.Text" OnClick="CloseTile">@Text["Close details"]</SUIButton></div>
-                    <p>@Text.Observed(tile.Status.Label) · @(tile.Remembered ? Text["Saved last observation (approximate)"] : Text["Last observation"]): @Timestamp(tile.Updated)</p>
-                    <p>@Text.Observed(tile.Peer?.RegistrationLabel ?? Text["Registration not reported"]) · @Text.Observed(tile.Peer?.ReachabilityLabel ?? Text["Reachability not reported"]) · @Text.Observed(tile.Peer?.DeviceLabel ?? Text["Device usage not reported"])</p>
-                    <p>@Text.Format("Last observed registration: {0}. Unknown states do not mean the extension is idle.", Timestamp(tile.Peer?.LastRegisteredObservedAt))</p>
-                    @if (tile.Channels.Length > 0) { @RenderChannels(tile.Channels.Take(100).ToArray()) }
-                    else { <p>@Text["No observed channels for this resource."]</p> }
-                    @if (tile.Channels.Length > 100) { <p>@Text["First 100 channels. Refine the Channels tab to view the others."]</p> }
-                </section>
-            }
-            </div>
+            @BoardContent
         }
         else if (Tab == "settings") { }
         else if (Tab == "calls")
@@ -165,6 +145,14 @@
         }
         @if (Tab is "calls" or "channels") { <p class="muted section-hint">@(Supervisor is { } supervisor ? Text.Format("Your supervision extension: {0}.", supervisor.Title) : Text["Set your preferred extension in the portal to enable supervision."]) @Text["Select the correct channel to listen or whisper. Actions require a recent event and verified company association."]</p> }
         @if (Tab is not ("board" or "settings")) { <div class="live-pagination"><span>@Text.Format("{0} results with current filters · page {1} of {2}", TotalVisible, Page + 1, Pages)</span><div><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page == 0)" OnClick="Previous">@Text["Previous"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page + 1 >= Pages)" OnClick="Next">@Text["Next"]</SUIButton></div></div> }
+        @ActionConfirmation
+        <details class="live-help"><summary>@Text["How to read this panel"]</summary><p>@Text["The overview shows the manager-authorized stream; company filtering uses resources authorized by the portal. Reconnecting discards old states. Current observation is limited to 5,000 resources and two hours without updates, not a full inventory. Keep previously seen resources retains the existence of extensions, trunks and queues separately, without automatic expiration or old channels. The saved last observation is approximate. Clearing remembered resources removes that history from the selected view; new events can record them again."]</p><p>@Text["SIP registration, reachability and device usage are independent. An extension may be registered but not respond. A static contact may respond without registering. Qualify does not prove the phone's WebSocket/TCP connection. Registration time here is when the panel received a registration event, not the PBX's historical timestamp. Events before connection are unavailable."]</p><p>@Text["Call queues distribute calls among agents. ACD stands for automatic call distribution. This monitor does not create queues or replace their management screen."]</p></details>
+    </div>
+</section>
+}
+
+@code {
+    private RenderFragment ActionConfirmation => @<div>
         @if (Pending is { } target)
         {
             <section class="monitor-confirm" role="region" aria-labelledby="confirm-title" tabindex="-1" @ref="Confirmation">
@@ -175,12 +163,97 @@
             </section>
         }
         @if (ActionMessage is not null) { <SUIAlert ToneValue="SUITone.Info">@Text.Observed(ActionMessage)</SUIAlert> }
-        <details class="live-help"><summary>@Text["How to read this panel"]</summary><p>@Text["The overview shows the manager-authorized stream; company filtering uses resources authorized by the portal. Reconnecting discards old states. Current observation is limited to 5,000 resources and two hours without updates, not a full inventory. Keep previously seen resources retains the existence of extensions, trunks and queues separately, without automatic expiration or old channels. The saved last observation is approximate. Clearing remembered resources removes that history from the selected view; new events can record them again."]</p><p>@Text["SIP registration, reachability and device usage are independent. An extension may be registered but not respond. A static contact may respond without registering. Qualify does not prove the phone's WebSocket/TCP connection. Registration time here is when the panel received a registration event, not the PBX's historical timestamp. Events before connection are unavailable."]</p><p>@Text["Call queues distribute calls among agents. ACD stands for automatic call distribution. This monitor does not create queues or replace their management screen."]</p></details>
-    </div>
-</section>
-
-@code {
+    </div>;
+    [Parameter] public bool Dark { get; set; }
+    [Parameter] public EventCallback ThemeChanged { get; set; }
+    private bool FiltersActive => Context.HasValue || Filter.Length > 0 || Node != "all" || StatusFilter != "all" || OnlyObservedChannels || TextKinds.Length != 3;
+    private bool ObservationWarning => !Connected || Error is not null || AcdError is not null || BoardError is not null || InventoryError is not null || Overflow || Observation.Limited;
+    private string NormalPanelUrl(string? tab = null) => Navigation.GetUriWithQueryParameters(Navigation.BaseUri, new Dictionary<string, object?>(CurrentQuery.Parameters()) { ["preview"] = Demo ? "true" : null, ["tab"] = tab });
+    private RenderFragment FilterTrigger => @<SUIButton Class="@(FiltersActive || ObservationWarning ? "board-filter-trigger is-marked" : "board-filter-trigger")" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="board-options" aria-label="@Text["Board filters and options"]" title="@Text["Board filters and options"]">
+        @if (ObservationWarning) { <span aria-label="@Text["Check observation status"]">!</span> }
+        else if (FiltersActive) { <span class="filter-mark" aria-label="@Text["Filters active"]"></span> }
+    </SUIButton>;
+    private RenderFragment DedicatedOptions => @<div id="board-options" class="board-options" popover="auto" role="region" aria-label="@Text["Board filters and options"]">
+        <div class="board-options-heading"><h2>@Text["Board filters and options"]</h2><SUIButton VariantValue="SUIVariant.Text" popovertarget="board-options" popovertargetaction="hide">@Text["Close filters"]</SUIButton></div>
+        @BoardFilters
+        @CompanyFilter
+        <div class="board-options-actions"><LanguagePicker /><SUIButton OnClick="() => ThemeChanged.InvokeAsync()" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
+        <div class="board-options-actions"><SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Text">@Text["Reconnect and refresh"]</SUIButton><SUIButton Href="@NormalPanelUrl()" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Back to panel"]</SUIButton><SUIButton Href="@NormalPanelUrl("settings")" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Configure board"]</SUIButton></div>
+        <p class="@(ObservationWarning ? "warning" : "good")" role="status">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</p>
+        @foreach (var message in new[] { Error, SearchError, AcdError, BoardError, InventoryError }.Where(m => m is not null)) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(message!)</SUIAlert> }
+        @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
+        @if (Overflow || Observation.Limited) { <p class="warning">@Text["Observation limit reached. Some resources may be missing. Reduce this customer's configured resource set or reconnect to start a new window."]</p> }
+        @if (Demo) { <p>@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</p> }
+    </div>;
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
+    private RenderFragment CompanyFilter => @<details class="company-filter" open="@(!BoardPage)"><summary>@Text.Format("Company: {0}", Context.HasValue ? ClientName : Text["entire exchange"])</summary>
+    <div class="client-picker">
+        <SUITextField T="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
+        <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
+        @if (Context.HasValue) { <SUIButton OnClick="ClearCompany" Disabled="@(Busy || ActionBusy)" VariantValue="SUIVariant.Text">@Text["Clear company · view exchange"]</SUIButton> }
+    </div>
+    @if (Searched)
+    {
+        <div class="client-results" aria-label="@Text["Matching customers"]">
+            @if (Clients.Length == 0) { <p>@Text["No customers found for this user. Try the full customer identifier."]</p> }
+            @foreach (var client in Clients) { <SUIButton OnClick="() => SelectClient(client.Id, client.Title)" Disabled="Busy" VariantValue="SUIVariant.Outlined">@client.Title</SUIButton> }
+        </div>
+    }
+    </details>;
+    private RenderFragment BoardContent => @<div class="board-focus" id="board-focus">
+            @if (!BoardPage)
+            {
+            @if (Demo) { <span class="board-demo-label">@Text["Local demo"]</span> }
+            <div class="board-focus-toolbar"><strong>@Text["Operator board"]</strong><span class="muted">@(Context.HasValue ? ClientName : Text["Entire exchange"])</span><span class="board-focus-spacer"></span><LanguagePicker /><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
+            @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
+            @BoardFilters
+            }
+            @if (BoardPage) { @DedicatedOptions }
+            <OperatorBoard Compact="BoardPage" HeaderTools="@(BoardPage ? FilterTrigger : null)" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" Page="Page" PageChanged="SetBoardPage" />
+            @if (BoardAction is { } action)
+            {
+                <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" Closed="() => BoardAction = null" />
+            }
+            @if (SelectedTile is { } tile)
+            {
+                @if (BoardPage)
+                {
+                    <BoardResourceDialog Title="@($"{tile.Title} · {tile.Node}")" Closed="CloseTile">
+                        @ResourceDetails(tile)
+                        @ActionConfirmation
+                    </BoardResourceDialog>
+                }
+                else
+                {
+                <section class="board-inspector" tabindex="-1" @ref="TileInspector" aria-labelledby="tile-heading">
+                    <div class="heading"><h3 id="tile-heading">@tile.Title · @tile.Node</h3><SUIButton VariantValue="SUIVariant.Text" OnClick="CloseTile">@Text["Close details"]</SUIButton></div>
+                    @ResourceDetails(tile)
+                </section>
+                }
+            }
+            </div>;
+    private RenderFragment ResourceDetails(OperatorTile tile) => @<div class="resource-details">
+                    <p>@Text.Observed(tile.Status.Label) · @(tile.Remembered ? Text["Saved last observation (approximate)"] : Text["Last observation"]): @Timestamp(tile.Updated)</p>
+                    @if (tile.Acd is { } acd)
+                    {
+                        <p>ACD · @Text["Context"]: @acd.Account · @Text["Call queue"]: @acd.Details["queueid"]</p>
+                        <p>@Text["ACD data comes from the queue controller, not native AMI queue events."]</p>
+                        @if (acd.State != "current") { <p>@Text["ACD state unavailable. Previous activity is not shown as live. Refresh to retry."]</p> }
+                        else if (acd.Details["correlation"] == "unavailable") { <p>@Text["This controller reports counts only; channel correlation requires its monitoring update."]</p> }
+                    }
+                    else
+                    {
+                    <p>@Text.Observed(tile.Peer?.RegistrationLabel ?? Text["Registration not reported"]) · @Text.Observed(tile.Peer?.ReachabilityLabel ?? Text["Reachability not reported"]) · @Text.Observed(tile.Peer?.DeviceLabel ?? Text["Device usage not reported"])</p>
+                    <p>@Text.Format("Last observed registration: {0}. Unknown states do not mean the extension is idle.", Timestamp(tile.Peer?.LastRegisteredObservedAt))</p>
+                    }
+                    @foreach (var flow in tile.Flows)
+                    {
+                        <p>@Display(flow.Caller) → @Display(flow.Destination) · @Text[PhaseLabel(flow.Phase)]</p>
+                    }
+                    @if (tile.DetailChannels.Length > 0) { @RenderChannels(tile.DetailChannels.Take(100).ToArray()) }
+                    else { <p>@Text["No observed channels for this resource."]</p> }
+                    @if (tile.DetailChannels.Length > 100) { <p>@Text["First 100 channels. Refine the Channels tab to view the others."]</p> }
+            </div>;
     private RenderFragment BoardFilters => @<header class="board-filter-header">
         <div class="live-filters">
             <SUITextField T="string" Label="@Text["Filter resources"]" Value="@Filter" ValueChanged="SetFilter" Immediate="true" MaxLength="100" Clearable="true" Placeholder="@Text["Extension, name, number or channel"]" />
@@ -216,7 +289,7 @@
     private bool urlPending, replaceUrl;
     private string lastWrittenUrl = "";
     private string BoardUrl => Navigation.GetUriWithQueryParameters(new Uri(new Uri(Navigation.BaseUri), "board").ToString(), new Dictionary<string, object?>(CurrentQuery.Parameters()) { ["preview"] = Demo ? "true" : null, ["tab"] = null });
-    private BoardViewQuery CurrentQuery => new() { Company = Context, Text = Filter, Node = Node, State = StatusFilter, TextKinds = TextKinds, Channels = OnlyObservedChannels, Tab = Tab, Page = Page };
+    private BoardViewQuery CurrentQuery => new() { ContextId = Context, Text = Filter, Node = Node, State = StatusFilter, TextKinds = TextKinds, Channels = OnlyObservedChannels, Tab = Tab, Page = Page };
     private void WriteUrl(bool replace = false)
     {
         if (!UrlReady) return;
@@ -241,13 +314,14 @@
     private async Task ApplyUrl()
     {
         var query = BoardViewQuery.Parse(Navigation.Uri);
-        if (query.Company != Context) await SelectClient(query.Company, query.Company?.ToString("N") ?? Text["Entire exchange"], false);
+        if (query.ContextId != Context) await SelectClient(query.ContextId, query.ContextId?.ToString("N") ?? Text["Entire exchange"], false);
         Filter = query.Text; Node = query.Node; StatusFilter = query.State; TextKinds = query.TextKinds;
         OnlyObservedChannels = query.Channels; Page = query.Page;
-        Tab = BoardPage && query.Tab != "settings" ? "board" : query.Tab;
+        Tab = BoardPage ? "board" : query.Tab;
         if (Tab == "trunks" && !Context.HasValue) Tab = "extensions";
         SettingsOpened |= Tab == "settings";
         SelectedTileId = null; Pending = null;
+        WriteUrl(true);
     }
     private bool FullscreenError;
     private async Task ToggleFullscreen() { FullscreenError = !await JS.InvokeAsync<bool>("telephonyPanel.fullscreen", "board-focus"); }
@@ -277,15 +351,17 @@
     private OperatorTile[]? classifiedSource;
     private string? classifiedRevision;
     private OperatorTile[] classifiedTiles = [];
+    private ObservedResource[]? classifiedRows;
     private OperatorTile[] BoardTiles
     {
         get
         {
             var source = BoardConfiguration.RetainSeenResources ? inventoryTiles ?? RawBoardTiles : RawBoardTiles;
-            if (!ReferenceEquals(source, classifiedSource) || classifiedRevision != BoardConfiguration.Revision)
+            if (!ReferenceEquals(source, classifiedSource) || classifiedRevision != BoardConfiguration.Revision || !ReferenceEquals(classifiedRows, Rows))
             {
                 classifiedSource = source; classifiedRevision = BoardConfiguration.Revision;
-                classifiedTiles = BoardRuleEngine.Apply(source, BoardConfiguration);
+                classifiedRows = Rows;
+                classifiedTiles = BoardCallFlow.Attach(BoardRuleEngine.Apply(source, BoardConfiguration), Rows);
             }
             return classifiedTiles;
         }
@@ -361,7 +437,7 @@
         }
     }
     private OperatorTile[] VisibleTiles => BoardTiles
-        .Where(t => (!OnlyObservedChannels || t.Channels.Length > 0) && (Node == "all" || t.Node == Node) && (StatusFilter == "all" || StatusFilter == "unknown" && t.Rows.Length == 0 || t.Rows.Any(MatchStatus))
+        .Where(t => (!OnlyObservedChannels || t.HasObservedActivity) && (Node == "all" || t.Node == Node) && (StatusFilter == "all" || StatusFilter == "unknown" && (t.Rows.Length == 0 || t.Acd is { State: "stale" }) || StatusFilter == "busy" && t.HasObservedActivity || t.Rows.Any(MatchStatus))
             && (!TextKinds.Contains(t.Kind == EventsPanelCardKind.TRUNK ? "trunks" : t.Kind == EventsPanelCardKind.QUEUE ? "queues" : "peers") || MatchText(t.Title + " " + t.Node + " " + string.Join(" ", t.Keys) + " " + string.Join(" ", t.Rows.Select(r => r.Key + " " + r.Caller + " " + r.Destination)))))
         .ToArray();
     private OperatorTile? SelectedTile => VisibleTiles.FirstOrDefault(t => t.Id == SelectedTileId);
@@ -375,6 +451,13 @@
     private (Guid Id, string Title)[] Clients = [];
     private (Guid Id, string Title)? Supervisor;
     private EventsPanelCardInfo[] Cards = [];
+    private EventsPanelCardInfo[] PortalCards = [];
+    private string? AcdError;
+    private static string PhaseLabel(string phase) => phase switch
+    {
+        "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent",
+        "answered" => "Answered in queue", "waiting" => "Waiting in queue", _ => "Observed call flow"
+    };
     private ObservedResource[] rows = [];
     private ObservedCallGroup[] callGroups = [];
     private ObservedResource[] Rows
@@ -431,20 +514,21 @@
         "1" or "notinuse" or "not_inuse" => Text["Idle in event"], "2" or "inuse" => Text["In use"], "3" or "busy" => Text["Busy"],
         "4" or "invalid" => Text["Invalid"], "5" or "unavailable" => Text["Unavailable"], "6" or "ringing" => Text["Ringing"], "7" or "ringinuse" => Text["Ringing while in use"], "8" or "onhold" => Text["On hold"], "0" => Text["Unknown state"], _ => State(row.State)
     } : Text.Observed(row.Peer?.ReachabilityLabel ?? State(row.State));
-    private string State(string value) => value.ToLowerInvariant() switch { "up" or "6" => Text["In conversation"], "ringing" or "5" => Text["Ringing"], "ring" or "4" => Text["Calling"], "down" or "0" => Text["Inactive in event"], "reachable" or "registered" => Text["Available in event"], "unreachable" or "unregistered" => Text["Unavailable in event"], "unknown" or "" => Text["Not reported"], _ => value };
+    private string State(string value) => value.ToLowerInvariant() switch { "up" or "6" => Text["Channel answered"], "ringing" or "5" => Text["Ringing"], "ring" or "4" => Text["Calling"], "down" or "0" => Text["Inactive in event"], "reachable" or "registered" => Text["Available in event"], "unreachable" or "unregistered" => Text["Unavailable in event"], "unknown" or "" => Text["Not reported"], _ => value };
     private string DetailLabel(string key) => key switch { "paused" => Text["paused"], "calls" => Text["Calls"], "completed" => Text["answered"], "abandoned" => Text["abandoned"], "holdtime" => Text["wait (s)"], "talktime" => Text["talk (s)"], "penalty" => Text["priority"], "strategy" => Text["strategy"], "membername" => Text["agent"], "interface" => "interface", "status" => "status", _ => key };
     protected override async Task OnAfterRenderAsync(bool first)
     {
         FlushUrl();
-        if (FocusTile && SelectedTile is not null) { FocusTile = false; await TileInspector.FocusAsync(); }
+        if (FocusTile && SelectedTile is not null) { FocusTile = false; if (!BoardPage) await TileInspector.FocusAsync(); }
         if (FocusConfirmation) { FocusConfirmation = false; await Confirmation.FocusAsync(); }
         if (!first) return;
         if (BoardPage) await JS.InvokeVoidAsync("telephonyPanel.fitBoard");
         Navigation.LocationChanged += LocationChanged;
         var initial = BoardViewQuery.Parse(Navigation.Uri);
-        await SelectClient(initial.Company, initial.Company?.ToString("N") ?? Text["Entire exchange"], false);
+        await SelectClient(initial.ContextId, initial.ContextId?.ToString("N") ?? Text["Entire exchange"], false);
         await ApplyUrl();
         UrlReady = true;
+        WriteUrl(true);
         await ReadBoardConfiguration();
         StateHasChanged();
         loop = Poll();
@@ -467,7 +551,7 @@
         if (ActionBusy || InventoryBusy) return;
         var version = ++selectionVersion;
         inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
-        Busy = true; Error = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; Supervisor = null; Clients = []; Searched = false;
+        Busy = true; Error = null; AcdError = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
         Context = id; ClientName = title; SelectedTileId = null;
         if (writeUrl) WriteUrl();
         if (!id.HasValue && Tab == "trunks") Tab = "extensions";
@@ -476,7 +560,7 @@
             if (Demo) { LoadDemo(); return; }
             var cards = id.HasValue ? await Access.Cards(id, lifetime.Token) : [];
             if (version != selectionVersion) return;
-            Cards = cards;
+            PortalCards = cards; Cards = cards;
             AuthorizationChecked = DateTimeOffset.UtcNow;
             var connection = await Access.Connection(lifetime.Token);
             if (version != selectionVersion) return;
@@ -516,7 +600,7 @@
                     {
                         var cards = await Access.Cards(context, lifetime.Token);
                         if (version != selectionVersion) return;
-                        Cards = cards;
+                        PortalCards = cards; Cards = cards;
                         AuthorizationChecked = DateTimeOffset.UtcNow;
                     }
                     await ReadRows();
@@ -530,14 +614,27 @@
     }
     private async Task ReadRows()
     {
+        var version = selectionVersion;
+        var selectedContext = Context;
+        var samples = await AcdAccess.Read(selectedContext, lifetime.Token);
+        if (version != selectionVersion) return;
+        AcdError = !AcdAccess.Configured ? Text["ACD monitoring is not configured on this panel."]
+            : samples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true)
+                ? Text["Some ACD sources are unavailable. Queue activity is shown only with current controller data."] : null;
         // The pool revalidates exact manager access. Selected tenants still require scoped API cards.
         var source = Connection?.Connected == true ? Connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
-        Observation = Context is { } context ? AuthorizedObservation.Create(Cards, source, context) : AuthorizedObservation.ForManager(source);
-        if (!Context.HasValue) Cards = Observation.Cards;
+        Observation = selectedContext is { } context ? AuthorizedObservation.Create(PortalCards, source, context) : AuthorizedObservation.ForManager(source);
+        Observation.AddAcd(AcdBoardProjection.Create(samples, Observation.Rows, selectedContext, DateTimeOffset.UtcNow));
+        Cards = Observation.Cards;
         Rows = Observation.Rows;
         await RefreshInventory();
     }
     private Guid TargetContext(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
+    private BoardSupervisionAction? BoardAction;
+    private bool DemoEndpointResolution => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query)
+        .TryGetValue("supervisionpreview", out var scenario) && scenario == "idle";
+    private void PrepareBoardSupervision(BoardSupervisionAction action)
+    { CloseTile(); Pending = null; BoardAction = action; }
     private bool CanMonitor(ObservedResource row) => !ActionBusy && Supervisor.HasValue && (Demo || MonitorActionGuard.Allows(row, TargetContext(row), Connected, DateTimeOffset.UtcNow));
     private void Prepare(ObservedResource row, TelephonyMonitorActionMode mode)
     {
@@ -577,9 +674,13 @@
             new("demo-peer", "apoint-voip", "peer", "PJSIP/1001", "Registered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", RegistrationObservedAt = now, LastRegisteredObservedAt = now, LastEventType = "PeerStatusEvent" } },
             new("demo-trunk", "google-voip", "peer", "PJSIP/trunk-demo", "Reachable", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Reachability = "online", ReachabilityObservedAt = now, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
             new("demo-agent", "eveo-voip", "agent", "fila-demo/PJSIP/6007", Text["In conversation"], "", "", null, now, now, new Dictionary<string,string> { ["queue"] = "fila-demo", ["paused"] = "false", ["membername"] = "Hugo" }),
-            new("demo-wait", "eveo-voip", "waiting", "PJSIP/demo-000000ac", "Aguardando", "Cliente demonstração", "", tenant.ToString("N"), now.AddSeconds(-43), now, new Dictionary<string,string> { ["queue"] = "fila-demo" }),
+            new("demo-wait", "eveo-voip", "waiting", "PJSIP/6007-000000ab", "waiting", "Cliente demonstração", "", tenant.ToString("N"), now.AddSeconds(-43), now, new Dictionary<string,string> { ["queue"] = "fila-demo", ["linkedid"] = "demo-linked-1" }),
             new("demo-hugo", "eveo-voip", "peer", "PJSIP/6007", "Reachable", "", "", null, now.AddMinutes(-8), now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", Reachability = "online", Device = "2", RegistrationObservedAt = now.AddMinutes(-7), LastRegisteredObservedAt = now.AddMinutes(-7), ReachabilityObservedAt = now, DeviceObservedAt = now, RoundTripMilliseconds = 12.5m, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
             new("demo-other", "google-voip", "peer", "PJSIP/2003", "Unregistered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "unregistered", Reachability = "offline", RegistrationObservedAt = now, LastRegisteredObservedAt = now.AddMinutes(-6), ReachabilityObservedAt = now, LastEventType = "PeerStatusEvent" } }];
+        var demoQuery = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (demoQuery.TryGetValue("supervisionpreview", out var supervisionScenario) && supervisionScenario == "multiple")
+            Rows = Rows.Append(Rows[0] with { Id = "demo-second-call", Key = "PJSIP/6007-000000ef" }).ToArray();
+        if (DemoEndpointResolution) Rows = Rows.Where(row => row.Kind is not ("call" or "waiting")).ToArray();
         var demoObservation = AuthorizedObservation.Create(Cards, Rows, tenant);
         demoTiles = OperatorTile.Create(Cards, demoObservation.ByCard);
         // Dense operator-board fixture only: never mixed into production observations
@@ -600,6 +701,35 @@
         Observation = Context is { } context ? AuthorizedObservation.Create(Cards, Rows, context) : AuthorizedObservation.ForManager(Rows);
         if (!Context.HasValue) Cards = Observation.Cards;
         Rows = Observation.Rows;
+        LoadAcdDemo();
+    }
+    private void LoadAcdDemo()
+    {
+        // Development-only fixture: exercise the real merge, filters and renderer without PBX access.
+        if (!Demo) return;
+        var values = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (!values.TryGetValue("acdpreview", out var scenario)) return;
+        var now = DateTimeOffset.UtcNow;
+        var tenant = Guid.Parse("11111111-1111-7111-8111-111111111111");
+        var queueId = "11111111111171118111111111116599";
+        var channel = new ObservedResource("acd-demo-call", "google-voip", "call", "SIP/0000006007-000000ef", "Up", "6007", "6599", tenant.ToString("N"),
+            now.AddSeconds(-10), now, new Dictionary<string, string> { ["uniqueid"] = "acd-demo-1", ["linkedid"] = "acd-demo-1" });
+        var phase = scenario.ToString() is "greeting" or "offering" or "connected" ? scenario.ToString() : "waiting";
+        var ended = scenario == "empty";
+        var snapshot = new AcdBoardSnapshot(tenant.ToString("N"), "22222222222272228222222222222222", now, true, false,
+            [new(queueId, "Homologação Sufficit — 6599", ended || phase == "connected" ? 0 : 1, 2, ended ? null : now.AddSeconds(-10),
+                Offering: phase == "offering" ? 1 : 0, Connected: phase == "connected" ? 1 : 0, Greeting: phase == "greeting" ? 1 : 0)],
+            ended ? [] : [new("33333333333373338333333333333333", queueId, phase, now.AddSeconds(-10), channel.Details["uniqueid"], channel.Key, "6007")]);
+        if (scenario == "legacy") snapshot = snapshot with { Visits = null };
+        var sample = new AcdBoardSample("google-voip", tenant, snapshot, scenario != "stale");
+        var native = new EventsPanelCardInfo { Label = "Hugo · piloto 6599", Kind = EventsPanelCardKind.PEER, Channels = ["SIP/0000006007"] };
+        var projection = AcdBoardProjection.Create([sample], ended ? [] : [channel], Context, now);
+        var fixture = Context is { } context ? AuthorizedObservation.Create([native], ended ? [] : [channel], context)
+            : AuthorizedObservation.ForManager(ended ? [] : [channel]);
+        fixture.AddAcd(projection);
+        demoTiles = demoTiles.Concat(OperatorTile.Create(fixture.Cards, fixture.ByCard)).ToArray();
+        Cards = Cards.Concat(fixture.Cards).ToArray();
+        Rows = Rows.Concat(fixture.Rows).ToArray();
     }
     public async ValueTask DisposeAsync()
     {

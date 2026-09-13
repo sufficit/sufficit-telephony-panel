@@ -1,12 +1,15 @@
 @using Sufficit.Telephony.Panel.Operations
 @using Sufficit.Telephony.EventsPanel
 <section class="operator-board" aria-label="@Text["Operation board"]">
+    @if (!Compact)
+    {
     <div class="board-legend" aria-label="@Text["Observed state legend"]">
         <span class="legend-online">@Text["Reachable / registered"]</span><span class="legend-busy">@Text["With channels / in use"]</span><span class="legend-ringing">@Text["Ringing"]</span><span class="legend-offline">@Text["No response / unregistered"]</span><span>@Text["No information"]</span>
     </div>
+    }
     <div class="board-columns">
         <section class="board-section" aria-labelledby="board-extensions">
-            <header class="board-section-heading"><h3 id="board-extensions">@(Central ? Text["Extensions and endpoints"] : Text["Extensions"])</h3><span>@Peers.Length</span></header>
+            <header class="board-section-heading"><h3 id="board-extensions">@(Central ? Text["Extensions and endpoints"] : Text["Extensions"])</h3><div class="board-heading-tools"><span>@Peers.Length</span>@HeaderTools</div></header>
             <div class="board-grid">
                 @foreach (var tile in Peers.Skip(page * Size).Take(Size)) { @TileButton(tile) }
             </div>
@@ -29,10 +32,22 @@
         </aside>
     </div>
 </section>
+@if (MenuTile is { } menu)
+{
+    <BoardCardMenu @key="menu.Id" Tile="menu" X="MenuX" Y="MenuY" Closed="() => MenuTile = null" Selected="Select" Action="Supervise" />
+}
 @code {
+    [Parameter] public EventCallback<BoardSupervisionAction> Supervise { get; set; }
+    private OperatorTile? MenuTile;
+    private double MenuX, MenuY;
+    private void OpenMenu(OperatorTile tile, MouseEventArgs e) { MenuTile = tile; MenuX = e.ClientX; MenuY = e.ClientY; }
+    private void MenuKey(OperatorTile tile, KeyboardEventArgs e)
+    { if (e.Key == "ContextMenu" || (e.ShiftKey && e.Key == "F10")) { MenuTile = tile; MenuX = MenuY = 0; } }
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
     [Parameter] public OperatorTile[] Tiles { get; set; } = [];
     [Parameter] public bool Central { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public RenderFragment? HeaderTools { get; set; }
     [Parameter] public string? Selected { get; set; }
     [Parameter] public EventCallback<OperatorTile> Select { get; set; }
     [Parameter] public int Page { get; set; }
@@ -43,13 +58,31 @@
     private OperatorTile[] Trunks => Tiles.Where(t => t.Kind == EventsPanelCardKind.TRUNK).ToArray();
     private OperatorTile[] Queues => Tiles.Where(t => t.Kind == EventsPanelCardKind.QUEUE).ToArray();
     private int Pages => Math.Max(1, (Peers.Length + Size - 1) / Size);
-    private RenderFragment TileButton(OperatorTile tile) => @<button type="button"
+    private string FlowStatus(OperatorTile tile)
+    {
+        if (tile.Acd is { } acd)
+            return acd.State != "current" ? Text["ACD state unavailable"]
+                : Text.Format("{0} pending · {1} in service", acd.Details["pending"], acd.Details["connected"]);
+        if (tile.Kind == EventsPanelCardKind.QUEUE && tile.QueueCalls.Length > 0)
+            return Text.Format("{0} waiting · {1} answered", tile.QueueCalls.Count(r => r.State != "answered"), tile.QueueCalls.Count(r => r.State == "answered"));
+        if (tile.Flows.Length == 0) return Text.Observed(tile.Status.Label);
+        var correlated = tile.Flows.Count(f => f.Correlated);
+        var label = correlated == tile.Flows.Length ? Text.Format("{0} observed calls", correlated)
+            : correlated == 0 ? Text.Format("{0} uncorrelated channels", tile.Flows.Length)
+            : Text.Format("{0} correlated calls · {1} uncorrelated channels", correlated, tile.Flows.Length - correlated);
+        return tile.Status.Tone == "ringing" ? Text["Ringing"] + " · " + label : label;
+    }
+    private RenderFragment TileButton(OperatorTile tile) => @<div class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
+    <button type="button"
         class="board-tile tone-@tile.Status.Tone @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
         title="@Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label))">
         <span class="tile-title"><span class="tile-dot" aria-hidden="true"></span><strong>@tile.Title</strong></span>
-        <span class="tile-status">@Text.Observed(tile.Status.Label)</span><span class="tile-node">@tile.Node</span>
-        @foreach (var channel in tile.Channels.Take(2)) { <span class="tile-channel">@channel.Caller → @channel.Destination</span> }
-        @if (tile.Channels.Length > 2) { <span class="tile-channel">@Text.Format("+{0} channels in details", tile.Channels.Length - 2)</span> }
-    </button>;
+        <span class="tile-status">@FlowStatus(tile)</span><span class="tile-node">@tile.Node</span>
+        @foreach (var flow in tile.Flows.Take(2)) { <span class="tile-channel">@(LiveProjection.Meaningful(flow.Caller) ? flow.Caller : Text["Source not reported"]) → @(LiveProjection.Meaningful(flow.Destination) ? flow.Destination : Text["Destination not reported"])@if (tile.Acd is not null) { <text> · @Text[flow.Phase switch { "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent", "answered" => "Answered in queue", _ => "Waiting in queue" }]</text> }</span> }
+        @if (tile.Flows.Length > 2) { <span class="tile-channel">@Text.Format("+{0} call flows in details", tile.Flows.Length - 2)</span> }
+    </button>
+    <SUIButton Class="card-menu-trigger" SizeValue="SUISize.Small" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Menu"
+        aria-haspopup="menu" aria-label="@Text.Format("Actions for {0}", tile.Title)" title="@Text["Card actions"]" OnClick="e => OpenMenu(tile, e)" />
+    </div>;
 }

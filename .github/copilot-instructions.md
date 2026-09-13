@@ -3,6 +3,7 @@
 
 * code comments should always be in English;
 * identifiers and canonical routes must be English; use `/board`, not `/mesa`;
+* use `contextid` for the company/context URL filter; `company` is a read-only legacy alias;
 * UI text must support English (default) and Brazilian Portuguese through PanelText;
 * preserve the browser-local language preference and never translate customer data;
 * response to user queries should be in IDE current language;

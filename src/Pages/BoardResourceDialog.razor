@@ -1,0 +1,53 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<dialog @ref="Element" class="board-resource-dialog" aria-labelledby="resource-dialog-title">
+    <header class="resource-dialog-header">
+        <h2 id="resource-dialog-title">@Title</h2>
+        <SUIButton VariantValue="SUIVariant.Text" OnClick="DismissAsync">@Text["Close details"]</SUIButton>
+    </header>
+    <div class="resource-dialog-body">@ChildContent</div>
+</dialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    private ElementReference Element;
+    private IJSObjectReference? module, session;
+    private DotNetObjectReference<BoardResourceDialog>? reference;
+    private bool closing;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        module = await JS.InvokeAsync<IJSObjectReference>("import", "./board-dialog.js");
+        reference = DotNetObjectReference.Create(this);
+        session = await module.InvokeAsync<IJSObjectReference>("open", Element, reference);
+    }
+
+    [JSInvokable]
+    public async Task DismissAsync()
+    {
+        if (closing) return;
+        closing = true;
+        if (session is not null) await session.InvokeVoidAsync("close");
+        await Closed.InvokeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (session is not null)
+            {
+                await session.InvokeVoidAsync("close");
+                await session.DisposeAsync();
+            }
+            if (module is not null) await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        reference?.Dispose();
+    }
+}

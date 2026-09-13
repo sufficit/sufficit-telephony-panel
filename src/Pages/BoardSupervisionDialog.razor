@@ -1,0 +1,130 @@
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.Monitor
+@inject OperationsAccess Access
+@inject SupervisionPrefixPolicy PrefixPolicy
+@implements IDisposable
+
+<BoardResourceDialog Title="@Text.Format("Supervision: {0}", Request.Tile.Title)" Closed="Closed">
+    <div class="board-supervision">
+        @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</SUIAlert> }
+        <p><strong>@Text[Request.Mode == TelephonyMonitorActionMode.Listen ? "Listen" : "Whisper"]</strong> · @Request.Tile.Node</p>
+        @if (Request.Continuous)
+        {
+            @if (PrefixChoices.Length > 1)
+            {
+            <SUISelect T="string" Label="@Text["Authorized prefix"]" @bind-Value="PrefixId" Disabled="@(Sending || Submitted)">
+                <SUISelectItem Value="@string.Empty">@Text["Choose a prefix"]</SUISelectItem>
+                @foreach (var rule in PrefixChoices) { <SUISelectItem Value="@rule.Id">@rule.Prefix · @rule.ContextId.ToString("N")</SUISelectItem> }
+            </SUISelect>
+            }
+            else if (PrefixChoices.SingleOrDefault() is { } onlyPrefix)
+            { <p>@Text["Authorized prefix"]: <code>@onlyPrefix.Prefix</code></p> }
+            <p>@Text["Continuous supervision follows matching channels on this server, one at a time, including future calls. It does not mix all calls. Press * on your phone to move to the next channel; hang up to stop. Maximum session: 30 minutes."]</p>
+            @if (PrefixChoices.Length == 0)
+            {
+                <SUIAlert ToneValue="SUITone.Warning">@Text[Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER
+                    ? "This extension has no live SIP/PJSIP endpoint associated with a context and server. Check the context filter and monitoring connection. An active call is not required."
+                    : "No protected prefix mapping is configured for this card. Display filters are not supervision permissions. Queue names are not channel prefixes; an administrator must map an exclusive routing prefix."]</SUIAlert>
+            }
+        }
+        else
+        {
+            @if (Channels.Length > 1)
+            {
+            <SUISelect T="string" Label="@Text["Specific channel"]" @bind-Value="ChannelId" Disabled="@(Sending || Submitted)">
+                <SUISelectItem Value="@string.Empty">@Text["Choose a channel"]</SUISelectItem>
+                @foreach (var row in Channels) { <SUISelectItem Value="@row.Id">@row.Key · @row.Caller → @row.Destination</SUISelectItem> }
+            </SUISelect>
+            }
+            else if (Channels.SingleOrDefault() is { } onlyChannel)
+            { <p>@Text["Specific channel"]: <code>@onlyChannel.Key</code></p> }
+            <p>@Text["Only the selected channel is monitored. The session ends when that channel ends; it does not follow other calls."]</p>
+            @if (Channels.Length == 0) { <SUIAlert ToneValue="SUITone.Warning">@Text["No fresh, authorized SIP/PJSIP channel is available for this card. Wait for current events or reconnect."]</SUIAlert> }
+        }
+        <p>@Text[Request.Mode == TelephonyMonitorActionMode.Listen
+            ? "Listening does not transmit your microphone to the call."
+            : "Whispering sends your voice to the selected channel, not automatically to an agent. Choose the agent leg, not the caller or trunk leg."]</p>
+        <p>@(Supervisor is { } supervisor ? Text.Format("Your extension {0} will be called. Answer it to begin. Use only with operational authorization.", supervisor.Title)
+            : Text["Set your preferred extension in the portal to enable supervision."])</p>
+        @if (Message is not null) { <SUIAlert ToneValue="@(Failed ? SUITone.Warning : SUITone.Info)" role="status">@Text.Observed(Message)</SUIAlert> }
+        @if (!Submitted)
+        {
+            <div class="tools"><SUIButton OnClick="Confirm" Disabled="@(!Ready)">@(Sending ? Text["Sending…"] : Text["Confirm and call my extension"])</SUIButton></div>
+        }
+        <p class="muted">@Text["Closing this window does not end an accepted telephone session. Hang up your supervision extension to stop."]</p>
+    </div>
+</BoardResourceDialog>
+
+@code {
+    [Parameter, EditorRequired] public BoardSupervisionAction Request { get; set; } = default!;
+    [Parameter] public Guid? Context { get; set; }
+    [Parameter] public bool Connected { get; set; }
+    [Parameter] public bool Demo { get; set; }
+    [Parameter] public bool DemoEndpointResolution { get; set; }
+    [Parameter] public (Guid Id, string Title)? Supervisor { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private string ChannelId = "", PrefixId = "";
+    private bool Sending, Submitted, Failed;
+    private string? Message;
+    private Guid ContextFor(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
+    private ObservedResource[] Channels => Request.Tile.DetailChannels.Where(row =>
+        MonitorActionGuard.Allows(Demo ? row with { Updated = DateTimeOffset.UtcNow } : row, ContextFor(row), Connected, DateTimeOffset.UtcNow)).ToArray();
+    private SupervisionPrefixRule[] Prefixes => Demo && !DemoEndpointResolution
+        ? [new() { Id = "demo-prefix", ContextId = Guid.Parse("11111111-1111-7111-8111-111111111111"), Node = Request.Tile.Node,
+            CardKey = Request.Tile.Keys.FirstOrDefault() ?? "demo", Prefix = Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.QUEUE
+                ? "Local/queue-demo@demo-" : Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.TRUNK ? "PJSIP/trunk-demo-" : "PJSIP/6007-" }]
+        : PrefixPolicy.For(Request.Tile, Context);
+    private EndpointSupervisionTarget[] EndpointTargets => Demo && !DemoEndpointResolution ? [] : EndpointSupervisionTarget.For(Request.Tile, Context, Connected, DateTimeOffset.UtcNow);
+    private SupervisionPrefixRule[] PrefixChoices => Prefixes.Concat(EndpointTargets.Select(target => new SupervisionPrefixRule
+        { Id = target.Id, ContextId = target.ContextId, Node = target.Node, CardKey = target.PeerKey, Prefix = target.Prefix }))
+        .DistinctBy(rule => (rule.ContextId, rule.Node, rule.Prefix)).ToArray();
+    private bool Ready => !Sending && !Submitted && Supervisor.HasValue && Connected
+        && (Request.Continuous ? PrefixChoices.Any(p => p.Id == PrefixId) : Channels.Any(c => c.Id == ChannelId));
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        // The menu click is the user's listening command. Resolve only one target,
+        // once; refreshes, failed requests and later observations never auto-submit.
+        if (Request.Continuous && PrefixChoices is [var prefix]) PrefixId = prefix.Id;
+        if (!Request.Continuous && Channels is [var channel]) ChannelId = channel.Id;
+        if (Request.Mode == TelephonyMonitorActionMode.Listen && Ready) await Confirm();
+        StateHasChanged();
+    }
+    private async Task Confirm()
+    {
+        if (!Ready) return;
+        Sending = true; Message = null; Failed = false;
+        try
+        {
+            if (Demo) Message = "Demonstration: confirmation validated. No call was sent.";
+            else
+            {
+                if (Request.Continuous)
+                {
+                    var endpoint = EndpointTargets.SingleOrDefault(target => target.Id == PrefixId);
+                    if (endpoint is not null) await Access.MonitorEndpointPrefix(endpoint, Request.Mode, lifetime.Token);
+                    else await Access.MonitorPrefix(PrefixId, Request.Mode, lifetime.Token);
+                }
+                else
+                {
+                    var channel = Channels.Single(c => c.Id == ChannelId);
+                    await Access.Monitor(ContextFor(channel), channel.Id, Request.Mode, lifetime.Token);
+                }
+                Message = "Request accepted by the exchange. Answer your extension. This does not confirm audio is connected yet.";
+            }
+            Submitted = true;
+        }
+        catch (Exception e)
+        {
+            Failed = true;
+            Message = (e is UnauthorizedAccessException or InvalidOperationException ? Text.Observed(e.Message)
+                : Text["Could not query the telephony service. Try refreshing; if it persists, check the connection and permissions."])
+                + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
+            // An ambiguous network response must never result in an automatic second call.
+            Submitted = true;
+        }
+        finally { Sending = false; }
+    }
+    public void Dispose() { lifetime.Cancel(); lifetime.Dispose(); }
+}

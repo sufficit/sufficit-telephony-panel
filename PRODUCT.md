@@ -23,6 +23,12 @@ The existing collectors remain responsible for AMI and PBX collection.
 - Server-side authentication and role checks; never expose monitoring credentials.
 - Bounded token, entitlement and monitoring caches; no per-tab AMI connections.
 - History and per-node details, freshness timestamps and clear unavailable states.
+- Dedicated `/board`: only the resource mosaic, with selected details in a popup, without the
+  normal page header, tabs, tips or legend. A compact filter icon opens persistent
+  URL-backed filters and display options; the normal page retains full controls.
+  Never append details or confirmations below the dedicated mosaic. Opening or
+  closing the popup preserves board scroll and filters; normal-page links open
+  another tab so the television-style board keeps running.
 - No customer messaging or PBX restart/reload. User-approved Listen/Whisper is
   delegated to the existing monitor API after explicit confirmation, tenant
   authorization and fresh observed-target validation.

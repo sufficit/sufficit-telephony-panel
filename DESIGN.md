@@ -336,17 +336,24 @@ seleção usa contorno interno primário de 2px e aria-pressed. Foco por teclado
 permanece visível; transições de fundo e borda duram 200ms e respeitam
 reduced-motion.
 
-A rota /board usa a mesma identidade SUI com cabeçalho compacto e sem rodapé ou
-navegação de infraestrutura. Os filtros ficam agrupados acima dos cartões; o
-fieldset “Aplicar texto em” controla ramais, troncos e filas independentemente,
-todos selecionados por padrão. Preferências de visualização acompanham a URL.
-Empresa, limites de observação e retenção usam disclosure nativo acessível.
-O cabeçalho de filtros é sticky no desktop, normal no móvel; a grade mede a altura
-disponível e não assume tamanho fixo do cabeçalho. O botão Tela cheia é opt-in e
-usa a API do navegador somente no contêiner board-focus: filtros, mosaico e
-inspetor selecionado. Cabeçalho global, abas, retenção e ajuda ficam fora dele.
-O botão de saída permanece dentro da tela cheia; sem suporte a página dedicada
-continua funcionando com aviso. /mesa redireciona para /board preservando filtros.
+The /board route renders only the resource mosaic at the top of the viewport.
+Global header, tabs, explanations, legend and retention controls are not rendered
+on this route; they remain on the normal page. A small SUI filter icon beside the
+extension count opens a native popover containing filters, company disclosure,
+language, theme, fullscreen, refresh and links back to the normal page/settings.
+Closing with its button, Escape or an outside click preserves filters and URL.
+The text scope independently targets extensions, trunks and queues, all by default.
+Company filtering uses the canonical `contextid` URL key. Legacy `company` links
+are normalized with history replacement, retaining other filters and access checks.
+Desktop sidebar sections use natural content height and share the viewport budget;
+neither list is independently capped at half the screen. Short trunks leave more
+space for queues; only excess content scrolls. Mobile lists keep natural height.
+Active filters and observation problems use a compact indicator on the icon;
+status and error details remain available inside the menu, not above the mosaic.
+Fullscreen targets board-focus, including the menu and selected-resource dialog.
+It must not reintroduce the normal page's header spacing or other panels.
+Unsupported browsers keep the dedicated page and receive a warning in the menu.
+/mesa remains a compatibility redirect to /board, preserving query filters.
 
 English é o idioma padrão; o seletor SUI English/Português salva a preferência
 em telephony-panel-language no localStorage. Rótulos, mensagens e estados usam
@@ -362,10 +369,16 @@ contagens do conjunto filtrado, não apenas dos cartões renderizados. Sem
 classificação autorizada, o título é “Ramais e endpoints” e Troncos orienta
 a filtrar uma empresa; não se infere tipo por nome ou prefixo.
 
-Clique ou Enter abre o inspetor abaixo do mosaico e transfere foco para ele.
-O detalhe separa registro, alcance, uso e horários, exibe até 100 canais com
-aviso de limite e oferece fechar. Ouvir/Sussurrar reutiliza a confirmação por
-canal existente; não há toolbar fictícia de transferência, discagem ou encerramento.
+On /board, clicking or pressing Enter on a resource opens a native top-layer
+dialog, never an inspector below the mosaic. The bounded dialog scrolls internally,
+stays above fullscreen, and keeps its close button visible. Escape, Close details
+or a backdrop click restore focus to the resource without changing board scroll
+or URL. Live detail updates remain bound to the selected resource. All channel
+confirmation/status content stays inside the popup. Normal-page/settings links
+from dedicated options open another tab with noopener; the board tab stays put.
+The normal root page retains its inline inspector and existing supervision flow.
+Details separate registration, reachability, usage and timestamps and show up to
+100 channels with an explicit limit. No new telephone action is introduced.
 
 Fontes desta extensão: src/Pages/OperatorBoard.razor, src/Pages/LiveOperations.razor,
 src/wwwroot/panel.css e docs/operator-board.md. As capturas

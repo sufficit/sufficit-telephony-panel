@@ -1,0 +1,47 @@
+@implements IAsyncDisposable
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.Monitor
+@inject IJSRuntime JS
+
+<div @ref="Element" class="board-card-menu" popover="auto" role="menu" aria-label="@Text.Format("Actions for {0}", Tile.Title)">
+    <strong class="card-menu-title">@Tile.Title</strong>
+    <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="Details">@Text["Open details"]</SUIButton>
+    <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, false)">@Text["Listen to a channel"]</SUIButton>
+    <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, false)">@Text["Whisper to a channel"]</SUIButton>
+    <hr />
+    <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, true)">@Text["Listen continuously by prefix"]</SUIButton>
+    <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, true)">@Text["Whisper continuously by prefix"]</SUIButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public OperatorTile Tile { get; set; } = default!;
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback<OperatorTile> Selected { get; set; }
+    [Parameter] public EventCallback<BoardSupervisionAction> Action { get; set; }
+    private ElementReference Element;
+    private IJSObjectReference? module, session;
+    private DotNetObjectReference<BoardCardMenu>? reference;
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (!first) return;
+        module = await JS.InvokeAsync<IJSObjectReference>("import", "./board-card-menu.js");
+        reference = DotNetObjectReference.Create(this);
+        session = await module.InvokeAsync<IJSObjectReference>("open", Element, X, Y, reference);
+    }
+    [JSInvokable] public Task DismissAsync() => Closed.InvokeAsync();
+    private async Task Details() { await Closed.InvokeAsync(); await Selected.InvokeAsync(Tile); }
+    private async Task Start(TelephonyMonitorActionMode mode, bool continuous)
+    { await Closed.InvokeAsync(); await Action.InvokeAsync(new(Tile, mode, continuous)); }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (session is not null) { await session.InvokeVoidAsync("close"); await session.DisposeAsync(); }
+            if (module is not null) await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        reference?.Dispose();
+    }
+}

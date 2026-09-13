@@ -19,7 +19,7 @@ const fs = require('node:fs');
         await page.waitForFunction(() => document.querySelectorAll('.board-grid .board-tile').length === 1);
         assert.equal(await channelsOnly.getAttribute('aria-pressed'), 'true');
         assert.equal(await page.locator('.board-trunks .board-tile').count(), 0);
-        assert.equal(await page.locator('.board-queues .board-tile').count(), 0);
+        assert.equal(await page.locator('.board-queues .board-tile').count(), 1, 'Waiting queue callers remain visible with the observed-channel filter');
         await page.getByRole('textbox', { name: 'Filtrar recursos' }).fill('6101');
         await page.waitForFunction(() => document.querySelectorAll('.board-tile').length === 0);
         await page.getByRole('textbox', { name: 'Filtrar recursos' }).fill('');

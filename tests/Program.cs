@@ -64,8 +64,11 @@ Check(Snapshot(healthy, fresh, Row("sufficit_pbx_active_calls", "NaN")).Nodes[0]
 Check(Snapshot(healthy, fresh, calls, calls).Nodes[0].Calls is null, "Ambiguous duplicate series fail closed");
 Check(Snapshot(healthy, fresh).Nodes[0].AmiUp is null, "AMI missing is not a disconnected assertion");
 await OperationsChecks.Run(Check);
+BoardSupervisionChecks.Run(Check);
 await SharedTelemetryChecks.Run(Check);
 CallGroupingChecks.Run(Check);
+QueueCallFlowChecks.Run(Check);
+await AcdBoardChecks.Run(Check);
 OperatorBoardChecks.Run(Check);
 await BoardConfigurationChecks.Run(Check);
 FopRulesChecks.Run(Check);

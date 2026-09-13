@@ -37,12 +37,24 @@ public sealed class AuthorizedObservation
     public Dictionary<string, string> Labels { get; } = new();
     public ObservedResource[] Rows { get; private set; } = [];
     public bool Limited { get; private set; }
+    // Only the manager-authorized private reader may supply this projection.
+    public void AddAcd(AcdBoardProjection projection)
+    {
+        foreach (var entry in projection.ByCard)
+        {
+            ByCard.Add(entry.Key, entry.Value);
+            foreach (var row in entry.Value) Labels[row.Id] = entry.Key.Label;
+        }
+        Cards = Cards.Concat(projection.ByCard.Keys).ToArray();
+        Rows = Rows.Concat(projection.Rows).ToArray();
+    }
     public static AuthorizedObservation Create(EventsPanelCardInfo[] cards, IEnumerable<ObservedResource> source, Guid context)
     {
-        var result = new AuthorizedObservation();
+        var result = new AuthorizedObservation { Cards = cards };
         var rows = new List<ObservedResource>();
         var comparisons = 0;
-        foreach (var row in source.OrderByDescending(r => r.Updated))
+        var candidates = source.OrderByDescending(r => r.Updated).Take(LiveProjection.Capacity).ToArray();
+        foreach (var row in candidates)
         {
             if (row.Kind is "call" or "waiting" && (!Guid.TryParse(row.Account, out var account) || account != context)) continue;
             var matched = false;
@@ -57,6 +69,15 @@ public sealed class AuthorizedObservation
             if (matched) rows.Add(row);
             if (result.Limited) break;
         }
+        // Preserve internal legs for diagnostics only after an authorized resource anchors
+        // the call. Each added leg still needs its own matching tenant AccountCode.
+        var calls = rows.Where(r => r.Kind is "call" or "waiting")
+            .Where(r => LiveProjection.Meaningful(r.Details.GetValueOrDefault("linkedid")))
+            .Select(r => (r.Node, Linked: r.Details["linkedid"])).ToHashSet();
+        var included = rows.Select(r => r.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var row in candidates.Where(r => r.Kind == "call"))
+            if (!included.Contains(row.Id) && Guid.TryParse(row.Account, out var account) && account == context
+                && calls.Contains((row.Node, row.Details.GetValueOrDefault("linkedid", "")))) rows.Add(row);
         result.Rows = rows.ToArray();
         return result;
     }

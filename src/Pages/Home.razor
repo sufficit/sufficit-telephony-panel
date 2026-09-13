@@ -11,8 +11,10 @@
 <PageTitle>@Text["Telephony · Sufficit Panel"]</PageTitle>
 <CascadingValue Name="PanelLanguage" Value="Text.Language">
 <SUIThemeProvider Theme="@(new PanelTheme(Dark))">
-<div class="panel-shell @(BoardPage ? "dedicated-board" : "")">
+<div class="panel-shell @(BoardPage && Allowed ? "dedicated-board board-only" : "")">
     <a class="skip-link" href="#main">@Text["Skip to monitoring"]</a>
+    @if (!BoardPage || (Ready && !Allowed))
+    {
     <header class="panel-header">
         <a class="brand" href="./"><img src="panel-icon.png" width="44" height="44" alt="" /><span>Sufficit <strong>Telephony Panel</strong></span></a>
         <div class="header-actions">
@@ -25,6 +27,7 @@
             }
         </div>
     </header>
+    }
     <main id="main" tabindex="-1">
     @if (!Ready)
     {
@@ -48,7 +51,7 @@
         </nav> }
         @if (Operational || BoardPage)
         {
-            <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" />
+            <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" Dark="Dark" ThemeChanged="ToggleTheme" />
         }
         else
         {

@@ -1,7 +1,7 @@
 # Eveo test deployment
 
 Only eveo-apps is authorized. Public entry:
-https://panel.sufficit.com.br/ (redirects to /telephony-panel/). The original
+https://panel.sufficit.com.br/ (served directly, without a path prefix). The original
 https://eveo-apps.sufficit.com.br/telephony-panel/ remains available. Kestrel uses a Unix socket;
 Nginx handles TLS. Normal panel deployments do not restart PBXs, portal or Identity.
 The separately approved token-format correction below restarted only Identity,
@@ -57,6 +57,31 @@ does not itself authorize Identity administration. See PLAN-telephony-panel.md f
 remaining authenticated validation and the narrowly scoped DCR cleanup.
 
 ## Packaging and service
+
+Current panel release: **0.12.2**, deployed on Eveo Apps. It also resolves idle
+extension peers without requiring an active call; see
+[idle-peer evidence and rollback](../docs/activities/202609122052-idle-prefix.md).
+Version 0.12.1 added direct listening
+for a single eligible channel/prefix and server-revalidated concrete endpoint
+prefixes; see [validation and rollback](../docs/activities/202609122036-direct-supervision.md).
+
+The ACD monitoring integration introduced in **0.12.0** remains configured, with Google's
+private snapshot source and a distinct snapshot-only credential. This deployment
+also updated only Google's isolated ACD controller to 0.10.1 and applied the
+required additive ACD schema; no Asterisk restart or dialplan change. See
+[release evidence and rollback](../docs/activities/202609122003-deploy-acd-board.md).
+`deploy-acd-board.py` is an explicit one-time host-checked helper, not a generic
+redeploy command. Its `probe` phase runs the real source reader as sufftelpanel;
+the probe project is `deploy/verification/AcdSourceProbe.csproj`.
+
+Version 0.10.3 uses `contextid` for company filtering (legacy `company` links are
+normalized) and lets trunks/queues share available desktop height before scrolling.
+The board stays mosaic-only even after a resource is selected:
+details and channel confirmations open in a bounded popup, including fullscreen.
+Normal-page/settings links open another tab. Filters and display controls open
+from the icon beside the extension count. Closing the popover preserves URL-backed
+filters. The normal root page keeps navigation, help, settings and retention.
+This is an application-only deployment; no nginx, Identity or PBX change is needed.
 
 Version 0.8 adds the default-on remembered-resource inventory, stored separately at
 `/var/lib/sufficit-telephony-panel/known-resources.json` (0600). Never overwrite or

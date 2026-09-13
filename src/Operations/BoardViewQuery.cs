@@ -5,7 +5,7 @@ namespace Sufficit.Telephony.Panel.Operations;
 /// <summary>URL preferences are bounded presentation state, never authorization.</summary>
 public sealed record BoardViewQuery
 {
-    public Guid? Company { get; init; }
+    public Guid? ContextId { get; init; }
     public string Text { get; init; } = "";
     public string Node { get; init; } = "all";
     public string State { get; init; } = "all";
@@ -25,9 +25,11 @@ public sealed record BoardViewQuery
         var scope = Get("text");
         var tab = Get("tab");
         var kinds = scope.Split(',').Where(Kinds.Contains).Distinct().ToArray();
+        // The canonical key wins even when invalid; never fall back to a different context.
+        var context = query.ContainsKey("contextid") ? Get("contextid") : Get("company");
         return new()
         {
-            Company = Guid.TryParse(Get("company"), out var id) && id != Guid.Empty ? id : null,
+            ContextId = Guid.TryParse(context, out var id) && id != Guid.Empty ? id : null,
             Text = new string(text.Where(c => !char.IsControl(c)).Take(100).ToArray()),
             Node = node.Length is > 0 and <= 128 && !node.Any(char.IsControl) ? node : "all",
             State = new[] { "online", "offline", "registered", "unregistered", "busy", "unknown" }.Contains(state) ? state : "all",
@@ -40,7 +42,8 @@ public sealed record BoardViewQuery
 
     public Dictionary<string, object?> Parameters() => new()
     {
-        ["company"] = Company?.ToString("N"), ["q"] = Text.Length > 0 ? Text : null,
+        ["contextid"] = ContextId?.ToString("N"), ["company"] = null,
+        ["q"] = Text.Length > 0 ? Text : null,
         ["node"] = Node == "all" ? null : Node, ["state"] = State == "all" ? null : State,
         ["text"] = TextKinds.Length == 3 ? null : TextKinds.Length == 0 ? "none" : string.Join(',', Kinds.Where(TextKinds.Contains)),
         ["channels"] = Channels ? "true" : null, ["tab"] = Tab == "board" ? null : Tab,
