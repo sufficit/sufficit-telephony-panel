@@ -1,0 +1,85 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+
+const key = 'telephony-panel-board-layout-v1';
+const base = 'http://127.0.0.1:5169';
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    const columns = page.locator('[data-board-split="columns"]');
+    const rows = page.locator('[data-board-split="rows"]');
+    const geometry = () => page.evaluate(() => {
+      const box = selector => { const r = document.querySelector(selector).getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height, bottom:r.bottom }; };
+      return { extensions:box('#board-extension-region'), trunks:box('#board-trunk-region'), queues:box('#board-queue-region') };
+    });
+    const saved = () => page.evaluate(k => JSON.parse(localStorage.getItem(k)), key);
+    const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const drag = async (handle, dx, dy) => {
+      const r = await handle.boundingBox();
+      await page.mouse.move(r.x+r.width/2, r.y+r.height/2);
+      await page.mouse.down();
+      await page.mouse.move(r.x+r.width/2+dx, r.y+r.height/2+dy, {steps:12});
+      await page.mouse.up(); await settle();
+    };
+    await page.goto(`${base}/board?preview=true`);
+    await columns.waitFor({state:'visible'});
+    const initial = await geometry();
+    await drag(columns, -220, 0);
+    await drag(rows, 0, 160);
+    const changed = await geometry();
+    assert(changed.extensions.width < initial.extensions.width-180, 'Column drag changes extension width');
+    assert(changed.trunks.width > initial.trunks.width+180, 'Sidebar receives released space');
+    assert(changed.trunks.height > initial.trunks.height+130, 'Row drag changes trunk height');
+    assert(Math.abs(changed.queues.y-changed.trunks.bottom-14)<2, 'Queues follow the chosen split');
+    assert(changed.queues.bottom <= 1000, 'Sidebar stays within viewport');
+    const preference = await saved();
+    assert.equal(preference.version,1);
+    await page.reload(); await columns.waitFor({state:'visible'}); await settle();
+    const restored = await geometry();
+    assert(Math.abs(restored.extensions.width-changed.extensions.width)<3, 'Widths survive reload');
+    assert(Math.abs(restored.trunks.height-changed.trunks.height)<3, 'Heights survive reload');
+    await page.goto(`${base}/board?preview=true&q=6101`); await columns.waitFor({state:'visible'});
+    assert.deepEqual(await saved(),preference,'Filters do not overwrite layout');
+    await rows.focus(); await page.keyboard.press('ArrowUp'); await settle();
+    assert((await saved()).rows < preference.rows,'Keyboard changes split');
+    await page.keyboard.press('Enter');
+    assert.equal((await saved()).rows,null,'Enter restores automatic content-based heights');
+    await columns.dblclick();
+    assert.equal((await saved()).columns,.76,'Double click restores width');
+    await columns.focus(); await page.keyboard.press('End'); await rows.focus(); await page.keyboard.press('Home'); await settle();
+    const bounded = await geometry();
+    assert(bounded.trunks.width >= 239 && bounded.trunks.height >= 103,'Small panels retain minimum dimensions');
+    const beforeCancel = await saved();
+    const r = await columns.boundingBox();
+    await page.mouse.move(r.x+7,r.y+80); await page.mouse.down(); await page.mouse.move(r.x-150,r.y+80);
+    await page.keyboard.press('Escape'); await page.mouse.up();
+    assert.deepEqual(await saved(),beforeCancel,'Escape cancels without overwriting preference');
+    await columns.press('Enter'); await rows.press('Enter');
+    await page.goto(`${base}/board?preview=true`); await columns.waitFor({state:'visible'});
+    await page.screenshot({path:'/tmp/board-resize-desktop.png'});
+    const desktopPreference = await saved();
+    await page.setViewportSize({width:390,height:844}); await settle();
+    assert.equal(await columns.isVisible(),false,'Stacked mobile layout has no misleading column separator');
+    assert.equal(await rows.isVisible(),false);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),'No mobile horizontal overflow');
+    assert.deepEqual(await saved(),desktopPreference,'Mobile does not overwrite desktop preference');
+    await page.screenshot({path:'/tmp/board-resize-mobile.png'});
+    await page.setViewportSize({width:1440,height:1000}); await columns.waitFor({state:'visible'});
+    await page.evaluate(k => localStorage.setItem(k,'invalid json'),key);
+    await page.reload(); await columns.waitFor({state:'visible'});
+    assert.equal(await columns.getAttribute('aria-valuenow'),'76','Corrupt preference falls back to default');
+    await page.addInitScript(k => {
+      const get = Storage.prototype.getItem, set = Storage.prototype.setItem;
+      Storage.prototype.getItem = function(name) { if(name===k) throw new DOMException('Blocked','SecurityError'); return get.call(this,name); };
+      Storage.prototype.setItem = function(name,value) { if(name===k) throw new DOMException('Blocked','SecurityError'); return set.call(this,name,value); };
+    },key);
+    await page.reload(); await columns.waitFor({state:'visible'});
+    const blocked = await geometry(); await drag(columns,-100,0);
+    assert((await geometry()).extensions.width < blocked.extensions.width-80,'Resizing works with unavailable localStorage');
+    assert.deepEqual(errors,[]);
+    console.log('PASS: section dragging, persistence, reload, filters, keyboard/reset/cancel, minimum sizes, mobile and unavailable storage.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode=1; });

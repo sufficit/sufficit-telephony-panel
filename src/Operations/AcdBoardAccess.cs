@@ -7,9 +7,11 @@ public sealed class AcdBoardAccess(PanelAccess access, AcdBoardReader reader)
     public bool Configured => reader.Configured;
     public async Task<AcdBoardSample[]> Read(Guid? context, CancellationToken ct)
     {
-        if (!await access.AllowedAsync(ct)) throw new UnauthorizedAccessException();
+        var permissions = await access.PermissionsAsync(ct);
+        context = permissions.SelectContext(context);
         var result = await reader.Read(context, ct);
-        if (!await access.AllowedAsync(ct)) throw new UnauthorizedAccessException();
-        return result;
+        permissions = await access.PermissionsAsync(ct);
+        permissions.SelectContext(context);
+        return result.Where(s => permissions.CanRead(s.ContextId)).ToArray();
     }
 }

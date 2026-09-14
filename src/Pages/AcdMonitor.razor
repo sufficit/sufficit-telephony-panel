@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @using Sufficit.Telephony.Panel.Operations
 @inject AcdBoardAccess Access
+@inject PanelAccess PanelAuthorization
 @inject NavigationManager Navigation
 @inject IWebHostEnvironment Environment
 
@@ -11,11 +12,13 @@
     </div>
     @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
     <div class="acd-filters">
+        @if (!Permissions.SingleContext.HasValue) {
         <SUISelect T="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
             <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
             @foreach (var context in Samples.Select(s => s.ContextId.ToString("N")).Distinct().Order())
             { <SUISelectItem Value="@context">@context</SUISelectItem> }
         </SUISelect>
+        }
         <SUISelect T="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
             <SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>
             @foreach (var node in Samples.Select(s => s.Node).Distinct().Order())
@@ -71,6 +74,7 @@
     [Parameter] public bool Preview { get; set; }
     private bool Demo => Preview && Environment.IsDevelopment();
     private AcdBoardSample[] Samples = [];
+    private Sufficit.Identity.Authorization.CurrentAuthorization Permissions = Sufficit.Identity.Authorization.CurrentAuthorization.None;
     private string Context = "", Node = "all", Search = "", QueueId = "";
     private bool Busy, Disposed;
     private string? Error;
@@ -104,7 +108,19 @@
     {
         if (Busy || Disposed) return;
         Busy = true; Error = null;
-        try { Samples = Demo ? AcdMonitorFixture.Create() : await Access.Read(null, Lifetime.Token); }
+        try
+        {
+            if (Demo) { Samples = AcdMonitorFixture.Create(); }
+            else
+            {
+                Permissions = await PanelAuthorization.PermissionsAsync(Lifetime.Token);
+                var requested = Guid.TryParse(Context, out var id) ? id : (Guid?)null;
+                var selected = Permissions.SelectContext(requested);
+                if (selected.HasValue && Context != selected.Value.ToString("N"))
+                { Context = selected.Value.ToString("N"); WriteUrl(); }
+                Samples = await Access.Read(null, Lifetime.Token);
+            }
+        }
         catch (UnauthorizedAccessException) { Samples = []; Error = "Your access expired. Sign in again."; }
         catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
         catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException)

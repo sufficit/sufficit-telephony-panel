@@ -8,6 +8,7 @@ var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PanelTextChecks.Run(Check);
 RegistrationChecks.Run(Check);
+await CustomerAccessChecks.Run(Check);
 var clock = new FakeClock();
 var http = new FakeHttp { Body = "{\"sub\":\"operator-a\",\"role\":[\"manager\"]}" };
 using var sessions = new PanelSessions(http, clock);
@@ -15,7 +16,7 @@ AuthenticationTicket Ticket(string subject, DateTimeOffset? expiry = null)
 {
     var principal = new ClaimsPrincipal(new ClaimsIdentity([new("sub", subject), new("role", "manager")], "panel", "name", "role"));
     var properties = new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1) };
-    properties.StoreTokens([new() { Name = "access_token", Value = "synthetic-not-a-real-token" }, new() { Name = "expires_at", Value = (expiry ?? clock.Now.AddHours(1)).ToString("O") }]);
+    properties.StoreTokens([new() { Name = "access_token", Value = "synthetic-" + Guid.NewGuid().ToString("N") }, new() { Name = "expires_at", Value = (expiry ?? clock.Now.AddHours(1)).ToString("O") }]);
     return new(principal, properties, "panel");
 }
 Check(!await sessions.IsManagerAsync(new ClaimsPrincipal(), default), "Anonymous must fail closed");

@@ -1,10 +1,30 @@
 using Sufficit.Telephony.EventsPanel;
+using Sufficit.Identity.Authorization;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
 /// <summary>Tenant-filtered view with a bounded comparison budget; never expose the raw manager stream.</summary>
 public sealed class AuthorizedObservation
 {
+    public static AuthorizedObservation ForCustomer(EventsPanelCardInfo[] cards,
+        IEnumerable<ObservedResource> source, CurrentAuthorization permissions, Guid? context)
+    {
+        context = permissions.SelectContext(context);
+        // Unknown ownership and foreign accounts are never exposed. In particular,
+        // matching a display regex is not proof that a shared trunk belongs here.
+        var rows = source.Where(row => Guid.TryParse(row.Account, out var account)
+            && permissions.CanRead(account) && (!context.HasValue || account == context)).ToArray();
+        if (context is { } selected) return Create(cards, rows, selected);
+        var result = new AuthorizedObservation { Rows = rows };
+        foreach (var group in rows.GroupBy(row => Guid.Parse(row.Account!)))
+        {
+            var scoped = ForManager(group);
+            foreach (var pair in scoped.ByCard) result.ByCard.Add(pair.Key, pair.Value);
+            foreach (var pair in scoped.Labels) result.Labels[pair.Key] = pair.Value;
+            result.Cards = result.Cards.Concat(scoped.Cards).ToArray();
+        }
+        return result;
+    }
     /// <summary>Only for the upstream manager ALL stream, after server-side role validation.</summary>
     public static AuthorizedObservation ForManager(IEnumerable<ObservedResource> source)
     {
