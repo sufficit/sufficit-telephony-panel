@@ -1,5 +1,11 @@
 # Eveo test deployment
 
+> Current-state note (2026-09-14): this document keeps detailed deployment and
+> rollback history. The canonical product/runtime status is
+> [docs/system-overview.md](../docs/system-overview.md). Manager sign-in and real
+> Listen audio have since been exercised; live revocation and Whisper acceptance
+> remain open. Later releases supersede the version summary below.
+
 Only eveo-apps is authorized. Public entry:
 https://panel.sufficit.com.br/ (served directly, without a path prefix). The original
 https://eveo-apps.sufficit.com.br/telephony-panel/ remains available. Kestrel uses a Unix socket;
@@ -10,10 +16,10 @@ sequentially across the three issuer replicas.
 ## Identity
 Provisioned on 2026-09-10 using the supplied operator token: inventory/preview/apply
 created only sufficit-telephony-panel. Both documented callback URLs are registered.
-Login now reaches Identity with authorization-code + PKCE S256. Real authenticated
-manager access and live revocation still need validation; anonymous API access is
-denied. The request-link instructions below remain the standard for future changes,
-not a request to issue another token now.
+Login reaches Identity with authorization-code + PKCE S256. Real manager access has
+been exercised; live revocation still needs explicit validation. Anonymous API
+access is denied. The request-link instructions below remain the standard for
+future changes, not a request to issue another token now.
 
 The application requires the exact current `manager` role. A dedicated public
 OIDC client uses authorization code + PKCE and explicit consent, with no client

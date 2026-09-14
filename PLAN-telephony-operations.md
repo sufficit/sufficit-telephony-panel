@@ -1,5 +1,9 @@
 # Operational telephony panel
 
+> Historical execution plan. Its checkpoints describe the initial rollout and are
+> not the current backlog. See [docs/system-overview.md](docs/system-overview.md)
+> for canonical status, ownership and remaining acceptance work.
+
 ## Scope and decisions
 User requests the most complete operational view based on the portal monitor:
 extensions, trunks, active calls, queue callers/members, client selection and

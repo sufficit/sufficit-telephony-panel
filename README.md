@@ -3,9 +3,14 @@
 Independent internal PBX observation console built on .NET 10 and
 Sufficit.Blazor.UI. Replaces the former sufficit-telephony-blazorpanel host.
 
-Eveo test entry point: https://panel.sufficit.com.br/ . The dedicated Identity client
-was provisioned on 2026-09-10 and the login redirect verified. Real manager login
-and live revocation validation remain pending (see PLAN-telephony-panel.md).
+Internal entry point: https://panel.sufficit.com.br/ . The dedicated Identity client
+was provisioned on 2026-09-10. Manager sign-in and real supervised Listen audio have
+been exercised; non-manager denial, live revocation and Whisper still need explicit
+acceptance before customer publication.
+
+Start with the [canonical system overview](docs/system-overview.md) and
+[documentation index](docs/README.md). Dated activity reports and root execution
+plans are historical evidence, not the current backlog.
 
 ## Scope
 
@@ -18,7 +23,9 @@ stages and registration diagnostics are available at `/queues`.
 - Per-node calls/channels, Asterisk RSS, AMI connectivity and internal work queues.
 - Bounded 1/6/24-hour history, explicit unavailable/stale states, local opt-in sound.
 - Light/dark SUI themes, responsive view, reduced-motion support.
-- No PBX control, customer messaging, tenant self-service or direct browser AMI.
+- Supervision is limited to server-authorized Listen/Whisper actions through the
+  existing Endpoints API. There is no general PBX administration, customer
+  messaging, tenant self-service or direct browser AMI.
 
 ## Develop and test
 Requires .NET 10 and the sibling `sufficit-blazor-ui` and `sufficit-ami-events`
@@ -67,7 +74,8 @@ by a 60-second permission cache and the 30-second panel refresh.
 The app icon is `src/wwwroot/panel-icon.png`; its generation prompt/provenance is
 adjacent. Application identity does not replace the corporate Sufficit mark.
 
-Live implementation status: PLAN-telephony-panel.md until delivery is complete.
+Current implementation status and remaining acceptance work are maintained in
+[docs/system-overview.md](docs/system-overview.md).
 
 ## Worktrees
 Keep worktrees under `.worktrees/` inside this repository.

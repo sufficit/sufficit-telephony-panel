@@ -1,5 +1,9 @@
 # Telephony panel restructuring and Eveo test deployment
 
+> Historical execution plan. Its checkpoints describe what was known during the
+> 2026-09-10 delivery and are not the current backlog. See
+> [docs/system-overview.md](docs/system-overview.md) for canonical status.
+
 ## Objective and acceptance
 Restructure this application as `sufficit-telephony-panel`, independently deployed
 from the main portal. Deliver an operational SUI interface for the already collected
