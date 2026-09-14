@@ -16,6 +16,10 @@ internal static class AcdMonitorFixture
             new(context.ToString("N"), "0000006008", now.AddMinutes(-5), true, true, false)];
         return [new("eveo-voip", context, new(context.ToString("N"), node, now, true, false, [queue],
             [new("44444444444444448444444444444444", queue.QueueId, "greeting", now.AddSeconds(-10), "synthetic.1", "PJSIP/6007-00000001", "6007")], agents), true),
+            new("google-voip", context, new(context.ToString("N"), "66666666666646668666666666666666", now, true, false,
+                [queue with { Waiting = 2, Greeting = 0, Offering = 0 }], [],
+                [agents[0] with { Registered = false, Reachable = false, Contacts = [], RegistrationHistory =
+                    [new(now.AddSeconds(-30), "unregistered", false, false, [])] }]), true),
             new("apoint-voip", context, null, false, Guid.Parse("55555555-5555-4555-8555-555555555555"))];
     }
 }

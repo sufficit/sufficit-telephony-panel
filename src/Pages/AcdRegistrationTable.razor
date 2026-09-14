@@ -2,35 +2,37 @@
 <section class="acd-diagnostics" aria-label="@Text["Extension diagnostics"]">
     <h3>@Text["Extension presence and registrations"]</h3>
     <p class="muted">@Text["Registration and queue membership are independent. History contains observed changes, not exact SIP message times."]</p>
-    <SUITable T="AcdAgentPresence" Items="Agents.OrderBy(a => a.Extension)" Dense="true" StackOnMobile="true" ColumnCount="5">
+    <SUITable T="AcdAgentOverview" Items="Agents" Dense="true" StackOnMobile="true" ColumnCount="5">
         <HeaderContent><SUITh>@Text["Extension"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Contact IP"]</SUITh><SUITh>@Text["Declared device"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
         <RowTemplate Context="agent">
             <SUITd DataLabel="@Text["Extension"]"><code>@agent.Extension</code></SUITd>
-            <SUITd DataLabel="@Text["Observed state"]">@Text[agent.State(DateTimeOffset.UtcNow, Fresh)]<SUIText Typo="SUITypo.caption">@Time(agent.ObservedAt)</SUIText></SUITd>
+            <SUITd DataLabel="@Text["Observed state"]">@Text[agent.State(DateTimeOffset.UtcNow)]<SUIText Typo="SUITypo.caption">@Time(agent.ObservedAt)</SUIText>
+                @if (agent.Observations.Any(o => !o.Fresh || !o.Agent.Fresh(DateTimeOffset.UtcNow))) { <SUIText Typo="SUITypo.caption">@Text["Includes historical readings"]</SUIText> }
+            </SUITd>
             <SUITd DataLabel="@Text["Contact IP"]">@Contacts(agent.Contacts, c => c.IpAddress)</SUITd>
             <SUITd DataLabel="@Text["Declared device"]">@Contacts(agent.Contacts, c => c.UserAgent)</SUITd>
-            <SUITd DataLabel="@Text["Diagnostics"]">
-                <details @key="agent.Extension" open="@Expanded.Contains(agent.Extension)">
-                    <summary @onclick="() => Toggle(agent.Extension)" @onclick:preventDefault>@Text["History and contacts"] · @(agent.RegistrationHistory?.Length ?? 0)</summary>
-                    <p class="muted">@Text["Up to 20 observed changes over 7 days. User-Agent is device-declared; Via IP can differ from contact IP."]</p>
-                    @foreach (var contact in agent.Contacts ?? [])
-                    { <p>@Text["Contact IP"]: @(contact.IpAddress ?? "—") · Via: @(contact.ViaAddress ?? "—")<br />@contact.Endpoint · @contact.UserAgent<br />@Text["Expires"]: @Time(contact.ExpiresAt)</p> }
-                    @if (agent.RegistrationHistory is { Length: > 0 } history)
-                    {
-                        <ol>@foreach (var entry in history.OrderByDescending(h => h.ObservedAt))
-                        { <li>@Time(entry.ObservedAt) · @Text[Event(entry.Event)]<br />@Contacts(entry.Contacts, c => c.IpAddress) · @Contacts(entry.Contacts, c => c.UserAgent)</li> }</ol>
-                        <p class="muted">@Text["History collected since"]: @Time(agent.HistorySince)</p>
+            <SUITd DataLabel="@Text["Diagnostics"]" Class="registration-details-cell">
+                <details @key="agent.Key" open="@Expanded.Contains(agent.Key)">
+                    <summary @onclick="() => Toggle(agent.Key)" @onclick:preventDefault>@Text["History and contacts"] · @agent.Observations.Sum(o => o.Agent.RegistrationHistory?.Length ?? 0)</summary>
+                    <p class="muted">@Text["Up to 20 observed changes per source over 7 days. User-Agent is device-declared; Via IP can differ from contact IP."]</p>
+                    <p class="muted">@Text["Context"]: @agent.ContextId.ToString("N")</p>
+                    @foreach (var observation in agent.Observations)
+                    { <p><strong>@observation.Source.Node</strong> · @Text[observation.Agent.State(DateTimeOffset.UtcNow, observation.Fresh)] · @Time(observation.Agent.ObservedAt)<br />@Text["History collected since"]: @Time(observation.Agent.HistorySince)</p>
+                        @foreach (var contact in observation.Agent.Contacts ?? [])
+                        { <p>@Text["Contact IP"]: @(contact.IpAddress ?? "—") · Via: @(contact.ViaAddress ?? "—")<br />@contact.Endpoint · @contact.UserAgent<br />@Text["Expires"]: @Time(contact.ExpiresAt)</p> }
                     }
-                    else { <p>@Text["History is not available on this source. Earlier registrations were not reconstructed."]</p> }
+                    <ol>@foreach (var item in agent.Observations.SelectMany(o => (o.Agent.RegistrationHistory ?? []).Select(h => (o.Source.Node, Entry: h))).OrderByDescending(h => h.Entry.ObservedAt))
+                    { <li>@Time(item.Entry.ObservedAt) · @Text[Event(item.Entry.Event)] · @item.Node<br />@Contacts(item.Entry.Contacts, c => c.IpAddress) · @Contacts(item.Entry.Contacts, c => c.UserAgent)</li> }</ol>
+                    @if (agent.Observations.Any(o => o.Agent.RegistrationHistory is not { Length: > 0 }))
+                    { <p>@Text["History is not available on every source. Earlier registrations were not reconstructed."]</p> }
                 </details>
             </SUITd>
         </RowTemplate>
-        <NoRecordsContent>@Text["No extension observations match this source and search."]</NoRecordsContent>
+        <NoRecordsContent>@Text["No extension observations match the filters."]</NoRecordsContent>
     </SUITable>
 </section>
 @code {
-    [Parameter] public AcdAgentPresence[] Agents { get; set; } = [];
-    [Parameter] public bool Fresh { get; set; }
+    [Parameter] public AcdAgentOverview[] Agents { get; set; } = [];
     private readonly HashSet<string> Expanded = [];
     private void Toggle(string extension) { if (!Expanded.Add(extension)) Expanded.Remove(extension); }
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];

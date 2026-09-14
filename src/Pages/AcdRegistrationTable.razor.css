@@ -4,3 +4,6 @@
 .acd-diagnostics summary:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: 2px; }
 .acd-diagnostics ol { padding-inline-start: var(--sui-space-5); font-variant-numeric: tabular-nums; }
 .acd-diagnostics li { margin-block: var(--sui-space-3); }
+@media (max-width: 599.98px) {
+    .acd-diagnostics ::deep .sui-table tbody td.registration-details-cell { grid-template-columns: minmax(0, 1fr); }
+}

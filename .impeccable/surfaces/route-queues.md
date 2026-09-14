@@ -8,8 +8,9 @@ registration diagnostics in Telephony Panel. It extends the incumbent Sufficit
 SUI interface; it does not establish a new visual identity or replace
 `PRODUCT.md`, `DESIGN.md` or the token sidecar.
 
-The manager moves from source/context and server selection to queue stages,
-observed calls, then extension contacts and retained registration history.
+The manager starts with one overview across all configured authorized sources,
+then optionally filters and expands source diagnostics. Server/context selection
+is never required before viewing queue stages or registration history.
 Configuration remains in the Blazor management portal, reached through the
 explicit Manage queues link in a new tab. Monitoring lives in Panel; management
 does not migrate into this diagnostic screen.
@@ -18,7 +19,7 @@ does not migrate into this diagnostic screen.
 
 Inherit SUI orange actions, neutral light/dark surfaces, semantic alerts and text
 tokens. A written Current collection / No current data label accompanies the
-source status chip. Warning and error messages explain unavailable observation;
+source diagnostic text. Warning and error messages explain unavailable observation;
 color alone never asserts registration, reachability or a healthy collection.
 
 ## Typography
@@ -32,11 +33,13 @@ IDs, contact values and device declarations wrap instead of widening the page.
 
 Use the normal Panel shell, header and monitoring-area navigation. The page
 heading pairs its diagnostic purpose with the management link. Labeled Context,
-Server and search controls precede source-grouped sections; Refresh is explicit
+Server and search controls precede unified lists; Refresh is explicit
 and disabled during loading. Filters wrap with SUI spacing and shrinkable fields.
 
-Each source section presents server, context and observation time, followed by
-a dense queue table, observed-call disclosure and extension diagnostic table.
+One dense queue table, observed-call disclosure and extension diagnostic table
+replace the repeated per-source sections. Source/context details are collapsed;
+each historical entry retains its source. Shared catalog queue capacity is not
+added across replicas. Partial fresh workload has an explicit lower-bound marker.
 SUI tables stack into labeled rows on mobile. The inherited narrow-screen layout
 stacks the heading and keeps controls, long data and expanded histories readable.
 Do not add these diagnostic tables or explanatory panels to `/board`: that route
@@ -46,8 +49,9 @@ remains mosaic-only, with details in its existing popup.
 
 ### Source scope and URL
 
-Source identity is bounded by server and authorized context; similar extension
-names across sources must not merge histories. Canonical URL state uses
+Source identity remains bounded by server and authorized context. Matching resource
+identities inside a context share a presentation row, with source-tagged histories
+ordered together. Different contexts must never be merged merely by name. Canonical URL state uses
 `contextid`, `node`, `q` and the optional `queueid` deep-link filter. Server/source
 ID aliases resolve to the corresponding displayed server. Filters update the URL
 with history replacement; context changes clear the queue selection. Search
@@ -58,8 +62,9 @@ observation scope, not queue execution placement or authorization.
 
 Queue stages distinguish greeting, waiting, offering and in-conversation counts,
 with announcement context where reported. A stale or unavailable source must not
-look like a live zero: current counters and longest wait become dashes; extension
-state becomes No current data. Retained details remain historical evidence, with
+look like a live zero: counters become dashes without fresh observations, or explicit
+partial lower bounds when some sources are missing. Conflicting fresh endpoint
+states show Different readings, not invented global availability. Retained details remain historical evidence, with
 source age and unavailability made visible. Loading, access expiration, source
 failure and no matching observations have distinct explanatory states.
 
@@ -113,3 +118,16 @@ ship after all three requested fixes were cleared. This records local UI and
 regression evidence only; it does not establish production deployment, a real
 user's authorization, complete live inventory or authenticated production UI
 acceptance.
+
+## Unified overview revision — 2026-09-13
+
+The user rejected visible partitioning by node/context. The current implementation
+therefore keeps a single queue table and registration list by default, preserving
+scope only for internal identity, optional URL filters and collapsed provenance.
+Shared history is source-tagged and chronological; capacity is not summed across
+replicas. Mobile expanded diagnostics use the full row width. The dedicated board
+and infrastructure pages are unchanged. The updated fixture contains matching
+resources on two live sources plus an unavailable third source. Current evidence:
+787 .NET checks, desktop/mobile browser filters, refresh persistence, merged history
+ordering, missing-source selection and no horizontal overflow or console errors.
+These are synthetic UI checks, not authenticated production browser evidence.

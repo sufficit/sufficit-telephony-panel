@@ -29,35 +29,41 @@
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
     @if (!Busy && Error is null && !FilteredSamples.Any())
     { <p class="operation-empty">@Text["No monitoring source matches these filters. Clear filters or check source configuration."]</p> }
-    @foreach (var sample in FilteredSamples)
+    @if (FilteredSamples.Any())
     {
-        var snapshot = sample.Snapshot;
-        var fresh = sample.Available && snapshot?.Fresh(DateTimeOffset.UtcNow) == true;
-        <section class="acd-source" @key="(sample.Node, sample.ContextId)">
-            <h2>@sample.Node <SUIChip SizeValue="SUISize.Small" ColorValue="@(fresh ? SUIColor.Success : SUIColor.Warning)">@Text[fresh ? "Current collection" : "No current data"]</SUIChip></h2>
-            <p class="muted acd-scope">@Text["Context"]: @sample.ContextId.ToString("N") · @Time(snapshot?.ObservedAt)</p>
-            @if (!sample.Available) { <SUIAlert ToneValue="SUITone.Warning">@Text["Source unavailable. Retained details are historical, not live state. Try refreshing."]</SUIAlert> }
-            @if (snapshot is not null)
-            {
-                <SUITable T="AcdBoardQueue" Items="snapshot.Queues.Where(q => Matches(q.Title + q.QueueId) && (QueueId.Length == 0 || q.QueueId == QueueId))" Dense="true" StackOnMobile="true" ColumnCount="7">
+        var overview = AcdMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
+        @if (FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true))
+        { <SUIAlert ToneValue="SUITone.Warning">@Text["Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical."]</SUIAlert> }
+        <section class="acd-queues" aria-labelledby="acd-queues-title">
+            <h2 id="acd-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
+            <p class="muted">@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]</p>
+                <SUITable T="AcdQueueOverview" Items="overview.Queues" Dense="true" StackOnMobile="true" ColumnCount="7">
                     <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
-                    <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title</SUITd>
-                        <SUITd DataLabel="@Text["Greeting"]">@Count(context.Greeting, fresh)</SUITd>
-                        <SUITd DataLabel="@Text["Waiting"]">@Count(Math.Max(0, context.Waiting - context.Greeting - context.Offering), fresh)
-                            @if (fresh && context.Announcing > 0) { <small>@Text.Format("{0} hearing an announcement", context.Announcing)</small> }</SUITd>
-                        <SUITd DataLabel="@Text["Offering"]">@Count(context.Offering, fresh)</SUITd>
-                        <SUITd DataLabel="@Text["In conversation"]">@Count(context.Connected, fresh)</SUITd>
+                    <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
+                        <details class="acd-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
+                            <p>@Text["Context"]: @context.ContextId.ToString("N")</p>
+                            @foreach (var observation in context.Observations)
+                            { <p>@observation.Source.Node · @Text[observation.Fresh ? "Current collection" : "No current data"] · @Time(observation.Source.Snapshot?.ObservedAt)</p> }
+                        </details></SUITd>
+                        <SUITd DataLabel="@Text["Greeting"]">@context.Count(q => q.Greeting)</SUITd>
+                        <SUITd DataLabel="@Text["Waiting"]">@context.Count(q => Math.Max(0, q.Waiting - q.Greeting - q.Offering))
+                            @if (context.Observations.Any(o => o.Fresh && o.Queue.Announcing > 0)) { <small>@Text.Format("{0} hearing an announcement", context.Count(q => q.Announcing))</small> }</SUITd>
+                        <SUITd DataLabel="@Text["Offering"]">@context.Count(q => q.Offering)</SUITd>
+                        <SUITd DataLabel="@Text["In conversation"]">@context.Count(q => q.Connected)</SUITd>
                         <SUITd DataLabel="@Text["Capacity"]">@context.Capacity</SUITd>
-                        <SUITd DataLabel="@Text["Longest wait"]">@(fresh && context.OldestEnteredAt is { } at ? $"{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
+                        <SUITd DataLabel="@Text["Longest wait"]">@(context.OldestEnteredAt is { } at ? $"{(context.Partial ? "≥ " : "")}{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
                     <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
                 </SUITable>
-                <details class="acd-visits"><summary>@Text["Observed queue calls"] (@(snapshot.Visits?.Length ?? 0))</summary>
-                    @foreach (var visit in (snapshot.Visits ?? []).Where(v => (QueueId.Length == 0 || v.QueueId == QueueId) && Matches(v.Caller + v.ChannelName + snapshot.Queues.FirstOrDefault(q => q.QueueId == v.QueueId)?.Title)))
-                    { <p>@(snapshot.Queues.FirstOrDefault(q => q.QueueId == visit.QueueId)?.Title) · @visit.Caller · @Text[Phase(visit.Phase)] · @Time(visit.EnteredAt)<br /><code>@visit.ChannelName</code></p> }
+                <details class="acd-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
+                    @foreach (var observation in overview.Visits)
+                    { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node</p> }
                 </details>
-                <AcdRegistrationTable Agents="@((snapshot.Agents ?? []).Where(a => Matches(a.Extension + string.Join(" ", (a.Contacts ?? []).Select(c => c.IpAddress + " " + c.UserAgent)))).ToArray())" Fresh="fresh" />
-            }
         </section>
+        <AcdRegistrationTable Agents="overview.Agents" />
+        <details class="acd-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
+            @foreach (var sample in FilteredSamples)
+            { <p>@sample.Node · @Text[sample.Available && sample.Snapshot?.Fresh(DateTimeOffset.UtcNow) == true ? "Current collection" : "No current data"] · @Time(sample.Snapshot?.ObservedAt)<br /><span class="muted">@Text["Context"]: @sample.ContextId.ToString("N")</span></p> }
+        </details>
     }
 </section>
 
@@ -92,9 +98,7 @@
     private void ChangeContext(string value) { Context = value; QueueId = ""; WriteUrl(); }
     private void ChangeNode(string value) { Node = value; WriteUrl(); }
     private void ChangeSearch(string value) { Search = value ?? ""; WriteUrl(); }
-    private bool Matches(string? value) => Search.Length == 0 || value?.Contains(Search, StringComparison.OrdinalIgnoreCase) == true;
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
-    private static string Count(int value, bool fresh) => fresh ? value.ToString() : "—";
     private static string Phase(string value) => value switch { "greeting" => "Greeting", "waiting" => "Waiting", "announcing" => "Announcement", "offering" => "Offering", "connected" => "In conversation", _ => "Unknown" };
     private async Task Refresh()
     {

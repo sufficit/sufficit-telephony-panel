@@ -1,7 +1,11 @@
 .acd-filters { display: flex; flex-wrap: wrap; gap: var(--sui-space-4); align-items: end; }
 .acd-filters ::deep .sui-field { flex: 1 1 240px; min-width: 0; }
-.acd-source { margin-top: var(--sui-space-8); }
-.acd-scope { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.acd-queues { margin-top: var(--sui-space-6); }
+.acd-provenance, .acd-sources { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.acd-sources { margin-top: var(--sui-space-6); border-top: 1px solid var(--sui-border); padding-top: var(--sui-space-4); }
+.acd-provenance { font-size: .875rem; }
+.acd-monitor summary { cursor: pointer; padding-block: var(--sui-space-2); }
+.acd-monitor summary:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: 2px; }
 .acd-visits { margin-block: var(--sui-space-4); overflow-wrap: anywhere; }
 .acd-visits summary { cursor: pointer; }
 small { display: block; }

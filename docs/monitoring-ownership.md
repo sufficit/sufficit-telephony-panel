@@ -23,6 +23,25 @@ are never forwarded. Manager authorization is rechecked by Panel.
 
 ## Queue diagnostics
 
+The default `/queues` overview contains one queue list and one registration list
+across all configured authorized sources. It has no per-server/context sections or
+required source selection. Context and server are optional filters, and source
+provenance is disclosed only in diagnostics and individual history entries.
+
+Matching stable resource identities within a context share a presentation row;
+different contexts are never merged merely because display names match. Source
+readings remain distinct evidence internally. Current queue workload is combined,
+not replica capacity. Counts show a lower bound when a relevant source is missing,
+and dashes if no fresh observation exists. Cross-server call legs are not claimed
+as globally unique callers. Conflicting fresh registration states are labeled
+Different readings instead of inventing globally available agents.
+
+Contact/history rows combine source-tagged observations in reverse chronological
+order. Retention is per source, not a new shared journal. This presentation change
+does not expand which identities are configured for collection, alter permissions,
+or move management away from Blazor. Collection health stays in one collapsed
+diagnostics section rather than duplicating the full operational screen per source.
+
 `/queues` supports optional `contextid`, `node`, `queueid` and `q` filters. Changing
 monitoring area preserves context/node/text filters. A node filter limits observed
 sources, never where a queue may run. Configured node IDs remain available even

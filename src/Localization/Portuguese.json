@@ -1,4 +1,13 @@
 {
+  "Up to 20 observed changes per source over 7 days. User-Agent is device-declared; Via IP can differ from contact IP.": "Até 20 mudanças observadas por fonte em 7 dias. O User-Agent é declarado pelo aparelho; o IP Via pode diferir do IP do contato.",
+  "Source details": "Detalhes da origem",
+  "Collection diagnostics": "Diagnóstico da coleta",
+  "Different readings": "Leituras diferentes",
+  "Includes historical readings": "Inclui leituras históricas",
+  "Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical.": "Algumas fontes estão sem dados atuais. Contagens com ≥ incluem apenas leituras atuais; detalhes mantidos são históricos.",
+  "Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers.": "Atividade das fontes selecionadas. Trechos de chamadas entre servidores podem ser contados separadamente; a capacidade não é somada entre servidores.",
+  "History is not available on every source. Earlier registrations were not reconstructed.": "O histórico não está disponível em todas as fontes. Registros anteriores não foram reconstruídos.",
+  "No extension observations match the filters.": "Nenhuma observação de ramal corresponde aos filtros.",
   "Context": "Contexto",
   "Channel answered": "Canal atendido",
   "ACD state unavailable": "Estado da fila ACD indisponível",
