@@ -19,3 +19,5 @@ src/appsettings.Production-Sufficit.json
 artifacts/
 published/
 *.secrets.json
+# Python bytecode cache
+**/__pycache__/
