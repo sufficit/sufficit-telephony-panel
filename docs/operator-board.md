@@ -11,6 +11,27 @@ On desktop, trunks and queues share available viewport height according to conte
 short/empty trunks leave room for queues, with internal scrolling only when needed.
 On mobile, sidebar lists follow natural height in the responsive document flow.
 
+### Resizing sections
+
+On screens wider than 900px, drag the divider between extensions and the sidebar
+to change their widths; drag the divider between trunks and queues to change
+their heights. Narrow visible grips highlight on hover/focus. Minimum sizes keep
+each section accessible. The normal board and dedicated `/board` share this layout
+preference; filters, selected contexts and authorization are unchanged.
+
+The browser stores only `{ version: 1, columns, rows }` under
+`telephony-panel-board-layout-v1` in localStorage. Values are proportions, not
+fixed pixel dimensions. `rows: null` means automatic content-based sizing: short
+trunk lists leave room for queues. Moving the horizontal divider selects a manual
+height ratio. The preference survives reloads; it is local to this browser/origin,
+not synchronized to other devices or users. No tenant data is stored there.
+
+Focus a divider and use the corresponding arrow keys (2% steps; Shift: 10%).
+Home/End select the size limits; Enter or double-click resets that divider.
+Escape cancels an active drag. On narrower screens the existing stacked layout is
+used and the desktop preference is retained. Malformed/blocked storage never
+breaks the board: resizing still works for the current session.
+
 Example: `/board?contextid=d21cfb049d37473b837c67591a26feed&q=6007&text=peers`.
 
 - `contextid`: company UUID; omitted means the manager-authorized entire exchange.

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Sufficit.Telephony.EventsPanel;
 using Sufficit.Telephony.Monitor;
 using Sufficit.Telephony.Panel.Security;
+using Sufficit.Identity.Authorization;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
@@ -14,16 +15,41 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
         var principal = (await authentication.GetAuthenticationStateAsync()).User;
         var token = await sessions.GetAccessTokenAsync(principal, ct)
             ?? throw new UnauthorizedAccessException("Sessão inválida. Entre novamente na Sufficit Identity.");
-        if (!sessions.HasTelephoneScope(principal))
-            throw new UnauthorizedAccessException("O login atual ainda não compartilha os direitos de telefonia. A equipe deve habilitar entitlements no cadastro deste painel; depois saia e entre novamente. A infraestrutura continua disponível.");
         return token;
+    }
+    public async Task<CurrentAuthorization> Permissions(CancellationToken ct) =>
+        await sessions.AuthorizationAsync((await authentication.GetAuthenticationStateAsync()).User, ct);
+
+    public async Task<AuthorizedObservation> Observation(Guid? context, EventsPanelCardInfo[] cards, CancellationToken ct)
+    {
+        var permissions = await Permissions(ct);
+        context = permissions.SelectContext(context);
+        var connection = await Connection(ct);
+        var rows = connection.Connected ? connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
+        if (permissions.Manager)
+            return context is { } managerContext ? AuthorizedObservation.Create(cards, rows, managerContext)
+                : AuthorizedObservation.ForManager(rows);
+        return AuthorizedObservation.ForCustomer(cards, rows, permissions, context);
     }
     public async Task<OperationsConnection> Connection(CancellationToken ct) =>
         await pool.Get((await authentication.GetAuthenticationStateAsync()).User, ct);
-    public async Task<EventsPanelCardInfo[]> Cards(Guid? context, CancellationToken ct) =>
-        await api.Cards(await Token(ct), context, ct);
+    public async Task<EventsPanelCardInfo[]> Cards(Guid? context, CancellationToken ct)
+    {
+        var permissions = await Permissions(ct);
+        context = permissions.SelectContext(context);
+        if (context is null) return [];
+        var cards = await api.Cards(await Token(ct), context, ct);
+        if (!(await Permissions(ct)).CanRead(context.Value)) throw new UnauthorizedAccessException();
+        return cards;
+    }
     public async Task<(Guid Id, string Title)[]> Search(string text, CancellationToken ct)
     {
+        var permissions = await Permissions(ct);
+        if (!permissions.PanelAllowed) throw new UnauthorizedAccessException();
+        if (!permissions.GlobalPanel) return permissions.PanelContexts
+            .Where(id => id.ToString("D").Contains(text, StringComparison.OrdinalIgnoreCase)
+                || id.ToString("N").Contains(text, StringComparison.OrdinalIgnoreCase))
+            .Take(20).Select(id => (id, id.ToString("D"))).ToArray();
         var json = await api.Search(await Token(ct), text, ct);
         if (json.ValueKind != System.Text.Json.JsonValueKind.Array) return [];
         return json.EnumerateArray().Take(20).Where(x => x.TryGetProperty("id", out var id) && id.TryGetGuid(out _))
@@ -47,6 +73,8 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
     private async Task MonitorPrefix(SupervisionPrefixRule rule, TelephonyMonitorActionMode mode, CancellationToken ct,
         EndpointSupervisionTarget? endpoint = null)
     {
+        var permissions = await Permissions(ct);
+        if (!permissions.CanRead(rule.ContextId) || !permissions.CanMonitor(rule.ContextId)) throw new UnauthorizedAccessException();
         if (mode is not (TelephonyMonitorActionMode.Listen or TelephonyMonitorActionMode.Whisper))
             throw new InvalidOperationException("Invalid supervision mode.");
         var connection = await Connection(ct);
@@ -76,6 +104,8 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
     }
     public async Task Monitor(Guid context, string targetId, TelephonyMonitorActionMode mode, CancellationToken ct)
     {
+        var permissions = await Permissions(ct);
+        if (!permissions.CanRead(context) || !permissions.CanMonitor(context)) throw new UnauthorizedAccessException();
         if (mode is not (TelephonyMonitorActionMode.Listen or TelephonyMonitorActionMode.Whisper)) throw new InvalidOperationException("Modo de monitoramento inválido.");
         var connection = await Connection(ct);
         if (!await connection.ActionGate.WaitAsync(0, ct)) throw new InvalidOperationException("Uma solicitação já está em andamento.");

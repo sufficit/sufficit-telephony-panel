@@ -1,6 +1,7 @@
 @page "/"
 @page "/board"
 @page "/queues"
+@using Sufficit.Telephony.Panel.Operations
 @implements IAsyncDisposable
 @inject PanelAccess Access
 @inject FleetMetrics Metrics
@@ -39,9 +40,9 @@
         <section class="entry">
             <div><h1>@Text["Telephony under observation."]</h1><p>@Text["An operational view of the Apoint, Eveo and Google PBXs. Connection, load and history together, with the source and age of each reading."]</p>
             <SUIButton Href="@LoginUrl" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
-            <aside><h2>@Text["Internal access"]</h2><p>@Text["Available only to users with the manager role. Permissions are checked on the server."]</p>
+            <aside><h2>@Text["Authorized access"]</h2><p>@Text["Sign in to view your authorized contexts. Permissions are checked on the server."]</p>
             @if (LoginFailed) { <SUIAlert ToneValue="SUITone.Warning">@Text["Sign-in could not be completed. Try again; if it persists, ask the team to check the application's Identity registration."]</SUIAlert> }
-            <p class="muted">@Text["Customer access is not enabled yet. Call supervision requires telephony permission and explicit confirmation."]</p></aside>
+            <p class="muted">@Text["Listening and whispering require a separate supervision permission."]</p></aside>
         </section>
     }
     else
@@ -49,13 +50,13 @@
         @if (!BoardPage) { <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
             <SUIButton Href="@AreaUrl(false)" OnClick="() => Operational = true" VariantValue="@(Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Live telephony"]</SUIButton>
             <SUIButton Href="@("queues" + new Uri(Navigation.Uri).Query)" VariantValue="@(QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Queues and registration"]</SUIButton>
-            <SUIButton Href="@AreaUrl(true)" OnClick="() => Operational = false" VariantValue="@(!Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton>
+            @if (Manager) { <SUIButton Href="@AreaUrl(true)" OnClick="() => Operational = false" VariantValue="@(!Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton> }
         </nav> }
         @if (QueuePage)
         {
             <AcdMonitor Preview="Preview" />
         }
-        else if (Operational || BoardPage)
+        else if (Operational || BoardPage || !Manager)
         {
             <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" Dark="Dark" ThemeChanged="ToggleTheme" />
         }
@@ -143,6 +144,7 @@
     private string Selected = "apoint-voip", Metric = "calls";
     private int Hours = 1;
     private FleetSnapshot? Snapshot;
+    private bool Manager;
     private IReadOnlyList<HistoryPoint> Points = [];
     private string? HistoryError;
     private readonly CancellationTokenSource lifetime = new();
@@ -200,7 +202,9 @@
         try
         {
             Allowed = Preview || await Access.AllowedAsync(lifetime.Token);
+            Manager = Preview ? CustomerAccessPreview.Read(Navigation.Uri).Manager : await Access.IsManagerAsync(lifetime.Token);
             if (!Allowed) { Snapshot = null; Points = []; return; }
+            if (!Manager) { Operational = true; Snapshot = null; Points = []; return; }
             if (QueuePage) return;
             Snapshot = Preview ? PreviewSnapshot() : await Metrics.ReadAsync(lifetime.Token);
             var active = Snapshot.Alerts.Where(a => a.State == "firing").Select(a => a.Name + a.Node).ToHashSet();
@@ -216,7 +220,7 @@
         HistoryError = null; Points = []; HistoryBusy = true;
         try
         {
-            if (!Preview && !await Access.AllowedAsync(lifetime.Token)) { Allowed = false; Snapshot = null; return; }
+            if (!Preview && !await Access.IsManagerAsync(lifetime.Token)) { Snapshot = null; Points = []; return; }
             var end = DateTimeOffset.UtcNow;
             var series = Preview ? new HistorySeries(end.AddHours(-Hours), end, Enumerable.Range(0, 61).Select(i => new HistoryPoint(end.AddMinutes(i - 60), 14 + Math.Sin(i / 7.0) * 7)).ToArray())
                 : await Metrics.HistoryAsync(Selected, Metric, Hours, lifetime.Token);

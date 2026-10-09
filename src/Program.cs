@@ -33,6 +33,11 @@ builder.Services.AddHttpClient("identity", client =>
     client.Timeout = TimeSpan.FromSeconds(5);
     client.MaxResponseContentBufferSize = 128 * 1024;
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("identity-authorization", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.MaxResponseContentBufferSize = 256 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("metrics", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(8);
@@ -95,8 +100,8 @@ builder.Services.AddAuthentication(o =>
     o.SlidingExpiration = false;
     o.Events.OnValidatePrincipal = async ctx =>
     {
-        if (!await ctx.HttpContext.RequestServices.GetRequiredService<PanelSessions>()
-            .IsManagerAsync(ctx.Principal!, ctx.HttpContext.RequestAborted)) ctx.RejectPrincipal();
+        if (!(await ctx.HttpContext.RequestServices.GetRequiredService<PanelSessions>()
+            .AuthorizationAsync(ctx.Principal!, ctx.HttpContext.RequestAborted)).PanelAllowed) ctx.RejectPrincipal();
     };
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
 }).AddOpenIdConnect("oidc", o =>
@@ -117,17 +122,10 @@ builder.Services.AddAuthentication(o =>
     o.MapInboundClaims = false;
     o.GetClaimsFromUserInfoEndpoint = true;
     o.Scope.Clear();
-    foreach (var scope in new[] { "openid", "profile", "roles" }) o.Scope.Add(scope);
-    // Enable only after the dedicated client manifest has been applied in Identity.
-    var requestEntitlements = builder.Configuration.GetValue<bool>("Panel:RequestEntitlements");
-    if (requestEntitlements) o.Scope.Add("entitlements");
-    o.Events.OnTokenResponseReceived = ctx =>
-    {
-        var scopes = ctx.TokenEndpointResponse?.Scope;
-        ctx.Properties!.Items["panel_entitlements"] = (scopes is null ? requestEntitlements
-            : scopes.Split(' ').Any(s => s is "entitlements" or "directives")) ? "true" : "false";
-        return Task.CompletedTask;
-    };
+    // The already-provisioned entitlements scope supplies the legacy Endpoints
+    // audience. It does not authorize Panel access: these two permission values
+    // are excluded by Identity and resolved separately through current UserInfo.
+    foreach (var scope in new[] { "openid", "profile", "roles", "entitlements" }) o.Scope.Add(scope);
     o.ClaimActions.MapUniqueJsonKey("role", "role");
     o.TokenValidationParameters.NameClaimType = "name";
     o.TokenValidationParameters.RoleClaimType = "role";

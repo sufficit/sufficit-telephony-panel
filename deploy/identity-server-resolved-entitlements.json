@@ -1,0 +1,12 @@
+{
+  "Sufficit": {
+    "Identity": {
+      "ClaimScopeMap": {
+        "ServerResolvedEntitlementKeys": [
+          "telephony.panel",
+          "telephony.monitor"
+        ]
+      }
+    }
+  }
+}

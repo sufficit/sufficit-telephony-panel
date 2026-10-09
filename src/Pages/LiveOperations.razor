@@ -2,6 +2,7 @@
 @using Sufficit.Telephony.Panel.Operations
 @using Sufficit.Telephony.EventsPanel
 @using Sufficit.Telephony.Monitor
+@using Sufficit.Identity.Authorization
 @inject OperationsAccess Access
 @inject AcdBoardAccess AcdAccess
 @inject IWebHostEnvironment Environment
@@ -28,17 +29,13 @@ else
         </div>
     </div>
     @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</SUIAlert> }
-    @if (!Demo && !Configuration.GetValue<bool>("Panel:RequestEntitlements"))
-    {
-        <p class="muted section-hint">@Text["The overview uses your manager access to the central stream. Company filtering and supervision depend on shared telephony entitlements from Identity, pending activation for this application."]</p>
-    }
-    @CompanyFilter
+    @if (!Permissions.SingleContext.HasValue) { @CompanyFilter }
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking permissions and resources"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)</SUIAlert> }
     @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)</SUIAlert> }
     @if (AcdError is not null) { <SUIAlert ToneValue="SUITone.Warning">@AcdError</SUIAlert> }
     <div class="operations-scope">
-        <div class="client-heading"><div><h2>@(Context.HasValue ? ClientName : Text["Entire exchange"])</h2><span class="muted identifier">@(Context.HasValue ? Context.Value.ToString("N") : Text["No company filter · manager access"])</span></div><span class="state-label @(Connected ? "good" : "warning")">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
+        <div class="client-heading"><div><h2>@(Context.HasValue ? ClientName : Text["All authorized contexts"])</h2><span class="muted identifier">@(Context.HasValue ? Context.Value.ToString("N") : Permissions.Manager ? Text["No company filter · manager access"] : Text["Access restricted to your authorized contexts"])</span></div><span class="state-label @(Connected ? "good" : "warning")">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
         @if (BoardPage) { <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary>@ObservationNote</details> }
         else { @ObservationNote }
         @if (Overflow || Observation.Limited) { <SUIAlert ToneValue="SUITone.Warning">@Text["Observation limit reached. Some resources may be missing. Reduce this customer's configured resource set or reconnect to start a new window."]</SUIAlert> }
@@ -47,14 +44,14 @@ else
         @if (Tab != "board") { @BoardFilters }
         }
         <nav class="live-tabs @(BoardPage ? "board-navigation" : "")" aria-label="@Text["Resource type"]">
-            @foreach (var tab in Tabs.Where(t => (Context.HasValue || t.Key != "trunks") && (!BoardPage || t.Key is "board" or "settings"))) { <button type="button" class="@(Tab == tab.Key ? "active" : "")" aria-pressed="@(Tab == tab.Key)" @onclick="() => SetTab(tab.Key)">@(tab.Key == "extensions" && !Context.HasValue ? Text["Extensions and endpoints"] : tab.Label) <span>@Count(tab.Key)</span></button> }
+            @foreach (var tab in Tabs.Where(t => (Context.HasValue || t.Key != "trunks") && (Permissions.Manager || t.Key != "settings") && (!BoardPage || t.Key is "board" or "settings"))) { <button type="button" class="@(Tab == tab.Key ? "active" : "")" aria-pressed="@(Tab == tab.Key)" @onclick="() => SetTab(tab.Key)">@(tab.Key == "extensions" && !Context.HasValue ? Text["Extensions and endpoints"] : tab.Label) <span>@Count(tab.Key)</span></button> }
         </nav>
         @if (BoardError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(BoardError)</SUIAlert> }
-        @if (SettingsOpened)
+        @if (SettingsOpened && Permissions.Manager)
         {
             <div hidden="@(Tab != "settings")"><BoardSettings Configuration="BoardConfiguration" Source="RawBoardTiles" Demo="Demo" Saved="SetBoardConfiguration" /></div>
         }
-        @if (Tab == "board")
+        @if (Tab == "board" && Permissions.Manager)
         {
             <details class="board-retention" open="@(!BoardPage)"><summary>@Text["Remembered resources and cleanup"]</summary>
             <div class="settings-toolbar">
@@ -186,9 +183,9 @@ else
     private RenderFragment DedicatedOptions => @<div id="board-options" class="board-options" popover="auto" role="region" aria-label="@Text["Board filters and options"]">
         <div class="board-options-heading"><h2>@Text["Board filters and options"]</h2><SUIButton VariantValue="SUIVariant.Text" popovertarget="board-options" popovertargetaction="hide">@Text["Close filters"]</SUIButton></div>
         @BoardFilters
-        @CompanyFilter
+        @if (!Permissions.SingleContext.HasValue) { @CompanyFilter }
         <div class="board-options-actions"><LanguagePicker /><SUIButton OnClick="() => ThemeChanged.InvokeAsync()" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
-        <div class="board-options-actions"><SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Text">@Text["Reconnect and refresh"]</SUIButton><SUIButton Href="@NormalPanelUrl()" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Back to panel"]</SUIButton><SUIButton Href="@NormalPanelUrl("settings")" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Configure board"]</SUIButton></div>
+        <div class="board-options-actions"><SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Text">@Text["Reconnect and refresh"]</SUIButton><SUIButton Href="@NormalPanelUrl()" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Back to panel"]</SUIButton>@if (Permissions.Manager) { <SUIButton Href="@NormalPanelUrl("settings")" target="_blank" rel="noopener" title="@Text["Opens in a new tab"]" VariantValue="SUIVariant.Text">@Text["Configure board"]</SUIButton> }</div>
         <p class="@(ObservationWarning ? "warning" : "good")" role="status">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</p>
         @foreach (var message in new[] { Error, SearchError, AcdError, BoardError, InventoryError }.Where(m => m is not null)) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(message!)</SUIAlert> }
         @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
@@ -196,7 +193,17 @@ else
         @if (Demo) { <p>@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</p> }
     </div>;
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
-    private RenderFragment CompanyFilter => @<details class="company-filter" open="@(!BoardPage)"><summary>@Text.Format("Company: {0}", Context.HasValue ? ClientName : Text["entire exchange"])</summary>
+    private RenderFragment CompanyFilter => @<details class="company-filter" open="@(!BoardPage)"><summary>@Text["Context"]: @(Context.HasValue ? ClientName : Text["All authorized contexts"])</summary>
+    @if (!Permissions.GlobalPanel)
+    {
+        <SUISelect T="string" Label="@Text["Context"]" Value="@(Context?.ToString("D") ?? "")" ValueChanged="SelectAuthorizedContext" Disabled="Busy">
+            <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
+            @foreach (var id in Permissions.PanelContexts.Order())
+            { <SUISelectItem Value="@id.ToString("D")">@id.ToString("D")</SUISelectItem> }
+        </SUISelect>
+    }
+    else
+    {
     <div class="client-picker">
         <SUITextField T="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
         <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
@@ -209,7 +216,10 @@ else
             @foreach (var client in Clients) { <SUIButton OnClick="() => SelectClient(client.Id, client.Title)" Disabled="Busy" VariantValue="SUIVariant.Outlined">@client.Title</SUIButton> }
         </div>
     }
+    }
     </details>;
+    private Task SelectAuthorizedContext(string value) => Guid.TryParse(value, out var id)
+        ? SelectClient(id, id.ToString("D")) : ClearCompany();
     private RenderFragment BoardContent => @<div class="board-focus" id="board-focus">
             @if (!BoardPage)
             {
@@ -219,7 +229,7 @@ else
             @BoardFilters
             }
             @if (BoardPage) { @DedicatedOptions }
-            <OperatorBoard Compact="BoardPage" HeaderTools="@(BoardPage ? FilterTrigger : null)" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" Page="Page" PageChanged="SetBoardPage" />
+            <OperatorBoard Compact="BoardPage" HeaderTools="@(BoardPage ? FilterTrigger : null)" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" Page="Page" PageChanged="SetBoardPage" />
             @if (BoardAction is { } action)
             {
                 <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" Closed="() => BoardAction = null" />
@@ -344,6 +354,7 @@ else
     private async Task ResetFilters() { Filter = ""; Node = "all"; StatusFilter = "all"; OnlyObservedChannels = false; TextKinds = BoardViewQuery.Kinds.ToArray(); Page = 0; if (Context.HasValue) await ClearCompany(); WriteUrl(); }
     private bool Demo => Preview && Environment.IsDevelopment();
     private Guid? Context;
+    private CurrentAuthorization Permissions = CurrentAuthorization.None;
     private string ClientName = "", SearchText = "", Filter = "", Node = "all", Tab = "board";
     private string? SelectedTileId;
     private ElementReference TileInspector;
@@ -441,7 +452,7 @@ else
             if (!ReferenceEquals(boardCards, Cards) || !ReferenceEquals(boardObservation, Observation))
             {
                 boardCards = Cards; boardObservation = Observation;
-                cachedTiles = OperatorTile.Create(Cards, Observation.ByCard);
+                cachedTiles = OperatorTile.Create(Cards, Observation.ByCard, !Permissions.Manager && !Context.HasValue);
             }
             return cachedTiles;
         }
@@ -563,12 +574,24 @@ else
         var version = ++selectionVersion;
         inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
         Busy = true; Error = null; AcdError = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
-        Context = id; ClientName = title; SelectedTileId = null;
+        Context = id; ClientName = title; SelectedTileId = null; BoardAction = null;
         if (writeUrl) WriteUrl();
         if (!id.HasValue && Tab == "trunks") Tab = "extensions";
         try
         {
-            if (Demo) { LoadDemo(); return; }
+            if (Demo)
+            {
+                Permissions = CustomerAccessPreview.Read(Navigation.Uri);
+                Context = Permissions.SelectContext(id);
+                if (Permissions.SingleContext.HasValue) { ClientName = Context!.Value.ToString("D"); WriteUrl(); }
+                if (!Permissions.Manager && Tab == "settings") Tab = "board";
+                LoadDemo(); return;
+            }
+            Permissions = await Access.Permissions(lifetime.Token);
+            id = Permissions.SelectContext(id);
+            Context = id;
+            if (Permissions.SingleContext.HasValue) { ClientName = id!.Value.ToString("D"); WriteUrl(); }
+            if (!Permissions.Manager && Tab == "settings") Tab = "board";
             var cards = id.HasValue ? await Access.Cards(id, lifetime.Token) : [];
             if (version != selectionVersion) return;
             PortalCards = cards; Cards = cards;
@@ -580,14 +603,14 @@ else
             if (version != selectionVersion) return;
             try
             {
-                var supervisor = Configuration.GetValue<bool>("Panel:RequestEntitlements") ? await Access.Supervisor(lifetime.Token) : null;
+                var supervisor = Permissions.Manager || Permissions.MonitorContexts.Count > 0 ? await Access.Supervisor(lifetime.Token) : null;
                 if (version != selectionVersion) return;
                 Supervisor = supervisor;
             }
             catch (Exception e) when (e is HttpRequestException or UnauthorizedAccessException) { /* Manager-wide observation does not depend on supervision rights. */ }
             if (version == selectionVersion) await ReadRows();
         }
-        catch (Exception e) { if (version == selectionVersion) { inventoryTiles = null; Cards = []; Rows = []; Observation = new(); Connection = null; Error = ErrorText(e); } }
+        catch (Exception e) { if (version == selectionVersion) { ClearAuthorizedState(); Error = ErrorText(e); } }
         finally { if (version == selectionVersion) Busy = false; }
     }
     private Task Reload() => SelectClient(Context, ClientName);
@@ -617,7 +640,7 @@ else
                     await ReadRows();
                     await ReadBoardConfiguration();
                 }
-                catch (Exception e) { if (version == selectionVersion) { inventoryTiles = null; Rows = []; Cards = []; Observation = new(); Pending = null; Connection = null; Error = ErrorText(e); } }
+                catch (Exception e) { if (version == selectionVersion) { ClearAuthorizedState(); Error = ErrorText(e); } }
                 Page = Math.Min(Page, Pages - 1); StateHasChanged();
             });
         }
@@ -632,21 +655,30 @@ else
         AcdError = !AcdAccess.Configured ? Text["ACD monitoring is not configured on this panel."]
             : samples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true)
                 ? Text["Some ACD sources are unavailable. Queue activity is shown only with current controller data."] : null;
-        // The pool revalidates exact manager access. Selected tenants still require scoped API cards.
-        var source = Connection?.Connected == true ? Connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
-        Observation = selectedContext is { } context ? AuthorizedObservation.Create(PortalCards, source, context) : AuthorizedObservation.ForManager(source);
+        Permissions = await Access.Permissions(lifetime.Token);
+        Observation = await Access.Observation(selectedContext, PortalCards, lifetime.Token);
         Observation.AddAcd(AcdBoardProjection.Create(samples, Observation.Rows, selectedContext, DateTimeOffset.UtcNow));
         Cards = Observation.Cards;
         Rows = Observation.Rows;
         await RefreshInventory();
     }
     private Guid TargetContext(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
+    private void ClearAuthorizedState()
+    {
+        inventoryTiles = null; Rows = []; Cards = []; PortalCards = []; Observation = new();
+        Pending = null; BoardAction = null; SelectedTileId = null; Connection = null; Supervisor = null;
+        Permissions = CurrentAuthorization.None; BoardConfiguration = new(); SettingsOpened = false;
+    }
+    private bool CanSuperviseTile(OperatorTile tile) => (Demo && Permissions.Manager) || tile.Rows.Any(row =>
+        Permissions.CanRead(TargetContext(row)) && Permissions.CanMonitor(TargetContext(row)));
     private BoardSupervisionAction? BoardAction;
     private bool DemoEndpointResolution => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query)
         .TryGetValue("supervisionpreview", out var scenario) && scenario == "idle";
     private void PrepareBoardSupervision(BoardSupervisionAction action)
     { CloseTile(); Pending = null; BoardAction = action; }
-    private bool CanMonitor(ObservedResource row) => !ActionBusy && Supervisor.HasValue && (Demo || MonitorActionGuard.Allows(row, TargetContext(row), Connected, DateTimeOffset.UtcNow));
+    private bool CanMonitor(ObservedResource row) => !ActionBusy && Supervisor.HasValue && (Demo ||
+        Permissions.CanRead(TargetContext(row)) && Permissions.CanMonitor(TargetContext(row))
+        && MonitorActionGuard.Allows(row, TargetContext(row), Connected, DateTimeOffset.UtcNow));
     private void Prepare(ObservedResource row, TelephonyMonitorActionMode mode)
     {
         Pending = row; Mode = mode; ActionMessage = null; FocusConfirmation = true;

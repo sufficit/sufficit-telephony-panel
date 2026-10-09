@@ -5,11 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Sufficit.Telephony.Panel</RootNamespace>
     <AssemblyName>Sufficit.Telephony.Panel</AssemblyName>
-    <Version>0.13.1</Version>
+    <Version>0.13.2</Version>
     <RepositoryUrl>https://github.com/sufficit/sufficit-telephony-panel</RepositoryUrl>
     <Company>Sufficit</Company>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../sufficit-identity-client/authorization/Sufficit.Identity.Authorization.Client.csproj" />
     <EmbeddedResource Include="Localization/Portuguese.json" />
     <ProjectReference Include="../../sufficit-ami-events/streaming/Sufficit.Telephony.Streaming.csproj" />
     <Content Remove="appsettings.*.json" />

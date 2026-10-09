@@ -39,7 +39,7 @@ public sealed class OperationsPool(PanelSessions sessions, SharedTelemetry telem
                 foreach (var pair in snapshot)
                 {
                     if (DateTimeOffset.UtcNow - pair.Value.LastUse < TimeSpan.FromMinutes(2)
-                        && await sessions.IsManagerAsync(pair.Value.Principal, stoppingToken)) continue;
+                        && (await sessions.AuthorizationAsync(pair.Value.Principal, stoppingToken)).PanelAllowed) continue;
                     await gate.WaitAsync(stoppingToken);
                     try { connections.Remove(pair.Key); } finally { gate.Release(); }
                     await pair.Value.DisposeAsync();

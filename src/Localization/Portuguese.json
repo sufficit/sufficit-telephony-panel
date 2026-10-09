@@ -1,4 +1,12 @@
 {
+  "Resize extensions and sidebar": "Redimensionar ramais e coluna lateral",
+  "Resize trunks and queues": "Redimensionar troncos e filas",
+  "Drag or use arrow keys to resize. Double-click or press Enter to reset.": "Arraste ou use as setas para redimensionar. Clique duas vezes ou pressione Enter para restaurar.",
+  "Authorized access": "Acesso autorizado",
+  "Sign in to view your authorized contexts. Permissions are checked on the server.": "Entre para visualizar seus contextos autorizados. As permissões são verificadas no servidor.",
+  "Listening and whispering require a separate supervision permission.": "Ouvir e sussurrar exigem uma permissão de supervisão separada.",
+  "All authorized contexts": "Todos os contextos autorizados",
+  "Access restricted to your authorized contexts": "Acesso restrito aos seus contextos autorizados",
   "Up to 20 observed changes per source over 7 days. User-Agent is device-declared; Via IP can differ from contact IP.": "Até 20 mudanças observadas por fonte em 7 dias. O User-Agent é declarado pelo aparelho; o IP Via pode diferir do IP do contato.",
   "Source details": "Detalhes da origem",
   "Collection diagnostics": "Diagnóstico da coleta",

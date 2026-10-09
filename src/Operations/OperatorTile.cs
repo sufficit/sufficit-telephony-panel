@@ -38,12 +38,13 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         return ("unknown", "Sem informação de alcance");
     }
     public static OperatorTile[] Create(IEnumerable<EventsPanelCardInfo> cards,
-        IReadOnlyDictionary<EventsPanelCardInfo, List<ObservedResource>> byCard) => cards
+        IReadOnlyDictionary<EventsPanelCardInfo, List<ObservedResource>> byCard, bool isolateContexts = false) => cards
         .Where(c => c.Kind is EventsPanelCardKind.PEER or EventsPanelCardKind.TRUNK or EventsPanelCardKind.QUEUE)
         .SelectMany(c => (byCard.TryGetValue(c, out var rows) && rows.Count > 0
             ? rows.GroupBy(r => r.Node).Select(g => (Node: g.Key, Rows: g.ToArray()))
             : [(Node: "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
-            .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node,
+            .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node
+                + (isolateContexts ? "|" + g.Rows.FirstOrDefault()?.Account : ""),
                 c.Label, g.Node, c.Kind, g.Rows) { Keys = c.Channels.ToArray() }))
         .OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Node, StringComparer.Ordinal).ToArray();
 }

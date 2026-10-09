@@ -1,5 +1,7 @@
 @using Sufficit.Telephony.Panel.Operations
 @using Sufficit.Telephony.EventsPanel
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 <section class="operator-board" aria-label="@Text["Operation board"]">
     @if (!Compact)
     {
@@ -7,8 +9,8 @@
         <span class="legend-online">@Text["Reachable / registered"]</span><span class="legend-busy">@Text["With channels / in use"]</span><span class="legend-ringing">@Text["Ringing"]</span><span class="legend-offline">@Text["No response / unregistered"]</span><span>@Text["No information"]</span>
     </div>
     }
-    <div class="board-columns">
-        <section class="board-section" aria-labelledby="board-extensions">
+    <div class="board-columns" @ref="Columns">
+        <section id="board-extension-region" class="board-section" aria-labelledby="board-extensions">
             <header class="board-section-heading"><h3 id="board-extensions">@(Central ? Text["Extensions and endpoints"] : Text["Extensions"])</h3><div class="board-heading-tools"><span>@Peers.Length</span>@HeaderTools</div></header>
             <div class="board-grid">
                 @foreach (var tile in Peers.Skip(page * Size).Take(Size)) { @TileButton(tile) }
@@ -16,14 +18,22 @@
             @if (Peers.Length == 0) { <p class="board-empty">@Text["No extension or endpoint matches the filters."]</p> }
             @if (Peers.Length > Size) { <div class="board-paging"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(page == 0)" OnClick="() => PageChanged.InvokeAsync(page - 1)">@Text["Previous"]</SUIButton><span>@(page + 1) / @Pages</span><SUIButton VariantValue="SUIVariant.Text" Disabled="@(page + 1 >= Pages)" OnClick="() => PageChanged.InvokeAsync(page + 1)">@Text["Next"]</SUIButton></div> }
         </section>
+        <div class="board-splitter board-column-splitter" role="separator" tabindex="0" aria-orientation="vertical"
+             aria-label="@Text["Resize extensions and sidebar"]" aria-controls="board-extension-region"
+             aria-valuemin="30" aria-valuemax="85" aria-valuenow="76" data-board-split="columns"
+             title="@Text["Drag or use arrow keys to resize. Double-click or press Enter to reset."]"></div>
         <aside class="board-sidebar">
-            <section class="board-section" aria-labelledby="board-trunks">
+            <section id="board-trunk-region" class="board-section" aria-labelledby="board-trunks">
                 <header class="board-section-heading"><h3 id="board-trunks">@Text["Trunks"]</h3><span>@Trunks.Length</span></header>
                 <div class="board-trunks">@foreach (var tile in Trunks.Take(40)) { @TileButton(tile) }</div>
                 @if (Trunks.Length == 0) { <p class="board-empty">@Text["No trunk matches the filters. Use Configure board to classify and group trunk identifiers."]</p> }
                 @if (Trunks.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} trunks. Refine the filters.", Trunks.Length)</p> }
             </section>
-            <section class="board-section" aria-labelledby="board-queues">
+            <div class="board-splitter board-row-splitter" role="separator" tabindex="0" aria-orientation="horizontal"
+                 aria-label="@Text["Resize trunks and queues"]" aria-controls="board-trunk-region"
+                 aria-valuemin="15" aria-valuemax="85" aria-valuenow="35" data-board-split="rows"
+                 title="@Text["Drag or use arrow keys to resize. Double-click or press Enter to reset."]"></div>
+            <section id="board-queue-region" class="board-section" aria-labelledby="board-queues">
                 <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span>@Queues.Length</span></header>
                 <div class="board-queues">@foreach (var tile in Queues.Take(40)) { @TileButton(tile) }</div>
                 @if (Queues.Length == 0) { <p class="board-empty">@Text["No queues observed or remembered with these filters."]</p> }
@@ -34,10 +44,32 @@
 </section>
 @if (MenuTile is { } menu)
 {
-    <BoardCardMenu @key="menu.Id" Tile="menu" X="MenuX" Y="MenuY" Closed="() => MenuTile = null" Selected="Select" Action="Supervise" />
+    <BoardCardMenu @key="menu.Id" Tile="menu" X="MenuX" Y="MenuY" Closed="() => MenuTile = null" Selected="Select" Action="@(CanSupervise?.Invoke(menu) == false ? default : Supervise)" />
 }
 @code {
+    private ElementReference Columns;
+    private IJSObjectReference? layoutModule, layoutSession;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        layoutModule = await JS.InvokeAsync<IJSObjectReference>("import", "./" + Assets["board-layout.js"]);
+        layoutSession = await layoutModule.InvokeAsync<IJSObjectReference>("attach", Columns);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (layoutSession is not null) { await layoutSession.InvokeVoidAsync("dispose"); await layoutSession.DisposeAsync(); }
+            if (layoutModule is not null) await layoutModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+    }
     [Parameter] public EventCallback<BoardSupervisionAction> Supervise { get; set; }
+    [Parameter] public Func<OperatorTile, bool>? CanSupervise { get; set; }
+    protected override void OnParametersSet()
+    {
+        if (MenuTile is { } previous) MenuTile = Tiles.FirstOrDefault(tile => tile.Id == previous.Id);
+    }
     private OperatorTile? MenuTile;
     private double MenuX, MenuY;
     private void OpenMenu(OperatorTile tile, MouseEventArgs e) { MenuTile = tile; MenuX = e.ClientX; MenuY = e.ClientY; }

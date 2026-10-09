@@ -26,7 +26,8 @@ public sealed class OperationsApi(IHttpClientFactory clients)
     }
     public async Task<EventsPanelCardInfo[]> Cards(string token, Guid? context, CancellationToken ct)
     {
-        var json = await Send(token, context.HasValue ? $"telephony/eventspanel/cardsbycontext?contextid={context:D}" : "telephony/eventspanel/cardsbyuser", ct);
+        if (!context.HasValue || context == Guid.Empty) throw new InvalidOperationException("A concrete context is required for the card catalogue.");
+        var json = await Send(token, $"telephony/panel/cards?contextid={context:D}", ct);
         if (json.ValueKind == JsonValueKind.Undefined) return [];
         var cards = json.Deserialize<EventsPanelCardInfo[]>(Json) ?? [];
         if (cards.Length > 2000) throw new InvalidOperationException("Há mais de 2.000 recursos. Selecione um cliente para reduzir a consulta.");

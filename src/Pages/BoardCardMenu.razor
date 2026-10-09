@@ -6,11 +6,14 @@
 <div @ref="Element" class="board-card-menu" popover="auto" role="menu" aria-label="@Text.Format("Actions for {0}", Tile.Title)">
     <strong class="card-menu-title">@Tile.Title</strong>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="Details">@Text["Open details"]</SUIButton>
+    @if (Action.HasDelegate)
+    {
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, false)">@Text["Listen to a channel"]</SUIButton>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, false)">@Text["Whisper to a channel"]</SUIButton>
     <hr />
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, true)">@Text["Listen continuously by prefix"]</SUIButton>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, true)">@Text["Whisper continuously by prefix"]</SUIButton>
+    }
 </div>
 
 @code {
