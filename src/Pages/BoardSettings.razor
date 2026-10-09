@@ -39,10 +39,10 @@
             <h3 id="rule-editor-title">@(Editing ? (Draft.Rules.Any(r => r.Id == EditId) ? Text["Edit rule"] : Text["New rule"]) : Text["Select or create a rule"])</h3>
             @if (Editing)
             {
-                <SUITextField T="string" Label="@Text["Board name"]" @bind-Value="Label" Immediate="true" MaxLength="80" Disabled="Busy" />
-                <SUISelect T="string" Label="@Text["Display as"]" @bind-Value="Kind" Disabled="Busy"><SUISelectItem Value="@("trunk")">@Text["Trunk"]</SUISelectItem><SUISelectItem Value="@("peer")">@Text["Extension"]</SUISelectItem><SUISelectItem Value="@("hidden")">@Text["Hide from board"]</SUISelectItem></SUISelect>
-                <SUITextField T="string" Label="@Text["Server (optional)"]" @bind-Value="Node" Immediate="true" MaxLength="100" Disabled="Busy" HelperText="@Text["Empty applies to all. Use the exact identifier displayed on the board."]" />
-                <SUITextField T="string" Label="@Text["SIP/PJSIP identifiers"]" @bind-Value="Patterns" Immediate="true" Multiline="true" Rows="6" MaxLength="10304" Disabled="Busy" HelperText="@Text["One per line, up to 64. Exact: PJSIP/6007. Prefix: SIP/in-dtr-*. Case-sensitive; no regex."]" />
+                <SUITextField TValue="string" Label="@Text["Board name"]" @bind-Value="Label" Immediate="true" MaxLength="80" Disabled="Busy" />
+                <SUISelect TValue="string" Label="@Text["Display as"]" @bind-Value="Kind" Disabled="Busy"><SUISelectItem Value="@("trunk")">@Text["Trunk"]</SUISelectItem><SUISelectItem Value="@("peer")">@Text["Extension"]</SUISelectItem><SUISelectItem Value="@("hidden")">@Text["Hide from board"]</SUISelectItem></SUISelect>
+                <SUITextField TValue="string" Label="@Text["Server (optional)"]" @bind-Value="Node" Immediate="true" MaxLength="100" Disabled="Busy" HelperText="@Text["Empty applies to all. Use the exact identifier displayed on the board."]" />
+                <SUITextField TValue="string" Label="@Text["SIP/PJSIP identifiers"]" @bind-Value="Patterns" Immediate="true" Multiline="true" Rows="6" MaxLength="10304" Disabled="Busy" HelperText="@Text["One per line, up to 64. Exact: PJSIP/6007. Prefix: SIP/in-dtr-*. Case-sensitive; no regex."]" />
                 <SUICheckbox @bind-Value="Enabled" Disabled="Busy" Label="@Text["Active rule"]" />
                 <p class="muted">@Text["A rule groups its identifiers into one card per server. The channel hexadecimal suffix is removed only for matching; SIP and PJSIP remain distinct."]</p>
                 @if (FormError is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(FormError)</SUIAlert> }

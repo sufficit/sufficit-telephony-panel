@@ -103,8 +103,8 @@
         </div>
         <section class="history" aria-labelledby="history-heading">
             <div class="history-heading"><div><h2 id="history-heading">@Text["History"] · @Current?.Name</h2><p class="muted">@Text["Collected readings, not a forecast. Gaps indicate missing samples."]</p></div>
-                <div class="history-controls"><SUISelect T="string" Label="@Text["Indicator"]" Value="Metric" ValueChanged="ChangeMetric"><SUISelectItem Value="@("calls")">@Text["Active calls"]</SUISelectItem><SUISelectItem Value="@("memory")">@Text["Memory (MiB)"]</SUISelectItem><SUISelectItem Value="@("work")">@Text["Internal tasks"]</SUISelectItem></SUISelect>
-                <SUISelect T="int" Label="@Text["Period"]" Value="Hours" ValueChanged="ChangeHours"><SUISelectItem Value="1">@Text["Last hour"]</SUISelectItem><SUISelectItem Value="6">@Text["Last 6 hours"]</SUISelectItem><SUISelectItem Value="24">@Text["Last 24 hours"]</SUISelectItem></SUISelect></div>
+                <div class="history-controls"><SUISelect TValue="string" Label="@Text["Indicator"]" Value="Metric" ValueChanged="ChangeMetric"><SUISelectItem Value="@("calls")">@Text["Active calls"]</SUISelectItem><SUISelectItem Value="@("memory")">@Text["Memory (MiB)"]</SUISelectItem><SUISelectItem Value="@("work")">@Text["Internal tasks"]</SUISelectItem></SUISelect>
+                <SUISelect TValue="int" Label="@Text["Period"]" Value="Hours" ValueChanged="ChangeHours"><SUISelectItem Value="1">@Text["Last hour"]</SUISelectItem><SUISelectItem Value="6">@Text["Last 6 hours"]</SUISelectItem><SUISelectItem Value="24">@Text["Last 24 hours"]</SUISelectItem></SUISelect></div>
             </div>
             @if (HistoryBusy) { <div class="empty-chart" role="status">@Text["Loading history…"]</div> }
             else if (HistoryError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(HistoryError)</SUIAlert> }

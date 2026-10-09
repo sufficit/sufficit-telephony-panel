@@ -196,7 +196,7 @@ else
     private RenderFragment CompanyFilter => @<details class="company-filter" open="@(!BoardPage)"><summary>@Text["Context"]: @(Context.HasValue ? ClientName : Text["All authorized contexts"])</summary>
     @if (!Permissions.GlobalPanel)
     {
-        <SUISelect T="string" Label="@Text["Context"]" Value="@(Context?.ToString("D") ?? "")" ValueChanged="SelectAuthorizedContext" Disabled="Busy">
+        <SUISelect TValue="string" Label="@Text["Context"]" Value="@(Context?.ToString("D") ?? "")" ValueChanged="SelectAuthorizedContext" Disabled="Busy">
             <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
             @foreach (var id in Permissions.PanelContexts.Order())
             { <SUISelectItem Value="@id.ToString("D")">@id.ToString("D")</SUISelectItem> }
@@ -205,7 +205,7 @@ else
     else
     {
     <div class="client-picker">
-        <SUITextField T="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
+        <SUITextField TValue="string" Label="@Text["Company (optional)"]" @bind-Value="SearchText" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
         <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
         @if (Context.HasValue) { <SUIButton OnClick="ClearCompany" Disabled="@(Busy || ActionBusy)" VariantValue="SUIVariant.Text">@Text["Clear company · view exchange"]</SUIButton> }
     </div>
@@ -276,9 +276,9 @@ else
             </div>;
     private RenderFragment BoardFilters => @<header class="board-filter-header">
         <div class="live-filters">
-            <SUITextField T="string" Label="@Text["Filter resources"]" Value="@Filter" ValueChanged="SetFilter" Immediate="true" MaxLength="100" Clearable="true" Placeholder="@Text["Extension, name, number or channel"]" />
-            <SUISelect T="string" Label="@Text["Observed server"]" Value="@Node" ValueChanged="SetNode"><SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>@foreach (var node in Rows.Select(x => x.Node).Concat(BoardTiles.Select(t => t.Node)).Distinct().Order()) { <SUISelectItem Value="@node">@node</SUISelectItem> }</SUISelect>
-            <SUISelect T="string" Label="@Text["Observed state"]" Value="@StatusFilter" ValueChanged="SetStatus"><SUISelectItem Value="@("all")">@Text["All states"]</SUISelectItem><SUISelectItem Value="@("online")">@Text["Reachable in qualify test"]</SUISelectItem><SUISelectItem Value="@("offline")">@Text["No response to qualify test"]</SUISelectItem><SUISelectItem Value="@("registered")">@Text["Registered"]</SUISelectItem><SUISelectItem Value="@("unregistered")">@Text["Unregistered"]</SUISelectItem><SUISelectItem Value="@("busy")">@Text["In use / ringing"]</SUISelectItem><SUISelectItem Value="@("unknown")">@Text["No registration information"]</SUISelectItem></SUISelect>
+            <SUITextField TValue="string" Label="@Text["Filter resources"]" Value="@Filter" ValueChanged="SetFilter" Immediate="true" MaxLength="100" Clearable="true" Placeholder="@Text["Extension, name, number or channel"]" />
+            <SUISelect TValue="string" Label="@Text["Observed server"]" Value="@Node" ValueChanged="SetNode"><SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>@foreach (var node in Rows.Select(x => x.Node).Concat(BoardTiles.Select(t => t.Node)).Distinct().Order()) { <SUISelectItem Value="@node">@node</SUISelectItem> }</SUISelect>
+            <SUISelect TValue="string" Label="@Text["Observed state"]" Value="@StatusFilter" ValueChanged="SetStatus"><SUISelectItem Value="@("all")">@Text["All states"]</SUISelectItem><SUISelectItem Value="@("online")">@Text["Reachable in qualify test"]</SUISelectItem><SUISelectItem Value="@("offline")">@Text["No response to qualify test"]</SUISelectItem><SUISelectItem Value="@("registered")">@Text["Registered"]</SUISelectItem><SUISelectItem Value="@("unregistered")">@Text["Unregistered"]</SUISelectItem><SUISelectItem Value="@("busy")">@Text["In use / ringing"]</SUISelectItem><SUISelectItem Value="@("unknown")">@Text["No registration information"]</SUISelectItem></SUISelect>
         </div>
         @if (Tab == "board")
         {

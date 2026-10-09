@@ -12,7 +12,7 @@
         {
             @if (PrefixChoices.Length > 1)
             {
-            <SUISelect T="string" Label="@Text["Authorized prefix"]" @bind-Value="PrefixId" Disabled="@(Sending || Submitted)">
+            <SUISelect TValue="string" Label="@Text["Authorized prefix"]" @bind-Value="PrefixId" Disabled="@(Sending || Submitted)">
                 <SUISelectItem Value="@string.Empty">@Text["Choose a prefix"]</SUISelectItem>
                 @foreach (var rule in PrefixChoices) { <SUISelectItem Value="@rule.Id">@rule.Prefix · @rule.ContextId.ToString("N")</SUISelectItem> }
             </SUISelect>
@@ -31,7 +31,7 @@
         {
             @if (Channels.Length > 1)
             {
-            <SUISelect T="string" Label="@Text["Specific channel"]" @bind-Value="ChannelId" Disabled="@(Sending || Submitted)">
+            <SUISelect TValue="string" Label="@Text["Specific channel"]" @bind-Value="ChannelId" Disabled="@(Sending || Submitted)">
                 <SUISelectItem Value="@string.Empty">@Text["Choose a channel"]</SUISelectItem>
                 @foreach (var row in Channels) { <SUISelectItem Value="@row.Id">@row.Key · @row.Caller → @row.Destination</SUISelectItem> }
             </SUISelect>

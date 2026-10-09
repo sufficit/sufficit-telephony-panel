@@ -13,18 +13,18 @@
     @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
     <div class="acd-filters">
         @if (!Permissions.SingleContext.HasValue) {
-        <SUISelect T="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
+        <SUISelect TValue="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
             <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
             @foreach (var context in Samples.Select(s => s.ContextId.ToString("N")).Distinct().Order())
             { <SUISelectItem Value="@context">@context</SUISelectItem> }
         </SUISelect>
         }
-        <SUISelect T="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
+        <SUISelect TValue="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
             <SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>
             @foreach (var node in Samples.Select(s => s.Node).Distinct().Order())
             { <SUISelectItem Value="@node">@node</SUISelectItem> }
         </SUISelect>
-        <SUITextField T="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
+        <SUITextField TValue="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
         <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
     </div>
     <p class="muted">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
