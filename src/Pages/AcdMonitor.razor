@@ -40,7 +40,7 @@
         <section class="acd-queues" aria-labelledby="acd-queues-title">
             <h2 id="acd-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
             <p class="muted">@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]</p>
-                <SUITable T="AcdQueueOverview" Items="overview.Queues" Dense="true" StackOnMobile="true" ColumnCount="7">
+                <SUITable T="AcdQueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
                     <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
                     <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
                         <details class="acd-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
@@ -58,11 +58,19 @@
                     <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
                 </SUITable>
                 <details class="acd-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
-                    @foreach (var observation in overview.Visits)
-                    { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node</p> }
+                    @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
+                    { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
+                        <SUIButton VariantValue="SUIVariant.Text" OnClick="() => SelectVisit(observation)">@Text["View timeline"]</SUIButton></p> }
+                    <SUIButton OnClick="() => VisitPage=Math.Max(0,VisitPage-1)" Disabled="@(VisitPage==0)">@Text["Previous page"]</SUIButton>
+                    <SUIButton OnClick="() => VisitPage++" Disabled="@((VisitPage+1)*30>=overview.Visits.Length)">@Text["Next page"]</SUIButton>
                 </details>
+                <SUIButton OnClick="() => QueuePage=Math.Max(0,QueuePage-1)" Disabled="@(QueuePage==0)">@Text["Previous page"]</SUIButton>
+                <SUIButton OnClick="() => QueuePage++" Disabled="@((QueuePage+1)*30>=overview.Queues.Length)">@Text["Next page"]</SUIButton>
+                @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
+                { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
         <AcdRegistrationTable Agents="overview.Agents" />
+        <details class="acd-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><AcdCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <details class="acd-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
             @foreach (var sample in FilteredSamples)
             { <p>@sample.Node · @Text[sample.Available && sample.Snapshot?.Fresh(DateTimeOffset.UtcNow) == true ? "Current collection" : "No current data"] · @Time(sample.Snapshot?.ObservedAt)<br /><span class="muted">@Text["Context"]: @sample.ContextId.ToString("N")</span></p> }
@@ -77,6 +85,9 @@
     private Sufficit.Identity.Authorization.CurrentAuthorization Permissions = Sufficit.Identity.Authorization.CurrentAuthorization.None;
     private string Context = "", Node = "all", Search = "", QueueId = "";
     private bool Busy, Disposed;
+    private int QueuePage, VisitPage;
+    private AcdVisitObservation? SelectedVisit;
+    private void SelectVisit(AcdVisitObservation visit) { SelectedVisit=visit; }
     private string? Error;
     private readonly CancellationTokenSource Lifetime = new();
     private Task? Loop;
@@ -99,9 +110,9 @@
     private void LocationChanged(object? sender, LocationChangedEventArgs args) { ReadUrl(); _ = InvokeAsync(StateHasChanged); }
     private void WriteUrl() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
         { ["contextid"] = Context.Length == 0 ? null : Context, ["company"] = null, ["node"] = Node == "all" ? null : Node, ["q"] = Search.Length == 0 ? null : Search, ["queueid"] = QueueId.Length == 0 ? null : QueueId }), replace: true);
-    private void ChangeContext(string value) { Context = value; QueueId = ""; WriteUrl(); }
-    private void ChangeNode(string value) { Node = value; WriteUrl(); }
-    private void ChangeSearch(string value) { Search = value ?? ""; WriteUrl(); }
+    private void ChangeContext(string value) { Context = value; QueueId = ""; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
+    private void ChangeNode(string value) { Node = value; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
+    private void ChangeSearch(string value) { Search = value ?? ""; QueuePage=VisitPage=0; WriteUrl(); }
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
     private static string Phase(string value) => value switch { "greeting" => "Greeting", "waiting" => "Waiting", "announcing" => "Announcement", "offering" => "Offering", "connected" => "In conversation", _ => "Unknown" };
     private async Task Refresh()

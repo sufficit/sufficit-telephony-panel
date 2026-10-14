@@ -15,6 +15,7 @@ public sealed class AcdBoardReader : IDisposable
         public DateTimeOffset Attempted;
     }
     private readonly Slot[] slots;
+    public AcdBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source;
     private readonly IHttpClientFactory clients;
     private readonly TimeProvider clock;
     private readonly SemaphoreSlim requests = new(4);
@@ -92,7 +93,7 @@ public sealed class AcdBoardReader : IDisposable
             c is not null && Text(c.Endpoint, 256) && Text(c.UserAgent, 160) &&
             (c.IpAddress is null || IPAddress.TryParse(c.IpAddress, out _)) &&
             (c.ViaAddress is null || IPAddress.TryParse(c.ViaAddress, out _)));
-        if (s.Agents is not null && (s.Agents.Length > 128 ||
+        if (s.Agents is not null && (s.Agents.Length > 1000 ||
             s.Agents.Select(a => a?.Extension).Distinct().Count() != s.Agents.Length ||
             s.Agents.Any(a => a is null || !Guid.TryParse(a.ContextId, out var scope) || scope != context ||
                 string.IsNullOrWhiteSpace(a.Extension) || !Text(a.Extension, 128) || !Contacts(a.Contacts) ||
@@ -105,8 +106,9 @@ public sealed class AcdBoardReader : IDisposable
                 q.Capacity is < 1 or > 10000 || q.Waiting is < 0 or > 10000 || q.Connected is < 0 or > 10000 ||
                 q.Greeting < 0 || q.Offering < 0 || q.Announcing < 0 || q.Greeting > q.Waiting || q.Offering > q.Waiting || q.Announcing > q.Waiting) ||
             s.Queues.Select(q => q.QueueId).Distinct().Count() != s.Queues.Length) return false;
+        var queueIds = s.Queues.Select(q => q.QueueId).ToHashSet(StringComparer.Ordinal);
         return s.Visits is null || s.Visits.Length <= 5000 && s.Visits.Select(v => v?.Id).Distinct().Count() == s.Visits.Length &&
-            s.Visits.All(v => v is not null && Id(v.Id) && s.Queues.Any(q => q.QueueId == v.QueueId) &&
+            s.Visits.All(v => v is not null && Id(v.Id) && queueIds.Contains(v.QueueId) &&
                 v.Phase is "greeting" or "waiting" or "announcing" or "offering" or "connected" &&
                 Text(v.ChannelId, 256) && Text(v.ChannelName, 256) && Text(v.Caller, 128) && v.EnteredAt <= s.ObservedAt.AddSeconds(5));
     }

@@ -24,6 +24,16 @@ public sealed class OperationsApi(IHttpClientFactory clients)
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         return document.RootElement.Clone();
     }
+    public async Task<AcdAccounting> Accounting(string token,Guid context,string node,string recordId,CancellationToken ct)
+    {
+        if(context==Guid.Empty || !System.Text.RegularExpressions.Regex.IsMatch(recordId,"^[0-9]{9,12}\\.[0-9]{1,20}$") ||
+            !System.Text.RegularExpressions.Regex.IsMatch(node,"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"))throw new InvalidOperationException("This channel cannot be correlated to accounting.");
+        var json=await Send(token,$"telephony/calls/accounting?contextid={context:D}&recordid={Uri.EscapeDataString(recordId)}&node={Uri.EscapeDataString(node)}",ct);
+        var record=json.Deserialize<AcdAccounting>(Json)??throw new InvalidDataException("Invalid accounting response.");
+        if(record.ContextId!=context || record.RecordId!=recordId || record.Node!=node ||
+            record.Status is not ("not_observed" or "pending_debit" or "legacy_debit_unknown" or "not_reconciled" or "confirmed"))throw new InvalidDataException("Accounting scope mismatch.");
+        return record;
+    }
     public async Task<EventsPanelCardInfo[]> Cards(string token, Guid? context, CancellationToken ct)
     {
         if (!context.HasValue || context == Guid.Empty) throw new InvalidOperationException("A concrete context is required for the card catalogue.");

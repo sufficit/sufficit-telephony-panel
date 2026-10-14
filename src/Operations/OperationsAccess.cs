@@ -17,6 +17,13 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
             ?? throw new UnauthorizedAccessException("Sessão inválida. Entre novamente na Sufficit Identity.");
         return token;
     }
+    public async Task<AcdAccounting> Accounting(Guid context,string node,string recordId,CancellationToken ct)
+    {
+        if(!(await Permissions(ct)).CanRead(context))throw new UnauthorizedAccessException();
+        var result=await api.Accounting(await Token(ct),context,node,recordId,ct);
+        if(!(await Permissions(ct)).CanRead(context))throw new UnauthorizedAccessException();
+        return result;
+    }
     public async Task<CurrentAuthorization> Permissions(CancellationToken ct) =>
         await sessions.AuthorizationAsync((await authentication.GetAuthenticationStateAsync()).User, ct);
 

@@ -50,8 +50,12 @@ public sealed record AcdMonitorOverview(AcdQueueOverview[] Queues, AcdAgentOverv
             .Select(g => new AcdAgentOverview(g.Key.ContextId, g.Key.Extension, g.OrderBy(o => o.Source.Node).ToArray()))
             .Where(a => Matches(a.Extension + " " + string.Join(" ", a.Contacts.Select(c => c.IpAddress + " " + c.UserAgent))))
             .OrderBy(a => a.Extension, StringComparer.OrdinalIgnoreCase).ThenBy(a => a.ContextId).ToArray();
-        var visits = sources.SelectMany(s => (s.Snapshot?.Visits ?? []).Select(v => new AcdVisitObservation(s, v,
-                s.Snapshot?.Queues.FirstOrDefault(q => q.QueueId == v.QueueId)?.Title ?? v.QueueId, Fresh(s))))
+        var visits = sources.SelectMany(s =>
+        {
+            var titles = (s.Snapshot?.Queues ?? []).ToDictionary(q => q.QueueId, q => q.Title);
+            return (s.Snapshot?.Visits ?? []).Select(v => new AcdVisitObservation(s, v,
+                titles.GetValueOrDefault(v.QueueId) ?? v.QueueId, Fresh(s)));
+        })
             .Where(v => (queueId.Length == 0 || Id(v.Visit.QueueId) == Id(queueId)) && Matches(v.QueueTitle + " " + v.Visit.Caller + " " + v.Visit.ChannelName))
             .OrderByDescending(v => v.Visit.EnteredAt).ToArray();
         return new(queues, agents, visits);

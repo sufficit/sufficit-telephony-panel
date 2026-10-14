@@ -1,0 +1,167 @@
+@using Sufficit.Telephony.Panel.Operations
+@implements IDisposable
+@inject IWebHostEnvironment Environment
+@inject AcdBoardAccess Access
+@inject OperationsAccess Operations
+<section class="acd-call-diagnostics" aria-labelledby="acd-call-history-title">
+    <h3 id="acd-call-history-title">@Text["Call diagnostics"]</h3>
+    <p class="muted">@Text["History is queried on demand, up to 50 calls per page from the last hour. It does not add a polling loop per call."]</p>
+    <SUISelect TValue="string" Label="@Text["Source"]" Value="Source" ValueChanged="ChangeSource" Disabled="Busy">
+        @foreach (var source in Sources.DistinctBy(s => (s.ContextId,s.NodeId)))
+        { <SUISelectItem Value="@($"{source.ContextId:N}:{source.NodeId:N}")">@source.Node · @source.ContextId.ToString("N")</SUISelectItem> }
+    </SUISelect>
+    <SUIButton OnClick="() => ReadCalls(false)" Disabled="Busy" VariantValue="SUIVariant.Outlined">@Text["Query calls"]</SUIButton>
+    @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }
+    <SUIButton OnClick="ReadReport" Disabled="Busy" VariantValue="SUIVariant.Outlined">@Text["Query last-hour SLA report"]</SUIButton>
+    @if(Report is not null)
+    {
+        <p>@Text["Report period"]: @Time(ReportFrom) — @Time(ReportUntil) · @Text["SLA threshold"]: 20 s</p>
+        <SUITable T="AcdDiagnosticQueueReport" Items="Report.Items.Skip(ReportPage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
+            <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Entered"]</SUITh><SUITh>@Text["Answered"]</SUITh><SUITh>@Text["Abandoned"]</SUITh><SUITh>@Text["Timed out"]</SUITh><SUITh>@Text["Average wait"]</SUITh><SUITh>@Text["Answered within SLA"]</SUITh></HeaderContent>
+            <RowTemplate><SUITd DataLabel="@Text["Queue"]">@QueueTitle(context.QueueId)</SUITd><SUITd DataLabel="@Text["Entered"]">@context.Entered</SUITd>
+                <SUITd DataLabel="@Text["Answered"]">@context.Answered</SUITd><SUITd DataLabel="@Text["Abandoned"]">@context.Abandoned</SUITd>
+                <SUITd DataLabel="@Text["Timed out"]">@context.TimedOut</SUITd><SUITd DataLabel="@Text["Average wait"]">@(context.AverageWaitSeconds?.ToString("N1",Text.Culture)??"—") s</SUITd>
+                <SUITd DataLabel="@Text["Answered within SLA"]">@context.AnsweredWithinSla / @context.Entered</SUITd></RowTemplate>
+        </SUITable>
+        <p class="muted">@Text["Reports count visits on this source, not unique cross-server calls. They do not include missing or interrupted observations as successful calls."]</p>
+        <SUIButton OnClick="() => ReportPage=Math.Max(0,ReportPage-1)" Disabled="@(ReportPage==0)">@Text["Previous page"]</SUIButton>
+        <SUIButton OnClick="() => ReportPage++" Disabled="@((ReportPage+1)*30>=Report.Items.Length)">@Text["Next page"]</SUIButton>
+    }
+    @if (Calls is not null)
+    {
+        <SUITable T="AcdDiagnosticCall" Items="Calls.Items" Dense="true" StackOnMobile="true" ColumnCount="4">
+            <HeaderContent><SUITh>@Text["Entered"]</SUITh><SUITh>@Text["Result"]</SUITh><SUITh>@Text["Conversation"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
+            <RowTemplate><SUITd DataLabel="@Text["Entered"]">@Time(context.EnteredAt)</SUITd>
+                <SUITd DataLabel="@Text["Result"]">@Text[Outcome(context.Status)]</SUITd>
+                <SUITd DataLabel="@Text["Conversation"]">@(context.Status=="completed" && context.AnsweredAt.HasValue && context.EndedAt.HasValue ? $"{Math.Max(0,(context.EndedAt.Value-context.AnsweredAt.Value).TotalSeconds).ToString("N1",Text.Culture)} s" : "—")</SUITd>
+                <SUITd DataLabel="@Text["Diagnostics"]"><SUIButton VariantValue="SUIVariant.Text" Disabled="Busy" OnClick="() => SelectCall(context)">@Text["View timeline"]</SUIButton></SUITd></RowTemplate>
+            <NoRecordsContent>@Text["No calls observed in this period."]</NoRecordsContent>
+        </SUITable>
+        @if (Calls.NextCursor is not null) { <SUIButton Disabled="Busy" OnClick="() => ReadCalls(true)">@Text["Next page"]</SUIButton> }
+    }
+    @if (Events is not null)
+    {
+        <section class="acd-call-timeline" aria-label="@Text["Call timeline"]">
+            <h4>@Text["Call timeline"]</h4>
+            <code>@Events.VisitId.ToString("N")</code>
+            @if (SelectedCall is not null)
+            {
+                <p>@Text["Wait before connection"]: @(SelectedCall.AnsweredAt is { } answer ? $"{Math.Max(0,(answer-SelectedCall.EnteredAt).TotalSeconds).ToString("N1",Text.Culture)} s" : "—") · @Text["Channel"]: @SelectedCall.ChannelId</p>
+            }
+            <p class="muted">@Text["Observed call times are not billed duration or proof of a debit. Billing must be checked against the actual call record."]</p>
+            @if (Events.Health.Dropped > 0 || !Events.Health.StorageAvailable)
+            { <SUIAlert ToneValue="SUITone.Warning">@Text["The diagnostic collector reports missing events or a storage failure. This timeline can be incomplete."]</SUIAlert> }
+            @if(SelectedCall is not null)
+            { <SUIButton OnClick="ReadAccounting" Disabled="Busy" VariantValue="SUIVariant.Outlined">@Text["Check actual accounting"]</SUIButton> }
+            @if(AccountingError is not null){<SUIAlert ToneValue="SUITone.Warning">@Text[AccountingError]</SUIAlert>}
+            @if(Accounting is not null)
+            {
+                <p>@Text["Accounting status"]: @Text[AccountingStatus(Accounting.Status)]</p>
+                <p>@Text["Recorded billing seconds"]: @(Accounting.RecordedSeconds?.ToString()??"—") · @Text["Tariff rule reference seconds"]: @(Accounting.TariffReferenceSeconds?.ToString("N0",Text.Culture)??"—")</p>
+                <p>@Text["Rated amount"]: @(Accounting.Value?.ToString("N4",Text.Culture)??"—") BRL · @Text["Recorded debit"]: @(Accounting.Debited?.ToString("N4",Text.Culture)??"—") BRL</p>
+                <p class="muted">@Text["Tariff reference duration follows the recorded discard, minimum and cadence. Amounts come from the accounting record; a pending or unknown debit is not a confirmed charge."]</p>
+            }
+            <ol>@foreach (var item in Events.Items)
+            { <li @key="item.Id"><time>@Time(item.OccurredAt)</time> · @Text[Kind(item.Kind)]
+                @if (!string.IsNullOrEmpty(item.Extension)) { <span> · @Text["Extension"] @item.Extension</span> }
+                @if (!string.IsNullOrEmpty(item.Reason)) { <span> · @Text[Outcome(item.Reason)]</span> }
+            </li> }</ol>
+            @if (Events.Items.Length == 0) { <p>@Text["No diagnostic events were retained for this call. Earlier events cannot be reconstructed."]</p> }
+            @if (Events.NextCursor is not null) { <SUIButton Disabled="Busy" OnClick="ReadNextEvents">@Text["Next events"]</SUIButton> }
+        </section>
+    }
+</section>
+@code {
+    [Parameter] public bool Preview {get;set;}
+    private bool Demo => Preview && Environment.IsDevelopment();
+    [Parameter] public AcdBoardSample[] Sources { get; set; } = [];
+    [Parameter] public AcdVisitObservation? SelectedVisit { get; set; }
+    private readonly CancellationTokenSource Lifetime = new();
+    private string Source = "";
+    private int Version;
+    private bool Busy, Disposed;
+    private string? Error;
+    private AcdDiagnosticCalls? Calls;
+    private AcdDiagnosticEvents? Events;
+    private AcdDiagnosticCall? SelectedCall;
+    private AcdDiagnosticReport? Report;
+    private int ReportPage;
+    private DateTimeOffset ReportFrom,ReportUntil;
+    private AcdAccounting? Accounting;
+    private string? AccountingError;
+    private DateTimeOffset From, Until;
+    private string? Selection;
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Sources.Any(s=>$"{s.ContextId:N}:{s.NodeId:N}"==Source)) ChangeSource("");
+        if (Source.Length == 0 && Sources.FirstOrDefault() is { } first) Source = $"{first.ContextId:N}:{first.NodeId:N}";
+        if (Busy) return;
+        if (SelectedVisit is { } selected && Selection != selected.Visit.Id + selected.Source.NodeId)
+        {
+            Selection = selected.Visit.Id + selected.Source.NodeId;
+            ChangeSource($"{selected.Source.ContextId:N}:{selected.Source.NodeId:N}");
+            await ReadEvents(Guid.ParseExact(selected.Visit.Id,"N"),0);
+        }
+    }
+    private void ChangeSource(string value) { Version++; Source = value; Calls = null; Events = null; SelectedCall = null; Report=null;ReportPage=0;Accounting=null;AccountingError=null;Error = null; }
+    private (Guid Context,Guid Node) Scope()
+    {
+        var parts = Source.Split(':');
+        if (parts.Length != 2 || !Guid.TryParseExact(parts[0],"N",out var context) || !Guid.TryParseExact(parts[1],"N",out var node) ||
+            !Sources.Any(s=>s.ContextId==context && s.NodeId==node)) throw new InvalidOperationException("Diagnostic source is not configured.");
+        return (context,node);
+    }
+    private async Task Execute(Func<Guid,Guid,Task> operation)
+    {
+        if (Busy || Disposed) return; Busy = true; Error = null; await InvokeAsync(StateHasChanged);
+        try { var scope = Scope(); await operation(scope.Context,scope.Node); }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException or System.Text.Json.JsonException or OperationCanceledException)
+        { Error = e is UnauthorizedAccessException ? "Your access expired. Sign in again." : "Call diagnostics are unavailable on this source. Check collection configuration."; }
+        finally { Busy = false; if (!Disposed) await InvokeAsync(StateHasChanged); }
+    }
+    private Task ReadCalls(bool next) => Execute(async (context,node) =>
+    {
+        if (!next) { Until=DateTimeOffset.UtcNow; From=Until.AddHours(-1); }
+        var path=$"calls?from={Uri.EscapeDataString(From.ToString("O"))}&until={Uri.EscapeDataString(Until.ToString("O"))}&limit=50";
+        if(next && Calls?.NextCursor is { } cursor) path+="&cursor="+Uri.EscapeDataString(cursor);
+        var version=Version;
+        var page=Demo ? AcdMonitorFixture.Calls(context,node) : await Access.Diagnostic<AcdDiagnosticCalls>(context,node,path,Lifetime.Token);
+        if(version==Version && !Disposed) Calls=page;
+    });
+    private Task SelectCall(AcdDiagnosticCall call) { Accounting=null;AccountingError=null;SelectedCall=call; return ReadEvents(call.VisitId,0); }
+    private Task ReadNextEvents() => Events is { NextCursor: { } next } e ? ReadEvents(e.VisitId,next) : Task.CompletedTask;
+    private Task ReadEvents(Guid visit,long after) => Execute(async (context,node) =>
+    {
+        var version=Version;
+        var page=Demo ? AcdMonitorFixture.Events(context,node,visit) : await Access.Diagnostic<AcdDiagnosticEvents>(context,node,$"calls/{visit:N}/events?after={after}&limit=50",Lifetime.Token);
+        if(version==Version && !Disposed) Events=page;
+    });
+    private string QueueTitle(Guid queue)=>Sources.Where(s=>$"{s.ContextId:N}:{s.NodeId:N}"==Source).SelectMany(s=>s.Snapshot?.Queues??[]).FirstOrDefault(q=>q.QueueId==queue.ToString("N"))?.Title??queue.ToString("N");
+    private Task ReadReport()=>Execute(async(context,node)=>
+    {
+        var version=Version;
+        ReportUntil=DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds()/30*30);ReportFrom=ReportUntil.AddHours(-1);
+        var page=Demo ? AcdMonitorFixture.Report(context,node) : await Access.Diagnostic<AcdDiagnosticReport>(context,node,$"report?from={Uri.EscapeDataString(ReportFrom.ToString("O"))}&until={Uri.EscapeDataString(ReportUntil.ToString("O"))}&sla=20",Lifetime.Token);
+        if(version==Version && !Disposed){Report=page;ReportPage=0;}
+    });
+    private Task ReadAccounting()=>Execute(async(context,node)=>
+    {
+        if(SelectedCall is null)return;
+        var version=Version;Accounting=null;AccountingError=null;
+        var source=Sources.Single(s=>s.ContextId==context && s.NodeId==node);
+        try
+        {
+            var result=await Operations.Accounting(context,source.Node,SelectedCall.ChannelId,Lifetime.Token);
+            if(version==Version && !Disposed)Accounting=result;
+        }
+        catch(UnauthorizedAccessException){AccountingError="Your account is not authorized to read accounting for this context.";}
+        catch(Exception e)when(e is HttpRequestException or IOException or InvalidOperationException){AccountingError="Accounting could not be correlated or is not available yet. No zero charge is inferred.";}
+    });
+    private static string AccountingStatus(string value)=>value switch {"confirmed"=>"Debit confirmed","pending_debit"=>"Debit pending","legacy_debit_unknown"=>"Historical debit not independently confirmed","not_reconciled"=>"Accounting not reconciled",_=>"Accounting not observed yet"};
+    private string Time(DateTimeOffset at)=>at.ToLocalTime().ToString("G",Text.Culture);
+    private static string Kind(string kind)=>kind switch {"entered"=>"Entered queue","offered"=>"Offer created","ringing"=>"Calling extension","connected"=>"Conversation started","offer_finished"=>"Offer finished","finished"=>"Call finished",_=>"Observed event"};
+    private static string Outcome(string value)=>value switch {"completed"=>"Completed","abandoned"=>"Caller abandoned","timed_out"=>"Wait timed out","ring_timeout"=>"Ring timed out","BUSY"=>"Busy","NOANSWER"=>"No answer","no_answer_or_busy"=>"No answer or busy","cancelled_or_unavailable"=>"Cancelled or unavailable","rejected"=>"Capacity reached","interrupted"=>"Observation interrupted","empty"=>"No eligible agents","offer_expired_before_dial"=>"Offer expired before dial","subscriber_absent"=>"Subscriber absent","transport_failure"=>"Transport failure","channel_ended"=>"Channel ended",_=>value};
+    public void Dispose() { Disposed=true; Lifetime.Cancel(); Lifetime.Dispose(); }
+}
