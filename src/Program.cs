@@ -77,6 +77,7 @@ builder.Services.AddHttpClient("acd-board", client =>
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton(sp => new AcdBoardReader(builder.Configuration.GetSection("Panel:AcdSources")
     .Get<AcdBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>()));
+builder.Services.AddSingleton<AcdDiagnosticsReader>();
 builder.Services.AddScoped<AcdBoardAccess>();
 builder.Services.AddSingleton(new SupervisionPrefixPolicy(builder.Configuration
     .GetSection("Panel:SupervisionPrefixes").Get<SupervisionPrefixRule[]>() ?? []));

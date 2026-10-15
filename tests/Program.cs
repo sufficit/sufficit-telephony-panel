@@ -8,6 +8,8 @@ var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PanelTextChecks.Run(Check);
 RegistrationChecks.Run(Check);
+AcdDiagnosticChecks.Run(Check);
+await AccountingChecks.Run(Check);
 await CustomerAccessChecks.Run(Check);
 var clock = new FakeClock();
 var http = new FakeHttp { Body = "{\"sub\":\"operator-a\",\"role\":[\"manager\"]}" };

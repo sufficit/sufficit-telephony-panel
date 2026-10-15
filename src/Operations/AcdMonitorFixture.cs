@@ -3,6 +3,17 @@ namespace Sufficit.Telephony.Panel.Operations;
 /// <summary>Synthetic data, invoked only by the Development-only UI fixture.</summary>
 internal static class AcdMonitorFixture
 {
+    public static AcdDiagnosticCalls Calls(Guid context,Guid node)
+    {
+        var now=DateTimeOffset.UtcNow;
+        return new(context,node,[new(Guid.ParseExact("44444444444444448444444444444444","N"),Guid.ParseExact("33333333333343338333333333333333","N"),"synthetic.1","completed",now.AddSeconds(-90),now.AddSeconds(-50),now.AddSeconds(-24))],null);
+    }
+    public static AcdDiagnosticEvents Events(Guid context,Guid node,Guid visit)
+    {
+        var now=DateTimeOffset.UtcNow;
+        return new(context,node,visit,[new(1,now.AddSeconds(-90),"entered",null,null),new(2,now.AddSeconds(-75),"offered","6018",null),new(3,now.AddSeconds(-60),"offer_finished","6018","NOANSWER"),new(4,now.AddSeconds(-50),"connected","6019",null),new(5,now.AddSeconds(-24),"finished",null,"completed")],null,new(5,5,0,0,true));
+    }
+    public static AcdDiagnosticReport Report(Guid context,Guid node)=>new(context,node,[new(Guid.ParseExact("33333333333343338333333333333333","N"),20,16,2,2,12.5m,14,20)]);
     public static AcdBoardSample[] Create()
     {
         var now = DateTimeOffset.UtcNow;
