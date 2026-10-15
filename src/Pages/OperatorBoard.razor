@@ -92,9 +92,9 @@
     private int Pages => Math.Max(1, (Peers.Length + Size - 1) / Size);
     private string FlowStatus(OperatorTile tile)
     {
-        if (tile.Acd is { } acd)
-            return acd.State != "current" ? Text["ACD state unavailable"]
-                : Text.Format("{0} pending · {1} in service", acd.Details["pending"], acd.Details["connected"]);
+        if (tile.Queue is { } queue)
+            return queue.State != "current" ? Text["QUEUE state unavailable"]
+                : Text.Format("{0} pending · {1} in service", queue.Details["pending"], queue.Details["connected"]);
         if (tile.Kind == EventsPanelCardKind.QUEUE && tile.QueueCalls.Length > 0)
             return Text.Format("{0} waiting · {1} answered", tile.QueueCalls.Count(r => r.State != "answered"), tile.QueueCalls.Count(r => r.State == "answered"));
         if (tile.Flows.Length == 0) return Text.Observed(tile.Status.Label);
@@ -111,7 +111,7 @@
         title="@Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label))">
         <span class="tile-title"><span class="tile-dot" aria-hidden="true"></span><strong>@tile.Title</strong></span>
         <span class="tile-status">@FlowStatus(tile)</span><span class="tile-node">@tile.Node</span>
-        @foreach (var flow in tile.Flows.Take(2)) { <span class="tile-channel">@(LiveProjection.Meaningful(flow.Caller) ? flow.Caller : Text["Source not reported"]) → @(LiveProjection.Meaningful(flow.Destination) ? flow.Destination : Text["Destination not reported"])@if (tile.Acd is not null) { <text> · @Text[flow.Phase switch { "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent", "answered" => "Answered in queue", _ => "Waiting in queue" }]</text> }</span> }
+        @foreach (var flow in tile.Flows.Take(2)) { <span class="tile-channel">@(LiveProjection.Meaningful(flow.Caller) ? flow.Caller : Text["Source not reported"]) → @(LiveProjection.Meaningful(flow.Destination) ? flow.Destination : Text["Destination not reported"])@if (tile.Queue is not null) { <text> · @Text[flow.Phase switch { "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent", "answered" => "Answered in queue", _ => "Waiting in queue" }]</text> }</span> }
         @if (tile.Flows.Length > 2) { <span class="tile-channel">@Text.Format("+{0} call flows in details", tile.Flows.Length - 2)</span> }
     </button>
     <SUIButton Class="card-menu-trigger" SizeValue="SUISize.Small" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Menu"

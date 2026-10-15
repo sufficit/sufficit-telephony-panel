@@ -25,7 +25,7 @@ def run(*args, **kwargs):
 
 def probe():
     with KEY.open() as source: key = source.read().strip()
-    base = 'http://172.19.254.250:18190/api/acd/contexts/'+CONTEXT+'/nodes/'+NODE
+    base = 'http://172.19.254.250:18190/api/queue/contexts/'+CONTEXT+'/nodes/'+NODE
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *args): return None
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
@@ -61,11 +61,11 @@ def main():
     env = dict(os.environ)
     for path in list(sorted(DROPINS.glob('*.conf'))) + [source]:
         for line in path.read_text().splitlines():
-            if line.startswith('Environment=Panel__AcdSources__'):
+            if line.startswith('Environment=Panel__QueueSources__'):
                 name, value = line[len('Environment='):].split('=',1)
                 env[name] = value
     print(run('runuser','-u','sufftelpanel','-p','--','dotnet',
-        '/tmp/monitoring-probe-20260913/AcdSourceProbe.dll',env=env))
+        '/tmp/monitoring-probe-20260913/QueueSourceProbe.dll',env=env))
     previous = run('systemctl','show','sufficit-telephony-panel','-p','MainPID')
     shutil.copy2(source, TARGET)
     try:
