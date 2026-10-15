@@ -8,7 +8,7 @@ var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PanelTextChecks.Run(Check);
 RegistrationChecks.Run(Check);
-AcdDiagnosticChecks.Run(Check);
+QueueDiagnosticChecks.Run(Check);
 await AccountingChecks.Run(Check);
 await CustomerAccessChecks.Run(Check);
 var clock = new FakeClock();
@@ -72,7 +72,7 @@ BoardSupervisionChecks.Run(Check);
 await SharedTelemetryChecks.Run(Check);
 CallGroupingChecks.Run(Check);
 QueueCallFlowChecks.Run(Check);
-await AcdBoardChecks.Run(Check);
+await QueueBoardChecks.Run(Check);
 OperatorBoardChecks.Run(Check);
 await BoardConfigurationChecks.Run(Check);
 FopRulesChecks.Run(Check);

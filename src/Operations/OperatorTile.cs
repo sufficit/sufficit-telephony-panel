@@ -7,9 +7,9 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
 {
     public string[] Keys { get; init; } = [];
     public BoardCallFlow[] Flows { get; init; } = [];
-    public ObservedResource? Acd => Rows.FirstOrDefault(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "acd");
+    public ObservedResource? Queue => Rows.FirstOrDefault(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue");
     public bool HasObservedActivity => Channels.Length > 0 || QueueCalls.Length > 0 ||
-        Acd is { State: "current" } acd && (acd.Details.GetValueOrDefault("pending", "0") != "0" || acd.Details.GetValueOrDefault("connected", "0") != "0");
+        Queue is { State: "current" } queue && (queue.Details.GetValueOrDefault("pending", "0") != "0" || queue.Details.GetValueOrDefault("connected", "0") != "0");
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting").ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels).Concat(Channels).DistinctBy(r => r.Id).ToArray();
     public DateTimeOffset? LastSeen { get; init; }
@@ -18,9 +18,9 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);
     public (string Tone, string Label) Status => Remembered ? ("unknown", "Já visto · sem estado atual")
-        : Acd is { } acd ? acd.State != "current" ? ("unknown", "ACD state unavailable")
-            : acd.Details.GetValueOrDefault("pending") != "0" || acd.Details.GetValueOrDefault("connected") != "0"
-                ? ("busy", "ACD queue activity") : ("online", "No active ACD visits")
+        : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
+            : queue.Details.GetValueOrDefault("pending") != "0" || queue.Details.GetValueOrDefault("connected") != "0"
+                ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
         : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade")) : Describe(Rows);
     public static (string Tone, string Label) Describe(ObservedResource[] rows)
     {

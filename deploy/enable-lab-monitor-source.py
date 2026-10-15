@@ -16,39 +16,39 @@ import sys
 
 host = socket.gethostname().split('.')[0]
 assert os.geteuid() == 0 and host in ('eveo-voip', 'apoint-voip')
-spec = importlib.util.spec_from_file_location('presence', '/tmp/sufficit-acd-registration-stage-20260913/install-agent-presence.py')
+spec = importlib.util.spec_from_file_location('presence', '/tmp/sufficit-queue-registration-stage-20260913/install-agent-presence.py')
 i = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(i)
 env = dict(line.split('=', 1) for line in (i.CONFIG / 'controller.env').read_text().splitlines()
            if line and not line.startswith('#') and '=' in line)
 key_path = i.CONFIG / 'panel-monitoring-key'
-dropin = Path('/etc/systemd/system/sufficit-acd-lab-controller.service.d/70-panel-monitoring.conf')
+dropin = Path('/etc/systemd/system/sufficit-queue-lab-controller.service.d/70-panel-monitoring.conf')
 resume = sys.argv[1:] == ['--resume-rolled-back']
 failed = dropin.with_suffix('.failed')
-expected_dropin = '[Service]\nEnvironment=ACD_MONITORING_KEY_FILE=' + str(key_path) + '\n'
+expected_dropin = '[Service]\nEnvironment=QUEUE_MONITORING_KEY_FILE=' + str(key_path) + '\n'
 assert not dropin.exists(), 'Already installed; inspect instead of retrying'
 assert (resume and key_path.is_file() and failed.read_text() == expected_dropin) or (not resume and not key_path.exists())
 i.idle(env)
 pbx = i.run('pidof', 'asterisk')
-before = {p: i.digest(p) for p in (i.CONFIG / 'controller.env', Path(env['ACD_AGENT_ROUTES_FILE']), Path(env['ACD_AGENT_IDENTITIES_FILE']))}
+before = {p: i.digest(p) for p in (i.CONFIG / 'controller.env', Path(env['QUEUE_AGENT_ROUTES_FILE']), Path(env['QUEUE_AGENT_IDENTITIES_FILE']))}
 os.umask(0o077)
 if not resume:
     with key_path.open('x') as output:
         output.write(secrets.token_urlsafe(48) + '\n')
-shutil.chown(key_path, user='root', group='sufficit-acd')
+shutil.chown(key_path, user='root', group='sufficit-queue')
 key_path.chmod(0o640)
 dropin.parent.mkdir(exist_ok=True)
 with dropin.open('x') as output:
     output.write(expected_dropin)
 base = 'http://' + ('172.19.2.104' if host == 'eveo-voip' else '172.19.1.104') + ':18189'
-path = '/api/acd/contexts/' + i.CONTEXT + '/nodes/' + env['ACD_NODE_UUID'].replace('-', '')
+path = '/api/queue/contexts/' + i.CONTEXT + '/nodes/' + env['QUEUE_NODE_UUID'].replace('-', '')
 key = key_path.read_text().strip()
 def request(suffix, method='GET'):
     class PrivateConnection(http.client.HTTPConnection):
         def connect(self):
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock.settimeout(4)
-            self.sock.connect('/run/sufficit-acd-management/api.sock')
+            self.sock.connect('/run/sufficit-queue-management/api.sock')
     connection = PrivateConnection('localhost', timeout=4)
     try:
         connection.request(method, path + suffix, headers={'Authorization': 'Bearer ' + key})

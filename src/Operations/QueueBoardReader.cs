@@ -3,34 +3,34 @@ using System.Text.Json;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
-/// <summary>Bounded single-flight private snapshots. Authorization belongs to AcdBoardAccess.</summary>
-public sealed class AcdBoardReader : IDisposable
+/// <summary>Bounded single-flight private snapshots. Authorization belongs to QueueBoardAccess.</summary>
+public sealed class QueueBoardReader : IDisposable
 {
-    private sealed class Slot(AcdBoardSource source, Guid context)
+    private sealed class Slot(QueueBoardSource source, Guid context)
     {
-        public readonly AcdBoardSource Source = source;
+        public readonly QueueBoardSource Source = source;
         public readonly Guid Context = context;
         public readonly SemaphoreSlim Gate = new(1);
-        public AcdBoardSample? Value;
+        public QueueBoardSample? Value;
         public DateTimeOffset Attempted;
     }
     private readonly Slot[] slots;
-    public AcdBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source;
+    public QueueBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source;
     private readonly IHttpClientFactory clients;
     private readonly TimeProvider clock;
     private readonly SemaphoreSlim requests = new(4);
     public bool Configured => slots.Length > 0;
-    public AcdBoardReader(IEnumerable<AcdBoardSource> sources, IHttpClientFactory clients, TimeProvider clock)
+    public QueueBoardReader(IEnumerable<QueueBoardSource> sources, IHttpClientFactory clients, TimeProvider clock)
     {
         this.clients = clients; this.clock = clock;
         var definitions = sources.ToArray();
         if (definitions.Length > 16 || definitions.Any(s => !ValidSource(s)) ||
             definitions.Sum(s => s.ContextIds.Length) > 64 ||
             definitions.SelectMany(s => s.ContextIds.Select(c => (s.Node, c))).Distinct().Count() != definitions.Sum(s => s.ContextIds.Length))
-            throw new InvalidOperationException("Invalid private ACD board sources.");
+            throw new InvalidOperationException("Invalid private QUEUE board sources.");
         slots = definitions.SelectMany(s => s.ContextIds.Select(c => new Slot(s, c))).ToArray();
     }
-    public static bool ValidSource(AcdBoardSource source)
+    public static bool ValidSource(QueueBoardSource source)
     {
         if (source is null || source.NodeId == Guid.Empty || string.IsNullOrWhiteSpace(source.Node) || source.Node.Length > 64 ||
             !source.Node.All(c => char.IsAsciiLetterOrDigit(c) || c == '-') || source.ContextIds is not { Length: > 0 and <= 64 } ||
@@ -41,13 +41,13 @@ public sealed class AcdBoardReader : IDisposable
         var bytes = ip.GetAddressBytes();
         return IPAddress.IsLoopback(ip) || bytes.Length == 4 && bytes[0] == 172 && bytes[1] == 19;
     }
-    public async Task<AcdBoardSample[]> Read(Guid? context, CancellationToken ct)
+    public async Task<QueueBoardSample[]> Read(Guid? context, CancellationToken ct)
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(5));
         return await Task.WhenAll(slots.Where(s => context is null || s.Context == context).Select(s => Read(s, budget.Token, ct)));
     }
-    private async Task<AcdBoardSample> Read(Slot slot, CancellationToken budget, CancellationToken caller)
+    private async Task<QueueBoardSample> Read(Slot slot, CancellationToken budget, CancellationToken caller)
     {
         var locked = false; var sending = false;
         try
@@ -57,39 +57,39 @@ public sealed class AcdBoardReader : IDisposable
             await requests.WaitAsync(budget); sending = true;
             slot.Attempted = clock.GetUtcNow();
             var info = new FileInfo(slot.Source.KeyFile);
-            if (!info.Exists || info.Length is < 32 or > 4096) throw new InvalidDataException("Invalid ACD credential file.");
+            if (!info.Exists || info.Length is < 32 or > 4096) throw new InvalidDataException("Invalid QUEUE credential file.");
             if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(info.FullName) &
                 (UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.GroupWrite)) != 0)
-                throw new InvalidDataException("ACD credential file must be private.");
+                throw new InvalidDataException("QUEUE credential file must be private.");
             var key = (await File.ReadAllTextAsync(info.FullName, budget)).Trim();
-            if (key.Length is < 32 or > 256 || key.Any(char.IsWhiteSpace)) throw new InvalidDataException("Invalid ACD credential.");
+            if (key.Length is < 32 or > 256 || key.Any(char.IsWhiteSpace)) throw new InvalidDataException("Invalid QUEUE credential.");
             using var request = new HttpRequestMessage(HttpMethod.Get, slot.Source.BaseUrl.TrimEnd('/') +
-                $"/api/acd/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot");
+                $"/api/queue/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot");
             request.Headers.Authorization = new("Bearer", key);
-            using var response = await clients.CreateClient("acd-board").SendAsync(request, budget);
+            using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
                 return slot.Value = new(slot.Source.Node, slot.Context, null, false, slot.Source.NodeId);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(budget);
-            if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("ACD snapshot exceeds its bound.");
-            var snapshot = JsonSerializer.Deserialize<AcdBoardSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-            if (snapshot is null || !ValidSnapshot(snapshot, slot.Context, slot.Source.NodeId)) throw new InvalidDataException("Invalid ACD snapshot scope or shape.");
+            if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("QUEUE snapshot exceeds its bound.");
+            var snapshot = JsonSerializer.Deserialize<QueueBoardSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (snapshot is null || !ValidSnapshot(snapshot, slot.Context, slot.Source.NodeId)) throw new InvalidDataException("Invalid QUEUE snapshot scope or shape.");
             return slot.Value = new(slot.Source.Node, slot.Context, snapshot, true, slot.Source.NodeId);
         }
         catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or JsonException or UnauthorizedAccessException or OperationCanceledException)
         {
             caller.ThrowIfCancellationRequested();
-            var failed = new AcdBoardSample(slot.Source.Node, slot.Context, slot.Value?.Snapshot, false, slot.Source.NodeId);
+            var failed = new QueueBoardSample(slot.Source.Node, slot.Context, slot.Value?.Snapshot, false, slot.Source.NodeId);
             if (locked) { slot.Attempted = clock.GetUtcNow(); slot.Value = failed; }
             return failed;
         }
         finally { if (sending) requests.Release(); if (locked) slot.Gate.Release(); }
     }
-    public static bool ValidSnapshot(AcdBoardSnapshot s, Guid context, Guid node)
+    public static bool ValidSnapshot(QueueBoardSnapshot s, Guid context, Guid node)
     {
         static bool Id(string? value) => Guid.TryParseExact(value, "N", out var id) && id != Guid.Empty;
         static bool Text(string? value, int max) => value is null || value.Length <= max && !value.Any(char.IsControl);
-        static bool Contacts(AcdContact[]? contacts) => contacts is null || contacts.Length <= 16 && contacts.All(c =>
+        static bool Contacts(QueueContact[]? contacts) => contacts is null || contacts.Length <= 16 && contacts.All(c =>
             c is not null && Text(c.Endpoint, 256) && Text(c.UserAgent, 160) &&
             (c.IpAddress is null || IPAddress.TryParse(c.IpAddress, out _)) &&
             (c.ViaAddress is null || IPAddress.TryParse(c.ViaAddress, out _)));

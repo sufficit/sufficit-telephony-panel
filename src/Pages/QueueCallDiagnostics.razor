@@ -1,10 +1,10 @@
 @using Sufficit.Telephony.Panel.Operations
 @implements IDisposable
 @inject IWebHostEnvironment Environment
-@inject AcdBoardAccess Access
+@inject QueueBoardAccess Access
 @inject OperationsAccess Operations
-<section class="acd-call-diagnostics" aria-labelledby="acd-call-history-title">
-    <h3 id="acd-call-history-title">@Text["Call diagnostics"]</h3>
+<section class="queue-call-diagnostics" aria-labelledby="queue-call-history-title">
+    <h3 id="queue-call-history-title">@Text["Call diagnostics"]</h3>
     <p class="muted">@Text["History is queried on demand, up to 50 calls per page from the last hour. It does not add a polling loop per call."]</p>
     <SUISelect TValue="string" Label="@Text["Source"]" Value="Source" ValueChanged="ChangeSource" Disabled="Busy">
         @foreach (var source in Sources.DistinctBy(s => (s.ContextId,s.NodeId)))
@@ -17,7 +17,7 @@
     @if(Report is not null)
     {
         <p>@Text["Report period"]: @Time(ReportFrom) — @Time(ReportUntil) · @Text["SLA threshold"]: 20 s</p>
-        <SUITable T="AcdDiagnosticQueueReport" Items="Report.Items.Skip(ReportPage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
+        <SUITable T="QueueDiagnosticQueueReport" Items="Report.Items.Skip(ReportPage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
             <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Entered"]</SUITh><SUITh>@Text["Answered"]</SUITh><SUITh>@Text["Abandoned"]</SUITh><SUITh>@Text["Timed out"]</SUITh><SUITh>@Text["Average wait"]</SUITh><SUITh>@Text["Answered within SLA"]</SUITh></HeaderContent>
             <RowTemplate><SUITd DataLabel="@Text["Queue"]">@QueueTitle(context.QueueId)</SUITd><SUITd DataLabel="@Text["Entered"]">@context.Entered</SUITd>
                 <SUITd DataLabel="@Text["Answered"]">@context.Answered</SUITd><SUITd DataLabel="@Text["Abandoned"]">@context.Abandoned</SUITd>
@@ -30,7 +30,7 @@
     }
     @if (Calls is not null)
     {
-        <SUITable T="AcdDiagnosticCall" Items="Calls.Items" Dense="true" StackOnMobile="true" ColumnCount="4">
+        <SUITable T="QueueDiagnosticCall" Items="Calls.Items" Dense="true" StackOnMobile="true" ColumnCount="4">
             <HeaderContent><SUITh>@Text["Entered"]</SUITh><SUITh>@Text["Result"]</SUITh><SUITh>@Text["Conversation"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
             <RowTemplate><SUITd DataLabel="@Text["Entered"]">@Time(context.EnteredAt)</SUITd>
                 <SUITd DataLabel="@Text["Result"]">@Text[Outcome(context.Status)]</SUITd>
@@ -42,7 +42,7 @@
     }
     @if (Events is not null)
     {
-        <section class="acd-call-timeline" aria-label="@Text["Call timeline"]">
+        <section class="queue-call-timeline" aria-label="@Text["Call timeline"]">
             <h4>@Text["Call timeline"]</h4>
             <code>@Events.VisitId.ToString("N")</code>
             @if (SelectedCall is not null)
@@ -75,20 +75,20 @@
 @code {
     [Parameter] public bool Preview {get;set;}
     private bool Demo => Preview && Environment.IsDevelopment();
-    [Parameter] public AcdBoardSample[] Sources { get; set; } = [];
-    [Parameter] public AcdVisitObservation? SelectedVisit { get; set; }
+    [Parameter] public QueueBoardSample[] Sources { get; set; } = [];
+    [Parameter] public QueueVisitObservation? SelectedVisit { get; set; }
     private readonly CancellationTokenSource Lifetime = new();
     private string Source = "";
     private int Version;
     private bool Busy, Disposed;
     private string? Error;
-    private AcdDiagnosticCalls? Calls;
-    private AcdDiagnosticEvents? Events;
-    private AcdDiagnosticCall? SelectedCall;
-    private AcdDiagnosticReport? Report;
+    private QueueDiagnosticCalls? Calls;
+    private QueueDiagnosticEvents? Events;
+    private QueueDiagnosticCall? SelectedCall;
+    private QueueDiagnosticReport? Report;
     private int ReportPage;
     private DateTimeOffset ReportFrom,ReportUntil;
-    private AcdAccounting? Accounting;
+    private QueueAccounting? Accounting;
     private string? AccountingError;
     private DateTimeOffset From, Until;
     private string? Selection;
@@ -127,15 +127,15 @@
         var path=$"calls?from={Uri.EscapeDataString(From.ToString("O"))}&until={Uri.EscapeDataString(Until.ToString("O"))}&limit=50";
         if(next && Calls?.NextCursor is { } cursor) path+="&cursor="+Uri.EscapeDataString(cursor);
         var version=Version;
-        var page=Demo ? AcdMonitorFixture.Calls(context,node) : await Access.Diagnostic<AcdDiagnosticCalls>(context,node,path,Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Calls(context,node) : await Access.Diagnostic<QueueDiagnosticCalls>(context,node,path,Lifetime.Token);
         if(version==Version && !Disposed) Calls=page;
     });
-    private Task SelectCall(AcdDiagnosticCall call) { Accounting=null;AccountingError=null;SelectedCall=call; return ReadEvents(call.VisitId,0); }
+    private Task SelectCall(QueueDiagnosticCall call) { Accounting=null;AccountingError=null;SelectedCall=call; return ReadEvents(call.VisitId,0); }
     private Task ReadNextEvents() => Events is { NextCursor: { } next } e ? ReadEvents(e.VisitId,next) : Task.CompletedTask;
     private Task ReadEvents(Guid visit,long after) => Execute(async (context,node) =>
     {
         var version=Version;
-        var page=Demo ? AcdMonitorFixture.Events(context,node,visit) : await Access.Diagnostic<AcdDiagnosticEvents>(context,node,$"calls/{visit:N}/events?after={after}&limit=50",Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Events(context,node,visit) : await Access.Diagnostic<QueueDiagnosticEvents>(context,node,$"calls/{visit:N}/events?after={after}&limit=50",Lifetime.Token);
         if(version==Version && !Disposed) Events=page;
     });
     private string QueueTitle(Guid queue)=>Sources.Where(s=>$"{s.ContextId:N}:{s.NodeId:N}"==Source).SelectMany(s=>s.Snapshot?.Queues??[]).FirstOrDefault(q=>q.QueueId==queue.ToString("N"))?.Title??queue.ToString("N");
@@ -143,7 +143,7 @@
     {
         var version=Version;
         ReportUntil=DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds()/30*30);ReportFrom=ReportUntil.AddHours(-1);
-        var page=Demo ? AcdMonitorFixture.Report(context,node) : await Access.Diagnostic<AcdDiagnosticReport>(context,node,$"report?from={Uri.EscapeDataString(ReportFrom.ToString("O"))}&until={Uri.EscapeDataString(ReportUntil.ToString("O"))}&sla=20",Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Report(context,node) : await Access.Diagnostic<QueueDiagnosticReport>(context,node,$"report?from={Uri.EscapeDataString(ReportFrom.ToString("O"))}&until={Uri.EscapeDataString(ReportUntil.ToString("O"))}&sla=20",Lifetime.Token);
         if(version==Version && !Disposed){Report=page;ReportPage=0;}
     });
     private Task ReadAccounting()=>Execute(async(context,node)=>

@@ -2,15 +2,15 @@ using Sufficit.Telephony.EventsPanel;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
-/// <summary>Explicit ACD evidence, not native AMI queue events. Correlation is node/context/channel exact.</summary>
-public sealed class AcdBoardProjection
+/// <summary>Explicit QUEUE evidence, not native AMI queue events. Correlation is node/context/channel exact.</summary>
+public sealed class QueueBoardProjection
 {
     public Dictionary<EventsPanelCardInfo, List<ObservedResource>> ByCard { get; } = new();
     public ObservedResource[] Rows => ByCard.Values.SelectMany(r => r).ToArray();
-    public static AcdBoardProjection Create(IEnumerable<AcdBoardSample> samples, IEnumerable<ObservedResource> channels,
+    public static QueueBoardProjection Create(IEnumerable<QueueBoardSample> samples, IEnumerable<ObservedResource> channels,
         Guid? context, DateTimeOffset now)
     {
-        var result = new AcdBoardProjection();
+        var result = new QueueBoardProjection();
         var candidates = channels.Where(r => r.Kind == "call").ToArray();
         foreach (var sample in samples.Where(s => context is null || s.ContextId == context))
         {
@@ -18,11 +18,11 @@ public sealed class AcdBoardProjection
             var fresh = sample.Available && snapshot.Fresh(now);
             foreach (var queue in snapshot.Queues)
             {
-                var key = $"acd:{tenant:N}:{queue.QueueId}";
+                var key = $"queue:{tenant:N}:{queue.QueueId}";
                 var card = new EventsPanelCardInfo { Label = queue.Title, Kind = EventsPanelCardKind.QUEUE, Channels = [key] };
                 var metadata = new Dictionary<string, string>
                 {
-                    ["source"] = "acd", ["queue"] = key, ["queueid"] = queue.QueueId, ["contextid"] = tenant.ToString("N"),
+                    ["source"] = "queue", ["queue"] = key, ["queueid"] = queue.QueueId, ["contextid"] = tenant.ToString("N"),
                     ["nodeid"] = snapshot.NodeId, ["correlation"] = snapshot.Visits is null ? "unavailable" : "visits"
                 };
                 if (fresh)
