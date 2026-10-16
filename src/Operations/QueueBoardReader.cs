@@ -103,7 +103,7 @@ public sealed class QueueBoardReader : IDisposable
         if (!Guid.TryParseExact(s.ContextId, "N", out var actualContext) || actualContext != context ||
             !Guid.TryParseExact(s.NodeId, "N", out var actualNode) || actualNode != node || s.Queues is null || s.Queues.Length > 2000 ||
             s.Queues.Any(q => q is null || !Id(q.QueueId) || string.IsNullOrWhiteSpace(q.Title) || !Text(q.Title, 256) ||
-                q.Capacity is < 1 or > 10000 || q.Waiting is < 0 or > 10000 || q.Connected is < 0 or > 10000 ||
+                q.Capacity < 0 || q.Waiting is < 0 or > 10000 || q.Connected is < 0 or > 10000 ||
                 q.Greeting < 0 || q.Offering < 0 || q.Announcing < 0 || q.Greeting > q.Waiting || q.Offering > q.Waiting || q.Announcing > q.Waiting) ||
             s.Queues.Select(q => q.QueueId).Distinct().Count() != s.Queues.Length) return false;
         var queueIds = s.Queues.Select(q => q.QueueId).ToHashSet(StringComparer.Ordinal);
