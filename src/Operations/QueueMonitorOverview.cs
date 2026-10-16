@@ -12,7 +12,8 @@ public sealed record QueueOverview(Guid ContextId, string QueueId, QueueObservat
         return current.Length == 0 ? "—" : (Partial ? "≥ " : "") + current.Sum(o => (long)Math.Max(0, value(o.Queue)));
     }
     // Capacity is catalog configuration, not additive across replicas.
-    public string Capacity => string.Join(" / ", Observations.Select(o => o.Queue.Capacity).Distinct().Order());
+    public string Capacity => CapacityText(static text => text);
+    public string CapacityText(Func<string,string> text) => string.Join(" / ", Observations.Select(o => o.Queue.Capacity).Distinct().Order().Select(c => c == 0 ? text("Unlimited") : c.ToString()));
     public DateTimeOffset? OldestEnteredAt => Observations.Where(o => o.Fresh).Select(o => o.Queue.OldestEnteredAt).Min();
 }
 public sealed record QueueAgentOverview(Guid ContextId, string Extension, QueueAgentObservation[] Observations)

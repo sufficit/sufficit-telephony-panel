@@ -33,6 +33,12 @@ static class RegistrationChecks
         var first = new QueueBoardSample("first", context, snapshot with { Queues = [queue] }, true);
         var second = new QueueBoardSample("second", context, snapshot with { NodeId = Guid.NewGuid().ToString("N"), Queues = [queue],
             Agents = [agent with { Registered = false }] }, true);
+        var unlimited=first with {Snapshot=first.Snapshot! with {Queues=[queue with {Capacity=0,Waiting=101}]}};
+        check(QueueBoardReader.ValidSnapshot(unlimited.Snapshot!,context,node),"Unlimited capacity snapshot accepted");
+        check(QueueMonitorOverview.Build([unlimited],now).Queues[0].Capacity=="Unlimited","Unlimited capacity has explicit label");
+        check(QueueBoardReader.ValidSnapshot(first.Snapshot! with {Queues=[queue with {Capacity=int.MaxValue}]},context,node),"Positive capacities are not capped at10000");
+        check(!QueueBoardReader.ValidSnapshot(first.Snapshot! with {Queues=[queue with {Capacity=-1}]},context,node),"Negative capacity rejected");
+        check(QueueMonitorOverview.Build([unlimited],now).Queues[0].CapacityText(s=>s=="Unlimited"?"Sem limite":s)=="Sem limite","Unlimited capacity label is localized");
         var combined = QueueMonitorOverview.Build([first, second], now);
         check(combined.Queues.Length == 1 && combined.Agents.Length == 1, "Unified overview does not duplicate shared queue/extension per node");
         check(combined.Queues[0].Count(q => q.Waiting) == "6" && combined.Queues[0].Capacity == "10", "Workload combines readings while replicated capacity is not summed");
