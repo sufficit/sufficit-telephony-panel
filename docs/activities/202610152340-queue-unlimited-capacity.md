@@ -15,6 +15,11 @@ componentes existentes; rótulo0=sem limite, apresentação localizada e sidecar
 atualizados. Referências: decisão do usuário, DESIGN.md existente e API SUI; sem
 mudança de layout/tokens. Sem nova validação visual em navegador nesta etapa.
 
-Publicação em preparação: migração via proxy, artefatos0.16.1 e deploys oficiais
-dos consumidores. Capacidades, rotas e dados de clientes existentes preservados.
+Publicado: schema009 pelo proxy com checksum preservado, ARI0.16.1 nos três
+controladores, Panel a60d8a3 e Blazor539a689d nos três hosts de gestão pelo deploy.py
+oficial. Serviços saudáveis e PIDs Asterisk preservados. Conta DDL temporária
+retirada; credenciais permanentes inalteradas. API valida0/101 e recusa-1,
+sem gravação por revisão condicional obsoleta. Réplicas mantêm bloqueio de escrita403.
+PRs de fontes: sufficit-ari#8, sufficit-blazor#186 e sufficit-telephony-panel#3.
+ Capacidades, rotas e dados de clientes existentes preservados.
 Importação geral permanece pendente das demais divergências (tempos, mídia/saídas).
