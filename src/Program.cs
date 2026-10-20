@@ -70,15 +70,15 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<SharedTelemetry>()
 builder.Services.AddSingleton<OperationsPool>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<OperationsPool>());
 builder.Services.AddScoped<OperationsAccess>();
-builder.Services.AddHttpClient("acd-board", client =>
+builder.Services.AddHttpClient("queue-board", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(3);
     client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
-builder.Services.AddSingleton(sp => new AcdBoardReader(builder.Configuration.GetSection("Panel:AcdSources")
-    .Get<AcdBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>()));
-builder.Services.AddSingleton<AcdDiagnosticsReader>();
-builder.Services.AddScoped<AcdBoardAccess>();
+builder.Services.AddSingleton(sp => new QueueBoardReader(builder.Configuration.GetSection("Panel:QueueSources")
+    .Get<QueueBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>()));
+builder.Services.AddSingleton<QueueDiagnosticsReader>();
+builder.Services.AddScoped<QueueBoardAccess>();
 builder.Services.AddSingleton(new SupervisionPrefixPolicy(builder.Configuration
     .GetSection("Panel:SupervisionPrefixes").Get<SupervisionPrefixRule[]>() ?? []));
 builder.Services.AddSingleton(new BoardRuleStore(builder.Configuration["Panel:BoardRulesFile"]

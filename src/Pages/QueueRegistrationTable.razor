@@ -1,8 +1,8 @@
 @using Sufficit.Telephony.Panel.Operations
-<section class="acd-diagnostics" aria-label="@Text["Extension diagnostics"]">
+<section class="queue-diagnostics" aria-label="@Text["Extension diagnostics"]">
     <h3>@Text["Extension presence and registrations"]</h3>
     <p class="muted">@Text["Registration and queue membership are independent. History contains observed changes, not exact SIP message times."]</p>
-    <SUITable T="AcdAgentOverview" Items="Agents.Skip(Page*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="8">
+    <SUITable T="QueueAgentOverview" Items="Agents.Skip(Page*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="8">
         <HeaderContent><SUITh>@Text["Extension"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Contact IP"]</SUITh><SUITh>@Text["Declared device"]</SUITh><SUITh>@Text["Registration"]</SUITh><SUITh>@Text["Reachability"]</SUITh><SUITh>@Text["Usage"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
         <RowTemplate Context="agent">
             <SUITd DataLabel="@Text["Extension"]"><code>@agent.Extension</code></SUITd>
@@ -41,10 +41,10 @@
     <SUIButton OnClick="() => Page++" Disabled="@((Page+1)*30>=Agents.Length)">@Text["Next page"]</SUIButton>
 </section>
 @code {
-    [Parameter] public AcdAgentOverview[] Agents { get; set; } = [];
+    [Parameter] public QueueAgentOverview[] Agents { get; set; } = [];
     private int Page;
     protected override void OnParametersSet() { Page=Math.Min(Page,Math.Max(0,(Agents.Length-1)/30)); Expanded.IntersectWith(Agents.Skip(Page*30).Take(30).Select(a=>a.Key)); }
-    private string Evidence(AcdAgentOverview agent,Func<AcdAgentPresence,bool?> select)
+    private string Evidence(QueueAgentOverview agent,Func<QueueAgentPresence,bool?> select)
     {
         var values=agent.Observations.Where(o=>o.Fresh && o.Agent.Fresh(DateTimeOffset.UtcNow)).Select(o=>select(o.Agent)).Distinct().ToArray();
         return Text[values.Length==0 ? "No current data" : values.Length>1 ? "Different readings" : values[0] is true ? "Yes" : values[0] is false ? "No" : "Unknown"];
@@ -52,6 +52,6 @@
     private readonly HashSet<string> Expanded = [];
     private void Toggle(string extension) { if (!Expanded.Add(extension)) Expanded.Remove(extension); }
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
-    private string Contacts(AcdContact[]? contacts, Func<AcdContact, string?> select) => string.Join(" · ", (contacts ?? []).Select(select).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct()) is { Length: > 0 } value ? value : Text["Not reported"];
+    private string Contacts(QueueContact[]? contacts, Func<QueueContact, string?> select) => string.Join(" · ", (contacts ?? []).Select(select).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct()) is { Length: > 0 } value ? value : Text["Not reported"];
     private static string Event(string value) => value switch { "registered" => "Registration observed", "renewed" => "Renewal observed", "unregistered" => "Unregistered", "changed" => "Contact or reachability changed", "unknown" => "Unknown", _ => "First observation" };
 }

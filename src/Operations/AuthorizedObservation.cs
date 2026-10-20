@@ -58,7 +58,7 @@ public sealed class AuthorizedObservation
     public ObservedResource[] Rows { get; private set; } = [];
     public bool Limited { get; private set; }
     // Only the manager-authorized private reader may supply this projection.
-    public void AddAcd(AcdBoardProjection projection)
+    public void AddQueue(QueueBoardProjection projection)
     {
         foreach (var entry in projection.ByCard)
         {

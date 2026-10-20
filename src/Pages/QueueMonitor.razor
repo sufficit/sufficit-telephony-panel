@@ -1,6 +1,6 @@
 @implements IAsyncDisposable
 @using Sufficit.Telephony.Panel.Operations
-@inject AcdBoardAccess Access
+@inject QueueBoardAccess Access
 @inject PanelAccess PanelAuthorization
 @inject NavigationManager Navigation
 @inject IWebHostEnvironment Environment
@@ -40,7 +40,7 @@
         <section class="queue-queues" aria-labelledby="queue-queues-title">
             <h2 id="queue-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
             <p class="muted">@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]</p>
-                <SUITable T="AcdQueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
+                <SUITable T="QueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
                     <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
                     <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
                         <details class="queue-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
@@ -53,7 +53,7 @@
                             @if (context.Observations.Any(o => o.Fresh && o.Queue.Announcing > 0)) { <small>@Text.Format("{0} hearing an announcement", context.Count(q => q.Announcing))</small> }</SUITd>
                         <SUITd DataLabel="@Text["Offering"]">@context.Count(q => q.Offering)</SUITd>
                         <SUITd DataLabel="@Text["In conversation"]">@context.Count(q => q.Connected)</SUITd>
-                        <SUITd DataLabel="@Text["Capacity"]">@context.Capacity</SUITd>
+                        <SUITd DataLabel="@Text["Capacity"]">@context.CapacityText(value => Text[value])</SUITd>
                         <SUITd DataLabel="@Text["Longest wait"]">@(context.OldestEnteredAt is { } at ? $"{(context.Partial ? "≥ " : "")}{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
                     <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
                 </SUITable>
@@ -69,8 +69,8 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
-        <AcdRegistrationTable Agents="overview.Agents" />
-        <details class="queue-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><AcdCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
+        <QueueRegistrationTable Agents="overview.Agents" />
+        <details class="queue-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <details class="queue-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
             @foreach (var sample in FilteredSamples)
             { <p>@sample.Node · @Text[sample.Available && sample.Snapshot?.Fresh(DateTimeOffset.UtcNow) == true ? "Current collection" : "No current data"] · @Time(sample.Snapshot?.ObservedAt)<br /><span class="muted">@Text["Context"]: @sample.ContextId.ToString("N")</span></p> }
@@ -81,18 +81,18 @@
 @code {
     [Parameter] public bool Preview { get; set; }
     private bool Demo => Preview && Environment.IsDevelopment();
-    private AcdBoardSample[] Samples = [];
+    private QueueBoardSample[] Samples = [];
     private Sufficit.Identity.Authorization.CurrentAuthorization Permissions = Sufficit.Identity.Authorization.CurrentAuthorization.None;
     private string Context = "", Node = "all", Search = "", QueueId = "";
     private bool Busy, Disposed;
     private int QueuePage, VisitPage;
-    private AcdVisitObservation? SelectedVisit;
-    private void SelectVisit(AcdVisitObservation visit) { SelectedVisit=visit; }
+    private QueueVisitObservation? SelectedVisit;
+    private void SelectVisit(QueueVisitObservation visit) { SelectedVisit=visit; }
     private string? Error;
     private readonly CancellationTokenSource Lifetime = new();
     private Task? Loop;
     private string SelectedNode => Node == "all" ? "all" : Samples.FirstOrDefault(s => s.MatchesNode(Node))?.Node ?? Node;
-    private IEnumerable<AcdBoardSample> FilteredSamples => Samples.Where(s => (Context.Length == 0 || s.ContextId.ToString("N") == Context) && s.MatchesNode(Node));
+    private IEnumerable<QueueBoardSample> FilteredSamples => Samples.Where(s => (Context.Length == 0 || s.ContextId.ToString("N") == Context) && s.MatchesNode(Node));
     private string ManagementUrl => "https://blazor.sufficit.com.br/pages/telephony/queue" + (Context.Length > 0 ? "?contextid=" + Context : "");
     protected override async Task OnInitializedAsync()
     {

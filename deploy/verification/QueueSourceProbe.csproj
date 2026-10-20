@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="PeerSnapshotProbe.cs" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="../../src/Operations/QueueBoardReader.cs" Link="QueueBoardReader.cs" />
+    <Compile Include="../../src/Operations/QueueBoardSource.cs" Link="QueueBoardSource.cs" />
+    <Compile Include="../../src/Operations/QueueBoardSample.cs" Link="QueueBoardSample.cs" />
+    <Compile Include="../../src/Operations/QueueBoardSnapshot.cs" Link="QueueBoardSnapshot.cs" />
+    <Compile Include="../../src/Operations/QueueAgentPresence.cs" Link="QueueAgentPresence.cs" />
+    <Compile Include="../../src/Operations/QueueBoardQueue.cs" Link="QueueBoardQueue.cs" />
+    <Compile Include="../../src/Operations/QueueBoardVisit.cs" Link="QueueBoardVisit.cs" />
+  </ItemGroup>
+</Project>

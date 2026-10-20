@@ -2,7 +2,7 @@ using Sufficit.Telephony.Panel.Security;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
-public sealed class AcdBoardAccess(PanelAccess access, AcdBoardReader reader, AcdDiagnosticsReader? diagnostics = null)
+public sealed class QueueBoardAccess(PanelAccess access, QueueBoardReader reader, QueueDiagnosticsReader? diagnostics = null)
 {
     public bool Configured => reader.Configured;
     public async Task<T> Diagnostic<T>(Guid context, Guid node, string endpoint, CancellationToken ct) where T : class
@@ -15,7 +15,7 @@ public sealed class AcdBoardAccess(PanelAccess access, AcdBoardReader reader, Ac
         if (!permissions.CanRead(context)) throw new UnauthorizedAccessException("Context access expired.");
         return result;
     }
-    public async Task<AcdBoardSample[]> Read(Guid? context, CancellationToken ct)
+    public async Task<QueueBoardSample[]> Read(Guid? context, CancellationToken ct)
     {
         var permissions = await access.PermissionsAsync(ct);
         context = permissions.SelectContext(context);
