@@ -174,8 +174,8 @@ completed.
 
 Configuration in Sufficit Blazor uses:
 
-- list: `/pages/telephony/acd?contextid=...`;
-- separate editor: `/pages/telephony/acd/edit?contextid=...&queueid=...`;
+- list: `/pages/telephony/queue?contextid=...`;
+- separate editor: `/pages/telephony/queue/edit?contextid=...&queueid=...`;
 - a floating save action only when the form is dirty;
 - revision/ETag optimistic concurrency instead of silent overwrites;
 - a shared telephony destination selector, contextual by default. Managers may

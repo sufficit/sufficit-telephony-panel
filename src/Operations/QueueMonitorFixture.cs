@@ -1,7 +1,7 @@
 namespace Sufficit.Telephony.Panel.Operations;
 
 /// <summary>Synthetic data, invoked only by the Development-only UI fixture.</summary>
-internal static class AcdMonitorFixture
+internal static class QueueMonitorFixture
 {
     public static AcdDiagnosticCalls Calls(Guid context,Guid node)
     {

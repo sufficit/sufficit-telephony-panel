@@ -127,7 +127,7 @@
         var path=$"calls?from={Uri.EscapeDataString(From.ToString("O"))}&until={Uri.EscapeDataString(Until.ToString("O"))}&limit=50";
         if(next && Calls?.NextCursor is { } cursor) path+="&cursor="+Uri.EscapeDataString(cursor);
         var version=Version;
-        var page=Demo ? AcdMonitorFixture.Calls(context,node) : await Access.Diagnostic<AcdDiagnosticCalls>(context,node,path,Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Calls(context,node) : await Access.Diagnostic<AcdDiagnosticCalls>(context,node,path,Lifetime.Token);
         if(version==Version && !Disposed) Calls=page;
     });
     private Task SelectCall(AcdDiagnosticCall call) { Accounting=null;AccountingError=null;SelectedCall=call; return ReadEvents(call.VisitId,0); }
@@ -135,7 +135,7 @@
     private Task ReadEvents(Guid visit,long after) => Execute(async (context,node) =>
     {
         var version=Version;
-        var page=Demo ? AcdMonitorFixture.Events(context,node,visit) : await Access.Diagnostic<AcdDiagnosticEvents>(context,node,$"calls/{visit:N}/events?after={after}&limit=50",Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Events(context,node,visit) : await Access.Diagnostic<AcdDiagnosticEvents>(context,node,$"calls/{visit:N}/events?after={after}&limit=50",Lifetime.Token);
         if(version==Version && !Disposed) Events=page;
     });
     private string QueueTitle(Guid queue)=>Sources.Where(s=>$"{s.ContextId:N}:{s.NodeId:N}"==Source).SelectMany(s=>s.Snapshot?.Queues??[]).FirstOrDefault(q=>q.QueueId==queue.ToString("N"))?.Title??queue.ToString("N");
@@ -143,7 +143,7 @@
     {
         var version=Version;
         ReportUntil=DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds()/30*30);ReportFrom=ReportUntil.AddHours(-1);
-        var page=Demo ? AcdMonitorFixture.Report(context,node) : await Access.Diagnostic<AcdDiagnosticReport>(context,node,$"report?from={Uri.EscapeDataString(ReportFrom.ToString("O"))}&until={Uri.EscapeDataString(ReportUntil.ToString("O"))}&sla=20",Lifetime.Token);
+        var page=Demo ? QueueMonitorFixture.Report(context,node) : await Access.Diagnostic<AcdDiagnosticReport>(context,node,$"report?from={Uri.EscapeDataString(ReportFrom.ToString("O"))}&until={Uri.EscapeDataString(ReportUntil.ToString("O"))}&sla=20",Lifetime.Token);
         if(version==Version && !Disposed){Report=page;ReportPage=0;}
     });
     private Task ReadAccounting()=>Execute(async(context,node)=>

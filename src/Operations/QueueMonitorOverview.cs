@@ -31,9 +31,9 @@ public sealed record AcdAgentOverview(Guid ContextId, string Extension, AcdAgent
 }
 
 /// <summary>Presentation aggregation only. Scope and source identity remain intact.</summary>
-public sealed record AcdMonitorOverview(AcdQueueOverview[] Queues, AcdAgentOverview[] Agents, AcdVisitObservation[] Visits)
+public sealed record QueueMonitorOverview(AcdQueueOverview[] Queues, AcdAgentOverview[] Agents, AcdVisitObservation[] Visits)
 {
-    public static AcdMonitorOverview Build(IEnumerable<AcdBoardSample> input, DateTimeOffset now, string search = "", string queueId = "")
+    public static QueueMonitorOverview Build(IEnumerable<AcdBoardSample> input, DateTimeOffset now, string search = "", string queueId = "")
     {
         // A configured source must not be counted twice if supplied more than once.
         var sources = input.GroupBy(s => (s.ContextId, NodeKey(s)))

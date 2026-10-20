@@ -13,7 +13,7 @@ static class AcdDiagnosticChecks
         var visits=Enumerable.Range(0,5000).Select(i=>new AcdBoardVisit(Guid.NewGuid().ToString("N"),queues[i%queues.Length].QueueId,"waiting",DateTimeOffset.UtcNow)).ToArray();
         var snapshot=new AcdBoardSnapshot(context.ToString("N"),node.ToString("N"),DateTimeOffset.UtcNow,true,false,queues,visits);
         check(AcdBoardReader.ValidSnapshot(snapshot,context,node),"5,000 visits validated using indexed queue membership");
-        var overview=AcdMonitorOverview.Build([new("synthetic",context,snapshot,true,node)],DateTimeOffset.UtcNow);
+        var overview=QueueMonitorOverview.Build([new("synthetic",context,snapshot,true,node)],DateTimeOffset.UtcNow);
         check(overview.Visits.Length==5000 && overview.Queues.Length==1000,"Large monitoring projection preserves visits without per-visit queue scans");
     }
 }

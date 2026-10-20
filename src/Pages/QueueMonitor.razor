@@ -5,13 +5,13 @@
 @inject NavigationManager Navigation
 @inject IWebHostEnvironment Environment
 
-<section class="acd-monitor" aria-labelledby="acd-title">
-    <div class="heading"><div><h1 id="acd-title">@Text["Queues and registration"]</h1>
+<section class="queue-monitor" aria-labelledby="queue-title">
+    <div class="heading"><div><h1 id="queue-title">@Text["Queues and registration"]</h1>
         <p class="muted">@Text["Observe queue stages and investigate extension registrations. Configuration stays in the management portal."]</p></div>
         <SUIButton Href="@ManagementUrl" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage queues"]</SUIButton>
     </div>
     @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
-    <div class="acd-filters">
+    <div class="queue-filters">
         @if (!Permissions.SingleContext.HasValue) {
         <SUISelect TValue="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
             <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
@@ -34,16 +34,16 @@
     { <p class="operation-empty">@Text["No monitoring source matches these filters. Clear filters or check source configuration."]</p> }
     @if (FilteredSamples.Any())
     {
-        var overview = AcdMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
+        var overview = QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
         @if (FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true))
         { <SUIAlert ToneValue="SUITone.Warning">@Text["Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical."]</SUIAlert> }
-        <section class="acd-queues" aria-labelledby="acd-queues-title">
-            <h2 id="acd-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
+        <section class="queue-queues" aria-labelledby="queue-queues-title">
+            <h2 id="queue-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
             <p class="muted">@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]</p>
                 <SUITable T="AcdQueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
                     <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
                     <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
-                        <details class="acd-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
+                        <details class="queue-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
                             <p>@Text["Context"]: @context.ContextId.ToString("N")</p>
                             @foreach (var observation in context.Observations)
                             { <p>@observation.Source.Node · @Text[observation.Fresh ? "Current collection" : "No current data"] · @Time(observation.Source.Snapshot?.ObservedAt)</p> }
@@ -57,7 +57,7 @@
                         <SUITd DataLabel="@Text["Longest wait"]">@(context.OldestEnteredAt is { } at ? $"{(context.Partial ? "≥ " : "")}{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
                     <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
                 </SUITable>
-                <details class="acd-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
+                <details class="queue-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
                     { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
                         <SUIButton VariantValue="SUIVariant.Text" OnClick="() => SelectVisit(observation)">@Text["View timeline"]</SUIButton></p> }
@@ -70,8 +70,8 @@
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
         <AcdRegistrationTable Agents="overview.Agents" />
-        <details class="acd-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><AcdCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
-        <details class="acd-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
+        <details class="queue-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><AcdCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
+        <details class="queue-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
             @foreach (var sample in FilteredSamples)
             { <p>@sample.Node · @Text[sample.Available && sample.Snapshot?.Fresh(DateTimeOffset.UtcNow) == true ? "Current collection" : "No current data"] · @Time(sample.Snapshot?.ObservedAt)<br /><span class="muted">@Text["Context"]: @sample.ContextId.ToString("N")</span></p> }
         </details>
@@ -93,7 +93,7 @@
     private Task? Loop;
     private string SelectedNode => Node == "all" ? "all" : Samples.FirstOrDefault(s => s.MatchesNode(Node))?.Node ?? Node;
     private IEnumerable<AcdBoardSample> FilteredSamples => Samples.Where(s => (Context.Length == 0 || s.ContextId.ToString("N") == Context) && s.MatchesNode(Node));
-    private string ManagementUrl => "https://blazor.sufficit.com.br/pages/telephony/acd" + (Context.Length > 0 ? "?contextid=" + Context : "");
+    private string ManagementUrl => "https://blazor.sufficit.com.br/pages/telephony/queue" + (Context.Length > 0 ? "?contextid=" + Context : "");
     protected override async Task OnInitializedAsync()
     {
         ReadUrl(); Navigation.LocationChanged += LocationChanged;
@@ -121,7 +121,7 @@
         Busy = true; Error = null;
         try
         {
-            if (Demo) { Samples = AcdMonitorFixture.Create(); }
+            if (Demo) { Samples = QueueMonitorFixture.Create(); }
             else
             {
                 Permissions = await PanelAuthorization.PermissionsAsync(Lifetime.Token);
