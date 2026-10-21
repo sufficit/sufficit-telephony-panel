@@ -367,3 +367,13 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
  .live-panel .heading .tools .sui-btn { font-size:13px; padding:6px 10px; min-height:0; }
  .live-panel .section-hint, .live-panel > .operations-scope > .muted { font-size:12px; }
 }
+.section-help { margin:4px 0 12px; font-size:13px; }
+.section-help summary { font-size:13px; padding:4px 0; }
+.section-help p { color:var(--sui-text-secondary); margin:4px 0 8px; max-width:90ch; }
+@media(max-width:600px) {
+ .queue-monitor .heading > .sui-btn, .queue-monitor .heading > a { align-self:flex-start; font-size:13px; padding:6px 10px; }
+ .queue-monitor .heading p { font-size:13px; }
+}
+.live-panel .section-hint { margin:12px 0 4px; }
+.live-panel .live-help summary, .live-panel .observation-details summary, .section-help summary { font-size:14px; }
+.live-panel .live-help { margin-top:0; }

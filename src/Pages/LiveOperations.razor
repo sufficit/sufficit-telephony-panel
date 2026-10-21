@@ -61,8 +61,11 @@ else
         else if (Tab == "calls")
         {
             var groups = VisibleGroups;
-            <p class="muted section-hint">@Text.Format("{0} correlated calls · {1} observed channels · {2} uncorrelated. Calls group channels with the same Linkedid on one server; there is no cross-server deduplication.", groups.Count(g => g.Correlated), groups.Sum(g => g.Channels.Length), groups.Count(g => !g.Correlated))</p>
-            <p class="muted section-hint">@Text["Expand to inspect channels. State belongs to each channel, not the entire call: “Inactive in event” does not prove the call ended. Elapsed time starts at the first available observation."]</p>
+            <p class="muted section-hint">@Text.Format("{0} correlated calls · {1} observed channels · {2} uncorrelated", groups.Count(g => g.Correlated), groups.Sum(g => g.Channels.Length), groups.Count(g => !g.Correlated))</p>
+            <details class="section-help"><summary>@Text["How to read this list"]</summary>
+                <p>@Text["Calls group channels with the same Linkedid on one server; there is no cross-server deduplication."]</p>
+                <p>@Text["Expand to inspect channels. State belongs to each channel, not the entire call: “Inactive in event” does not prove the call ended. Elapsed time starts at the first available observation."]</p>
+            </details>
             @if (groups.Length == 0) { <div class="operation-empty">@Text["No groups observed with these filters. Wait for new events or check the connection."]</div> }
             else
             {
@@ -89,7 +92,7 @@ else
         }
         else
         {
-            @if (!Context.HasValue) { <p class="muted section-hint">@Text["Resources found in the central stream, including those not configured as portal cards. Extension and trunk endpoints appear together because events do not identify their classification. Absence from this list does not prove an extension is offline."]</p> }
+            @if (!Context.HasValue) { <details class="section-help"><summary>@Text["How to read this list"]</summary><p>@Text["Resources found in the central stream, including those not configured as portal cards. Extension and trunk endpoints appear together because events do not identify their classification. Absence from this list does not prove an extension is offline."]</p></details> }
             @if (VisibleCards.Length == 0) { <div class="operation-empty">@Text["No authorized resource matches the filters. Extension, trunk and queue configurations are maintained in the portal."]</div> }
             else
             {
