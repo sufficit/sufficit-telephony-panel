@@ -9,6 +9,7 @@ void Check(bool condition, string message) { if (!condition) throw new Exception
 PanelTextChecks.Run(Check);
 PanelDiagnosticChecks.Run(Check);
 SupportChatChecks.Run(Check);
+CardMatcherChecks.Run(Check);
 await SessionStoreChecks.Run(Check);
 RegistrationChecks.Run(Check);
 QueueDiagnosticChecks.Run(Check);
