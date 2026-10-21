@@ -44,3 +44,19 @@ Autorização do usuário: "faça e implemente e deploy". Ativado em 21/10/2026 
 
 Rollback: apontar `current` para `error-diagnostics-20261021-0918` e reiniciar só
 `sufficit-telephony-panel` (manifesto em `/var/backups/sufficit-telephony-panel/frontend-reorg-20261021-7d99719/`).
+
+## Mesa de operação sempre em área inteira (pedido do usuário, 21/10)
+"A mesa de operação é sempre bom usar tela cheia, todo o espaço disponível, nunca aba
+de alguma coisa." Mudança:
+- A mesa virou área própria no cabeçalho ("Mesa de operação", `/`); "Telefonia ao vivo"
+  (`/?tab=extensions`) reúne Ramais, Chamadas, Canais, Filas e Eventos. A aba
+  "Mesa de operação" saiu da faixa de abas.
+- Na página normal a mesa usa o mesmo modo da mesa dedicada: ocupa toda a altura abaixo
+  do cabeçalho, sem título, abas, legenda nem rodapé; filtros, contexto, tela cheia,
+  reconectar, abrir mesa dedicada, configurar mesa, recursos lembrados e limites de
+  observação ficam no popover do ícone de filtro. Detalhes do recurso abrem em popup.
+- `LiveOperations` inicia na aba da URL (antes montava a mesa e desmontava em seguida,
+  derrubando o circuito com `board-layout.attach(null)`); `attach` ficou tolerante a nulo.
+- Testes ajustados: board-inventory, board-only, board-settings, call-grouping,
+  error-diagnostics, operator-board. Resultado: 971 checks + 16/16 navegador PASS,
+  zero exceções no log do servidor.

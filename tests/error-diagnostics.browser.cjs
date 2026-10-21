@@ -8,7 +8,7 @@ const fs = require('node:fs');
         const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
         const errors = []; page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(() => localStorage.setItem('telephony-panel-language', 'pt-BR'));
-        await page.goto('http://127.0.0.1:5169/?preview=true&diagnosticpreview=true');
+        await page.goto('http://127.0.0.1:5169/?preview=true&diagnosticpreview=true&tab=extensions');
         await page.getByText('Detalhes do erro', { exact: true }).waitFor();
         await page.getByText('Detalhes do erro', { exact: true }).focus();
         await page.keyboard.press('Enter');

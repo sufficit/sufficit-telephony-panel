@@ -23,7 +23,7 @@ window.telephonyPanel = (() => {
         fitBoard: () => {
             boardObserver?.disconnect();
             if (fitBoard) window.removeEventListener('resize', fitBoard);
-            const panel = document.querySelector('.dedicated-board .live-panel');
+            const panel = document.querySelector('.live-panel.board-fill');
             if (!panel) return;
             fitBoard = () => {
                 const grid = panel.querySelector('.board-grid');

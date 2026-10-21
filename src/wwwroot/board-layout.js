@@ -3,6 +3,8 @@ const defaults = { columns: 0.76, rows: null };
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 export function attach(root) {
+    // The board can be removed before this module loads (area switch); nothing to attach then.
+    if (!root) return { dispose() {} };
     const sidebar = root.querySelector('.board-sidebar');
     const handles = [...root.querySelectorAll('[data-board-split]')];
     const desktop = matchMedia('(min-width: 901px)');

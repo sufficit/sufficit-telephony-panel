@@ -23,7 +23,8 @@
         @if (Ready && Allowed && !BoardPage)
         {
             <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
-                <a href="@AreaHref("")" class="@(LivePage ? "active" : "")" aria-current="@(LivePage ? "page" : null)">@Text["Live telephony"]</a>
+                <a href="@LiveHref(null)" class="@(BoardArea ? "active" : "")" aria-current="@(BoardArea ? "page" : null)">@Text["Operation board"]</a>
+                <a href="@LiveHref("extensions")" class="@(LivePage && !BoardArea ? "active" : "")" aria-current="@(LivePage && !BoardArea ? "page" : null)">@Text["Live telephony"]</a>
                 <a href="@AreaHref("queues")" class="@(QueuePage ? "active" : "")" aria-current="@(QueuePage ? "page" : null)">@Text["Queues and registration"]</a>
                 @if (Manager) { <a href="@AreaHref("infrastructure")" class="@(InfraPage ? "active" : "")" aria-current="@(InfraPage ? "page" : null)">@Text["Infrastructure and history"]</a> }
             </nav>
@@ -146,6 +147,8 @@
     private bool InfraPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/infrastructure", StringComparison.Ordinal)
         || Navigation.Uri.Contains("area=infrastructure", StringComparison.Ordinal);
     private bool LivePage => !QueuePage && !InfraPage && !BoardPage;
+    private string? LiveTab => Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).TryGetValue("tab", out var tab) ? tab.ToString() : null;
+    private bool BoardArea => LivePage && LiveTab is null or "" or "board";
     private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
     private bool Ready, Allowed, Busy, Sound, Dark, Preview, HistoryBusy;
     private string Selected = "apoint-voip", Metric = "calls";
@@ -161,6 +164,7 @@
     private HashSet<string> PreviousAlerts = [];
     private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal);
     // Area links keep the shared scope (preview, context, server, search) and drop the legacy area switch.
+    private string LiveHref(string? tab) => "./" + new Uri(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?> { ["area"] = null, ["tab"] = tab, ["page"] = null })).Query;
     private string AreaHref(string path) => "./" + path + new Uri(Navigation.GetUriWithQueryParameter("area", (string?)null)).Query;
     private NodeSnapshot? Current => Snapshot?.Nodes.FirstOrDefault(n => n.Id == Selected);
     private string Number(double? value) => value?.ToString("N0", Text.Culture) ?? "—";

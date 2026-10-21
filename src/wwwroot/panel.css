@@ -289,3 +289,8 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
  .live-tabs { flex-wrap:nowrap; overflow-x:auto; }
  .live-tabs button { flex:0 0 auto; white-space:nowrap; }
 }
+
+/* Embedded operator board fills the viewport below the header, like the dedicated board. */
+.board-fill .board-grid { max-height:var(--board-available-height, 60vh); min-height:200px; }
+.panel-shell:has(.board-fill) main { padding:8px 0 0; }
+.panel-shell:has(.board-fill) footer { display:none; }
