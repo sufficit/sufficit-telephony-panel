@@ -73,3 +73,12 @@ Commit `d5a863c`: `LiveOperations.razor.cs` com a lógica; componentes `ContextP
 `refactor-20261021-d5a863c` (anterior `iax2-group-20261021-b8d9c5c` preservado), DLL
 `c54833afee2ea4a31de514985272c04a83fe0693c8f408c20879b9ef1cbd8c5f`, appsettings idêntico,
 health 200, `/api/fleet` anônimo 401, sem warnings no journal.
+
+## Vistas extraídas e CSS da mesa escopado
+Commit `32656b1`: `LiveFormat`, `ChannelTable`, `EventsView`; 50 regras da mesa em
+`OperatorBoard.razor.css`. Comparação de pixels antes/depois em 11 capturas (mesa embutida
+claro/escuro/tablet/mobile, mesa dedicada desktop/mobile/1977px, popup, canais, eventos,
+configuração): idênticas salvo timestamps do fixture. 975 checks + 16/16 navegador PASS,
+zero exceções. Publicado como `views-css-20261021-32656b1` (anterior `refactor-20261021-d5a863c`
+preservado), DLL `be915020916ca982fed4f6400421632a29f03a905e5546912958b8b4361078d5`,
+appsettings idêntico, health 200, `/api/fleet` anônimo 401, bundle escopado servido com as regras da mesa.
