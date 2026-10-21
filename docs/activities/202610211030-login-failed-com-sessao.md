@@ -30,3 +30,16 @@ ser tratada como incidente.
 Publicado 21/10: release `login-kept-20261021-3d4b275` (anterior `views-css-20261021-32656b1`
 preservado), DLL `6cfeddd2c76be3ca3113c5fc93268cc65357aa6e752e27852968197e68263527`, appsettings
 idêntico, health 200, `/api/fleet` anônimo 401, `/login` redireciona para o authorize do Identity.
+
+## Segunda tentativa: `teste@sufficit.com.br` em janela anônima limpa
+Resultado: tela de entrada com "login não concluído" e nenhum log de falha. O nível mínimo de log
+em produção é Warning, então o "Sign-in completed" (Information) não aparecia. Causa provável:
+o Identity autenticou, mas `OnValidatePrincipal` rejeitou a sessão por falta de permissão do painel,
+e o usuário voltou para o `returnUrl` que ainda carregava `?login=failed` da tentativa anterior.
+
+Correção:
+- `OnTokenValidated` consulta a permissão do painel antes de criar a sessão. Sem permissão,
+  registra `Sign-in denied: subject … has no panel permission` (Warning) e redireciona para
+  `?login=denied`, com a mensagem "Sua conta Sufficit entrou, mas não tem acesso ao Painel de Telefonia…".
+- O login concluído é registrado como Warning (trilha de auditoria visível com o nível atual).
+- O link "Entrar" não leva mais o parâmetro `login=` para o `returnUrl`.

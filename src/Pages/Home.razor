@@ -54,6 +54,7 @@
             <div><h1>@Text["Telephony under observation."]</h1><p>@Text["An operational view of the Apoint, Eveo and Google PBXs. Connection, load and history together, with the source and age of each reading."]</p>
             <SUIButton Href="@LoginUrl" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
             <aside><h2>@Text["Authorized access"]</h2><p>@Text["Sign in to view your authorized contexts. Permissions are checked on the server."]</p>
+            @if (LoginDenied) { <SUIAlert ToneValue="SUITone.Warning">@Text["Your Sufficit account signed in, but it has no access to the Telephony Panel. Ask a manager to grant access, or sign in with another account."]</SUIAlert> }
             @if (LoginFailed) { <SUIAlert ToneValue="SUITone.Warning">@Text["Sign-in could not be completed. Try again; if it persists, ask the team to check the application's Identity registration."]</SUIAlert> }
             <p class="muted">@Text["Listening and whispering require a separate supervision permission."]</p></aside>
         </section>
@@ -152,7 +153,9 @@
     private bool LivePage => !QueuePage && !InfraPage && !BoardPage;
     private string? LiveTab => Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).TryGetValue("tab", out var tab) ? tab.ToString() : null;
     private bool BoardArea => LivePage && LiveTab is null or "" or "board";
-    private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
+    // Never carry a previous sign-in outcome into the next attempt's return address.
+    private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.GetUriWithQueryParameter("login", (string?)null)).PathAndQuery);
+    private bool LoginDenied => Navigation.Uri.Contains("login=denied", StringComparison.Ordinal);
     private bool Ready, Allowed, Busy, Sound, Dark, Preview, HistoryBusy;
     private string Selected = "apoint-voip", Metric = "calls";
     private int Hours = 1;
@@ -166,7 +169,7 @@
     private int historyRequest;
     private DateTimeOffset HistoryStart, HistoryEnd;
     private HashSet<string> PreviousAlerts = [];
-    private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal);
+    private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal) || Navigation.Uri.Contains("login=kept", StringComparison.Ordinal);
     // Area links keep the shared scope (preview, context, server, search) and drop the legacy area switch.
     private string LiveHref(string? tab) => "./" + new Uri(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?> { ["area"] = null, ["tab"] = tab, ["page"] = null })).Query;
     private string AreaHref(string path) => "./" + path + new Uri(Navigation.GetUriWithQueryParameter("area", (string?)null)).Query;

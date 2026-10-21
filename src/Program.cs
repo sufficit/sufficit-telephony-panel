@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Sufficit.Blazor.UI;
+using Sufficit.Identity.Authorization;
 using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Panel.Security;
 using Sufficit.Telephony.Panel.Monitoring;
@@ -138,11 +139,23 @@ builder.Services.AddAuthentication(o =>
         { ctx.HandleResponse(); ctx.Response.StatusCode = 401; }
         return Task.CompletedTask;
     };
-    o.Events.OnTokenValidated = ctx =>
+    o.Events.OnTokenValidated = async ctx =>
     {
-        ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login")
-            .LogInformation("Sign-in completed for subject {Subject}", ctx.Principal?.FindFirst("sub")?.Value ?? "unknown");
-        return Task.CompletedTask;
+        var log = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login");
+        var subject = ctx.Principal?.FindFirst("sub")?.Value;
+        var token = ctx.TokenEndpointResponse?.AccessToken;
+        // Identity authenticated the person; the panel still needs its own permission. Deny here,
+        // before creating a session, so the user sees "no access" instead of a failed sign-in.
+        var permissions = subject is null || string.IsNullOrEmpty(token) ? CurrentAuthorization.None
+            : await ctx.HttpContext.RequestServices.GetRequiredService<PanelSessions>().PermissionsAsync(subject, token, ctx.HttpContext.RequestAborted);
+        if (!permissions.PanelAllowed)
+        {
+            log.LogWarning("Sign-in denied: subject {Subject} has no panel permission", subject ?? "unknown");
+            ctx.HandleResponse();
+            ctx.Response.Redirect(pathBase + "/?login=denied");
+            return;
+        }
+        log.LogWarning("Sign-in completed for subject {Subject} (manager: {Manager})", subject, permissions.Manager);
     };
     o.Events.OnRemoteFailure = async ctx =>
     {

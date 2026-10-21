@@ -36,6 +36,14 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         return key is null ? null : cache.Get<SessionEntry>(key)?.Ticket.Properties.GetTokenValue("access_token");
     }
 
+    /// <summary>Current panel permissions for a fresh sign-in, before any session handle exists.</summary>
+    public async Task<CurrentAuthorization> PermissionsAsync(string subject, string accessToken, CancellationToken ct)
+    {
+        try { return await authorization.ReadAsync(subject, accessToken, ct); }
+        catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
+        { return CurrentAuthorization.None; }
+    }
+
     public async Task<bool> IsManagerAsync(ClaimsPrincipal principal, CancellationToken ct) =>
         (await AuthorizationAsync(principal, ct)).Manager;
 
