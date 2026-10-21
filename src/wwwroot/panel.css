@@ -377,3 +377,14 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
 .live-panel .section-hint { margin:12px 0 4px; }
 .live-panel .live-help summary, .live-panel .observation-details summary, .section-help summary { font-size:14px; }
 .live-panel .live-help { margin-top:0; }
+/* Phones: headings stack left-aligned (a later base rule centred the column) with compact tools. */
+@media(max-width:600px) {
+ .heading { align-items:flex-start; }
+ .heading > div { width:100%; }
+ .heading .tools { width:auto; gap:4px; flex-wrap:wrap; }
+ .heading .tools > * { flex:0 0 auto; }
+ .heading .tools .sui-btn { font-size:13px; padding:6px 10px; min-height:0; }
+ .heading > .sui-btn { align-self:flex-start; }
+ .operations .detail { padding:18px; }
+ .settings-toolbar .sui-btn { flex:0 0 auto; }
+}
