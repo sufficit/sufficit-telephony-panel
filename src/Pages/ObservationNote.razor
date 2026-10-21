@@ -1,0 +1,6 @@
+@* Limits of the partial event observation; shown collapsed so it never pushes the board down. *@
+<p class="observation-note">@Text.Format("Partial observation {0}. Calls before connection may be absent. No event does not mean idle or disconnected. {1}", Since is null ? Text["not started yet"] : Text.Format("since {0}", Since.Value.ToLocalTime().ToString("T", Text.Culture)), LastEvent is null ? Text["No events received on this connection."] : Text.Format("Last stream event: {0}.", LastEvent.Value.ToLocalTime().ToString("T", Text.Culture)))</p>
+@code {
+    [Parameter] public DateTimeOffset? Since { get; set; }
+    [Parameter] public DateTimeOffset? LastEvent { get; set; }
+}

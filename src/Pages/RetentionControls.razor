@@ -1,0 +1,35 @@
+@using Sufficit.Telephony.Panel.Operations
+@* Shared "remembered resources" switch and cleanup; persistence stays in the owner. *@
+<details class="board-retention"><summary>@Text["Remembered resources and cleanup"]</summary>
+    <div class="settings-toolbar">
+        <SUICheckbox Value="Retain" ValueChanged="RetainChanged" Disabled="Disabled" Label="@Text["Keep previously seen resources"]" />
+        <SUIButton OnClick="() => ConfirmingChanged.InvokeAsync(true)" Disabled="Disabled" VariantValue="SUIVariant.Text">@Text["Clear remembered resources"]</SUIButton>
+        @if (Simulate.HasDelegate) { <SUIButton OnClick="Simulate" VariantValue="SUIVariant.Text">@Text["Simulate missing events"]</SUIButton> }
+    </div>
+    <p class="muted section-hint">@Text["Keeping previously seen resources is enabled by default and shared between managers. It retains existence, not old state. Disabling only hides resources without current observations; rules and filters still apply."]</p>
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(Error)<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
+    @if (Message is not null) { <p role="status">@Text.Observed(Message)</p> }
+    @if (Confirming)
+    {
+        <div class="settings-confirm" role="alert">
+            <p>@Text.Format("Clear remembered resources for {0} for all managers? Current resources remain; new events may record them again. Extensions, queues, calls and rules are unchanged.", ScopeLabel)</p>
+            <SUIButton OnClick="Clear" Disabled="Busy">@Text["Confirm cleanup"]</SUIButton>
+            <SUIButton OnClick="() => ConfirmingChanged.InvokeAsync(false)" Disabled="Busy" VariantValue="SUIVariant.Text">@Text["Cancel cleanup"]</SUIButton>
+        </div>
+    }
+</details>
+@code {
+    [Parameter] public bool Retain { get; set; }
+    [Parameter] public EventCallback<bool> RetainChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Confirming { get; set; }
+    [Parameter] public EventCallback<bool> ConfirmingChanged { get; set; }
+    [Parameter] public string ScopeLabel { get; set; } = "";
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public PanelDiagnostic? Failure { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback Clear { get; set; }
+    /// <summary>Demo-only synthetic gap; omitted outside the local fixture.</summary>
+    [Parameter] public EventCallback Simulate { get; set; }
+}

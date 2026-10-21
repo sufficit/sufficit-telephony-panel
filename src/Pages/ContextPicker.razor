@@ -1,0 +1,43 @@
+@using Sufficit.Identity.Authorization
+@* Company/context scope. Search and selection stay in the owner, which also validates authorization. *@
+<details class="company-filter" open="@Searched"><summary>@Text["Context"]: @(Context.HasValue ? ClientName : Text["All authorized contexts"])</summary>
+@if (!Permissions.GlobalPanel)
+{
+    <SUISelect TValue="string" Label="@Text["Context"]" Value="@(Context?.ToString("D") ?? "")" ValueChanged="SelectAuthorized" Disabled="Busy">
+        <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
+        @foreach (var id in Permissions.PanelContexts.Order())
+        { <SUISelectItem Value="@id.ToString("D")">@id.ToString("D")</SUISelectItem> }
+    </SUISelect>
+}
+else
+{
+    <div class="client-picker">
+        <SUITextField TValue="string" Label="@Text["Company (optional)"]" Value="SearchText" ValueChanged="SearchTextChanged" Immediate="true" Placeholder="@Text["Company name or identifier"]" MaxLength="100" Disabled="Busy" />
+        <SUIButton OnClick="Search" Disabled="@(Busy || SearchText.Trim().Length < 2)" VariantValue="SUIVariant.Outlined">@Text["Find company"]</SUIButton>
+        @if (Context.HasValue) { <SUIButton OnClick="Clear" Disabled="@(Busy || ClearDisabled)" VariantValue="SUIVariant.Text">@Text["Clear company · view exchange"]</SUIButton> }
+    </div>
+    @if (Searched)
+    {
+        <div class="client-results" aria-label="@Text["Matching customers"]">
+            @if (Clients.Length == 0) { <p>@Text["No customers found for this user. Try the full customer identifier."]</p> }
+            @foreach (var client in Clients) { <SUIButton OnClick="() => Select.InvokeAsync((client.Id, client.Title))" Disabled="Busy" VariantValue="SUIVariant.Outlined">@client.Title</SUIButton> }
+        </div>
+    }
+}
+</details>
+@code {
+    [Parameter, EditorRequired] public CurrentAuthorization Permissions { get; set; } = CurrentAuthorization.None;
+    [Parameter] public Guid? Context { get; set; }
+    [Parameter] public string ClientName { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool ClearDisabled { get; set; }
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public bool Searched { get; set; }
+    [Parameter] public (Guid Id, string Title)[] Clients { get; set; } = [];
+    [Parameter] public EventCallback Search { get; set; }
+    [Parameter] public EventCallback<(Guid Id, string Title)> Select { get; set; }
+    [Parameter] public EventCallback Clear { get; set; }
+    private Task SelectAuthorized(string value) => Guid.TryParse(value, out var id)
+        ? Select.InvokeAsync((id, id.ToString("D"))) : Clear.InvokeAsync();
+}

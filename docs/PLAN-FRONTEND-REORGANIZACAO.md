@@ -64,12 +64,12 @@ Infra:     rota /infrastructure própria
 2. [concluído 21/10] Ao vivo: mosaico na primeira dobra; filtros compactos em uma linha;
    vistas secundárias como segmented control; remover "Configurar quadro" e
    "Recursos lembrados" do fluxo principal; disclaimers em ajuda contextual.
-3. [pendente] Quebrar `LiveOperations.razor` em componentes (`ContextPicker`,
+3. [concluído parcial 21/10] Quebrar `LiveOperations.razor` em componentes (`ContextPicker`,
    `StreamStatus`, `BoardFilters`, `CallsView`, `ChannelsView`, `EventsView`) e mover
    para `Pages/` (rotas) × `Components/` (peças).
 4. [concluído 21/10] Filas e Infra no mesmo padrão; paginação e botões uniformes; chip de
    demonstração discreto; tema escuro seguindo o sistema na primeira visita.
-5. [pendente] CSS: escopo por componente (`.razor.css`), `panel.css` só tokens e
+5. [concluído parcial 21/10] CSS: escopo por componente (`.razor.css`), `panel.css` só tokens e
    quadro; remover overrides de SUI que existam por causa do layout antigo.
 6. [concluído 21/10] Validação: testes `tests/*.browser.cjs` atualizados, capturas
    desktop/mobile claro/escuro em `.impeccable/review/`, revisão com `impeccable`
@@ -85,6 +85,14 @@ escuro seguindo o sistema na primeira visita. Mosaico desktop começa em ≈420p
 Desvio do alvo: `/board/settings` não foi criado; a configuração segue em `tab=settings`
 para manter links e testes existentes. Pendentes: etapas 3 e 5 (quebra de
 `LiveOperations.razor` e escopo de CSS por componente).
+
+Etapas 3 e 5 (21/10): lógica de `LiveOperations` movida para `LiveOperations.razor.cs`
+(marcação caiu de ~840 para ~250 linhas); extraídos `ContextPicker`, `RetentionControls`,
+`ObservationNote` e `Pager`; removidos o inspetor de recurso abaixo da mesa (detalhes sempre
+em popup) e o CSS morto (`client-heading`, `board-focus-toolbar`, `board-demo-label`,
+`board-inspector`, regras de cabeçalho da mesa dedicada). Pendente: extrair as vistas de
+lista (Ramais/Chamadas/Canais/Eventos) e mover o CSS da mesa para `OperatorBoard.razor.css`;
+ambas exigem tirar helpers de estado/supervisão de `LiveOperations` primeiro.
 
 Restrições: textos novos em `Localization/Portuguese.json`; nada de feature nova;
 `/board` (TV) não pode regredir; supervisão continua exigindo confirmação explícita.
