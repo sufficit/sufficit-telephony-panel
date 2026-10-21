@@ -8,7 +8,7 @@ using Sufficit.Identity.Authorization;
 namespace Sufficit.Telephony.Panel.Security;
 
 /// <summary>Bounded server-only ticket/token cache; browser cookies contain only a random handle.</summary>
-public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock) : ITicketStore, IDisposable
+public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock, SessionFileStore? files = null) : ITicketStore, IDisposable
 {
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 200 });
     private readonly SemaphoreSlim gate = new(1, 1);
@@ -22,18 +22,30 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
     }
     public Task RenewAsync(string key, AuthenticationTicket ticket)
     {
-        cache.Set(key, new SessionEntry(ticket), new MemoryCacheEntryOptions
-        { Size = 1, AbsoluteExpiration = ticket.Properties.ExpiresUtc ?? DateTimeOffset.UtcNow.AddHours(8) });
+        Remember(key, ticket);
+        files?.Save(key, ticket);
         return Task.CompletedTask;
     }
-    public Task<AuthenticationTicket?> RetrieveAsync(string key) => Task.FromResult(cache.Get<SessionEntry>(key)?.Ticket);
-    public Task RemoveAsync(string key) { cache.Remove(key); return Task.CompletedTask; }
+    private void Remember(string key, AuthenticationTicket ticket) =>
+        cache.Set(key, new SessionEntry(ticket), new MemoryCacheEntryOptions
+        { Size = 1, AbsoluteExpiration = ticket.Properties.ExpiresUtc ?? DateTimeOffset.UtcNow.AddHours(8) });
+    public Task<AuthenticationTicket?> RetrieveAsync(string key) => Task.FromResult(Entry(key)?.Ticket);
+    public Task RemoveAsync(string key) { Forget(key); return Task.CompletedTask; }
+    private void Forget(string key) { cache.Remove(key); files?.Remove(key); }
+    // Memory first; after a restart the encrypted file restores the session once.
+    private SessionEntry? Entry(string key)
+    {
+        if (cache.Get<SessionEntry>(key) is { } entry) return entry;
+        if (files?.Load(key) is not { } ticket) return null;
+        Remember(key, ticket);
+        return cache.Get<SessionEntry>(key);
+    }
 
     public async Task<string?> GetAccessTokenAsync(ClaimsPrincipal principal, CancellationToken ct)
     {
         if (!(await AuthorizationAsync(principal, ct)).PanelAllowed) return null;
         var key = principal.FindFirstValue("panel_session");
-        return key is null ? null : cache.Get<SessionEntry>(key)?.Ticket.Properties.GetTokenValue("access_token");
+        return key is null ? null : Entry(key)?.Ticket.Properties.GetTokenValue("access_token");
     }
 
     /// <summary>Current panel permissions for a fresh sign-in, before any session handle exists.</summary>
@@ -54,15 +66,15 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         await gate.WaitAsync(ct);
         try
         {
-            var entry = cache.Get<SessionEntry>(key);
+            var entry = Entry(key);
             if (entry is null) return CurrentAuthorization.None;
             var token = entry.Ticket.Properties.GetTokenValue("access_token");
             if (string.IsNullOrEmpty(token) || !DateTimeOffset.TryParse(entry.Ticket.Properties.GetTokenValue("expires_at"), out var expires)
-                || expires <= clock.GetUtcNow()) { cache.Remove(key); return CurrentAuthorization.None; }
+                || expires <= clock.GetUtcNow()) { Forget(key); return CurrentAuthorization.None; }
             try
             {
                 var permissions = await authorization.ReadAsync(principal.FindFirstValue("sub")!, token, ct);
-                if (!permissions.PanelAllowed) cache.Remove(key);
+                if (!permissions.PanelAllowed) Forget(key);
                 return permissions;
             }
             catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)

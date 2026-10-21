@@ -27,7 +27,13 @@ builder.Services.AddScoped<Sufficit.Telephony.Panel.Localization.PanelText>();
 builder.Services.AddDataProtection().SetApplicationName("sufficit-telephony-panel");
 if (builder.Configuration["Panel:KeyDirectory"] is { Length: > 0 } keys)
     builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keys));
-builder.Services.AddSingleton<PanelSessions>();
+// Sessions survive restarts only when the DataProtection key ring is persisted; otherwise memory only.
+builder.Services.AddSingleton(sp => new PanelSessions(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>(),
+    builder.Configuration["Panel:KeyDirectory"] is { Length: > 0 } keyDirectory
+        ? new SessionFileStore(builder.Configuration["Panel:SessionDirectory"] is { Length: > 0 } sessions ? sessions
+            : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(keyDirectory).TrimEnd('/'))!, "sessions"),
+            sp.GetRequiredService<IDataProtectionProvider>(), sp.GetRequiredService<TimeProvider>())
+        : null));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient("identity", client =>
 {

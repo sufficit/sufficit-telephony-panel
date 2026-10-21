@@ -175,9 +175,13 @@ Botões: "Falar com o suporte" no acesso negado (contexto em cookie protegido de
 ramal preferido (tabela de canais, chamadas e popup do recurso). O diálogo de supervisão da mesa
 (`BoardSupervisionDialog`) ganhou o botão em 21/10 (v0.14.3) para o caso de ramal preferido ausente.
 
-9. [pendente, decisão do usuário] **Sessões sobrevivendo a deploy.** `PanelSessions` guarda tickets
+9. [concluído 21/10, v0.15.0, aprovado pelo usuário] **Sessões sobrevivendo a deploy.** `PanelSessions` guarda tickets
    e tokens só em memória (máx. 200), por decisão de segurança. Cada publicação reinicia o serviço e
    obriga todos a entrar de novo: o journal de 21/10 mostra o `teste@` entrando 5 vezes em 1 hora, uma
    por deploy. Opção: persistir os tickets cifrados com DataProtection (chaves já em
    `/var/lib/sufficit-telephony-panel/keys`) num arquivo 0600 com limite de tamanho e expiração,
    mantendo a revalidação de permissão a cada 60 s. Custo: o token passa a ficar em disco, cifrado.
+   Entregue: `Security/SessionFileStore.cs`, um arquivo por sessão em
+   `/var/lib/sufficit-telephony-panel/sessions` (diretório 0700, arquivos 0600), cifrado com o key ring
+   persistido, limite de 200 e expiração do próprio ticket (corte absoluto de 9 h). Só é ativado quando
+   `Panel:KeyDirectory` está configurado. Sair do painel apaga o arquivo; perda de permissão também.
