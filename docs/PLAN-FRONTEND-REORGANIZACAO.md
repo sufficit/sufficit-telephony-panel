@@ -139,6 +139,19 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
      Telefonia"; incluir `panel.sufficit.com.br` em `allowed_domains` e ligar `hmac_mandatory`.
    - **Testes**: teste de navegador com stub do SDK, validando atributos enviados, ausência de
      segredos e as duas situações; teste unitário do HMAC e do cookie de contexto.
+   - **Levantamento no Hermes (21/10, só leitura)**: existe uma única caixa web, "Atendimento"
+     (inbox 15, conta 1, `www.sufficit.com.br`): sem restrição de domínio, `hmac_mandatory`
+     desligado mas com segredo HMAC já gerado, formulário pré-chat ligado. A conta 1 não tem
+     definições de atributo para o painel; sem elas o Chatwoot não mostra atributos customizados
+     ao atendente. O SDK só aceita `name`, `email`, `avatar_url` e `identifier_hash` no `setUser`.
+     Os atributos de conversa só valem depois da primeira mensagem.
+   - **Decisões em aberto**:
+     1) usar a caixa "Atendimento" ou criar uma caixa "Painel de Telefonia";
+     2) criar na conta 1 as definições de atributo de contato `painel_motivo`,
+        `painel_contexto`, `painel_permissoes`, `painel_pedido` e `painel_referencia`;
+     3) guardar o segredo HMAC da caixa no Vault do Identity e entregá-lo ao painel como
+        credencial do systemd. Sem HMAC, `setUser` com identificador permitiria assumir
+        o histórico de outro contato, então não será usado.
 
 8. [concluído 21/10 11:05] **Entrega das permissões pelo Identity.** Produção
    (`ff8c411`, nós eveo/apoint/castrum-apps) já tem o recurso, mas não tem
