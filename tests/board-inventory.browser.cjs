@@ -10,6 +10,7 @@ const fs = require('node:fs');
     await page.goto('http://127.0.0.1:5169/?preview=true');
     const toggle = page.getByRole('checkbox', { name: 'Manter recursos já vistos', exact: true });
     await page.locator('.board-grid .board-tile').first().waitFor();
+    await page.locator('.board-retention summary').click();
     assert(await toggle.isChecked(), 'Retention defaults on');
     assert.equal(await page.locator('.board-queues .board-tile').count(), 1);
     await page.getByRole('button', { name: 'Simular ausência de eventos', exact: true }).click();

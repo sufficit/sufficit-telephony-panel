@@ -10,7 +10,6 @@
         <p class="muted">@Text["Observe queue stages and investigate extension registrations. Configuration stays in the management portal."]</p></div>
         <SUIButton Href="@ManagementUrl" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage queues"]</SUIButton>
     </div>
-    @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
     <div class="queue-filters">
         @if (!Permissions.SingleContext.HasValue) {
         <SUISelect TValue="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
@@ -27,7 +26,7 @@
         <SUITextField TValue="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
         <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
     </div>
-    <p class="muted">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
+    <p class="muted filter-hint">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
     @if (!Busy && Error is null && !FilteredSamples.Any())
@@ -61,11 +60,9 @@
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
                     { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
                         <SUIButton VariantValue="SUIVariant.Text" OnClick="() => SelectVisit(observation)">@Text["View timeline"]</SUIButton></p> }
-                    <SUIButton OnClick="() => VisitPage=Math.Max(0,VisitPage-1)" Disabled="@(VisitPage==0)">@Text["Previous page"]</SUIButton>
-                    <SUIButton OnClick="() => VisitPage++" Disabled="@((VisitPage+1)*30>=overview.Visits.Length)">@Text["Next page"]</SUIButton>
+                    <Pager Total="overview.Visits.Length" Page="VisitPage" PageChanged="value => VisitPage = value" />
                 </details>
-                <SUIButton OnClick="() => QueuePage=Math.Max(0,QueuePage-1)" Disabled="@(QueuePage==0)">@Text["Previous page"]</SUIButton>
-                <SUIButton OnClick="() => QueuePage++" Disabled="@((QueuePage+1)*30>=overview.Queues.Length)">@Text["Next page"]</SUIButton>
+                <Pager Total="overview.Queues.Length" Page="QueuePage" PageChanged="value => QueuePage = value" />
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>

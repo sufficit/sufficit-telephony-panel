@@ -37,8 +37,7 @@
         <NoRecordsContent>@Text["No extension observations match the filters."]</NoRecordsContent>
     </SUITable>
     <p class="muted">@Text["Declared mobile applications do not prove battery state or wake-up support. Offline registration is an observation, not a saved expected-offline preference."]</p>
-    <SUIButton OnClick="() => Page=Math.Max(0,Page-1)" Disabled="@(Page==0)">@Text["Previous page"]</SUIButton>
-    <SUIButton OnClick="() => Page++" Disabled="@((Page+1)*30>=Agents.Length)">@Text["Next page"]</SUIButton>
+    <Pager Total="Agents.Length" Page="Page" PageChanged="value => Page = value" />
 </section>
 @code {
     [Parameter] public QueueAgentOverview[] Agents { get; set; } = [];

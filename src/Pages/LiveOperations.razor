@@ -23,38 +23,35 @@
 else
 {
 <section class="live-panel @(Tab is "board" or "settings" ? "board-mode" : "")" aria-labelledby="live-title">
-    <div class="heading"><div><h1 id="live-title">@(BoardPage ? Text["Operator board"] : Text["Real-time telephony"])</h1><p class="muted">@Text["Exchange overview. Filter by company only when needed."]</p></div>
+    <div class="heading"><div class="heading-title"><h1 id="live-title">@Text["Real-time telephony"]</h1><span class="state-label @(Connected ? "good" : "warning")" role="status"><span class="status-dot"></span>@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
         <div class="tools">
-        @if (!BoardPage) { <SUIButton Href="@BoardUrl" VariantValue="SUIVariant.Outlined">@Text["Open dedicated board"]</SUIButton> }
-        <SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton>
+        <SUIButton Href="@BoardUrl" VariantValue="SUIVariant.Outlined">@Text["Open dedicated board"]</SUIButton>
+        @if (Permissions.Manager) { <SUIButton OnClick="@(() => SetTab(Tab == "settings" ? "board" : "settings"))" VariantValue="@(Tab == "settings" ? SUIVariant.Filled : SUIVariant.Text)" aria-pressed="@(Tab == "settings" ? "true" : "false")">@Text["Configure board"]</SUIButton> }
+        <SUIButton OnClick="Reload" Disabled="Busy" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton>
         </div>
     </div>
-    @if (Demo) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</SUIAlert> }
     @if (!Permissions.SingleContext.HasValue) { @CompanyFilter }
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking permissions and resources"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
     @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)<ErrorDetails Diagnostic="SearchFailure" /></SUIAlert> }
     @if (QueueError is not null) { <SUIAlert ToneValue="SUITone.Warning">@QueueError<QueueSourceDetails Samples="QueueSamples" /></SUIAlert> }
     <div class="operations-scope">
-        <div class="client-heading"><div><h2>@(Context.HasValue ? ClientName : Text["All authorized contexts"])</h2><span class="muted identifier">@(Context.HasValue ? Context.Value.ToString("N") : Permissions.Manager ? Text["No company filter · manager access"] : Text["Access restricted to your authorized contexts"])</span></div><span class="state-label @(Connected ? "good" : "warning")">@(Connected ? Text["Connected to the event stream"] : Text["Disconnected from events"])</span></div>
-        @if (BoardPage) { <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary>@ObservationNote</details> }
-        else { @ObservationNote }
         @if (Overflow || Observation.Limited) { <SUIAlert ToneValue="SUITone.Warning">@Text["Observation limit reached. Some resources may be missing. Reduce this customer's configured resource set or reconnect to start a new window."]</SUIAlert> }
-        @if (Tab != "settings")
-        {
-        @if (Tab != "board") { @BoardFilters }
-        }
-        <nav class="live-tabs @(BoardPage ? "board-navigation" : "")" aria-label="@Text["Resource type"]">
-            @foreach (var tab in Tabs.Where(t => (Context.HasValue || t.Key != "trunks") && (Permissions.Manager || t.Key != "settings") && (!BoardPage || t.Key is "board" or "settings"))) { <button type="button" class="@(Tab == tab.Key ? "active" : "")" aria-pressed="@(Tab == tab.Key)" @onclick="() => SetTab(tab.Key)">@(tab.Key == "extensions" && !Context.HasValue ? Text["Extensions and endpoints"] : tab.Label) <span>@Count(tab.Key)</span></button> }
+        <nav class="live-tabs" aria-label="@Text["Resource type"]">
+            @foreach (var tab in Tabs.Where(t => (Context.HasValue || t.Key != "trunks") && t.Key != "settings")) { <button type="button" class="@(Tab == tab.Key ? "active" : "")" aria-pressed="@(Tab == tab.Key)" @onclick="() => SetTab(tab.Key)">@(tab.Key == "extensions" && !Context.HasValue ? Text["Extensions and endpoints"] : tab.Label) <span>@Count(tab.Key)</span></button> }
         </nav>
+        @if (Tab is not ("board" or "settings")) { @BoardFilters }
         @if (BoardError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(BoardError)<ErrorDetails Diagnostic="BoardFailure" /></SUIAlert> }
         @if (SettingsOpened && Permissions.Manager)
         {
-            <div hidden="@(Tab != "settings")"><BoardSettings Configuration="BoardConfiguration" Source="RawBoardTiles" Demo="Demo" Saved="SetBoardConfiguration" /></div>
+            <div hidden="@(Tab != "settings")"><BoardSettings Configuration="BoardConfiguration" Source="RawBoardTiles" Demo="Demo" Saved="SetBoardConfiguration" />
+            </div>
         }
         @if (Tab == "board" && Permissions.Manager)
         {
-            <details class="board-retention" open="@(!BoardPage)"><summary>@Text["Remembered resources and cleanup"]</summary>
+            @if (OnlyObservedChannels) { <p class="muted section-hint" role="status">@Text["Filter enabled: only resources with observed channels. No channels does not prove a resource is idle."]</p> }
+            @BoardContent
+            <details class="board-retention"><summary>@Text["Remembered resources and cleanup"]</summary>
             <div class="settings-toolbar">
                 <SUICheckbox Value="BoardConfiguration.RetainSeenResources" ValueChanged="SetRetention" Disabled="@(Busy || InventoryBusy || Error is not null)" Label="@Text["Keep previously seen resources"]" />
                 <SUIButton OnClick="() => ConfirmClearInventory = true" Disabled="@(Busy || InventoryBusy || Error is not null)" VariantValue="SUIVariant.Text">@Text["Clear remembered resources"]</SUIButton>
@@ -72,8 +69,6 @@ else
                 </div>
             }
             </details>
-            @if (OnlyObservedChannels) { <p class="muted section-hint" role="status">@Text["Filter enabled: only resources with observed channels. No channels does not prove a resource is idle."]</p> }
-            @BoardContent
         }
         else if (Tab == "settings") { }
         else if (Tab == "events")
@@ -154,6 +149,7 @@ else
         @if (Tab is "calls" or "channels") { <p class="muted section-hint">@(Supervisor is { } supervisor ? Text.Format("Your supervision extension: {0}.", supervisor.Title) : Text[SupervisorFailure is not null ? "Could not load your supervision extension. Reconnect and refresh to try again." : "Set your preferred extension in the portal to enable supervision."]) @Text["Select the correct channel to listen or whisper. Actions require a recent event and verified company association."]</p><ErrorDetails Diagnostic="SupervisorFailure" /> }
         @if (Tab is not ("board" or "settings")) { <div class="live-pagination"><span>@Text.Format("{0} results with current filters · page {1} of {2}", TotalVisible, Page + 1, Pages)</span><div><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page == 0)" OnClick="Previous">@Text["Previous"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page + 1 >= Pages)" OnClick="Next">@Text["Next"]</SUIButton></div></div> }
         @ActionConfirmation
+        <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary>@ObservationNote</details>
         <details class="live-help"><summary>@Text["How to read this panel"]</summary><p>@Text["The overview shows the manager-authorized stream; company filtering uses resources authorized by the portal. Reconnecting discards old states. Current observation is limited to 5,000 resources and two hours without updates, not a full inventory. Keep previously seen resources retains the existence of extensions, trunks and queues separately, without automatic expiration or old channels. The saved last observation is approximate. Clearing remembered resources removes that history from the selected view; new events can record them again."]</p><p>@Text["SIP registration, reachability and device usage are independent. An extension may be registered but not respond. A static contact may respond without registering. Qualify does not prove the phone's WebSocket/TCP connection. Registration time here is when the panel received a registration event, not the PBX's historical timestamp. Events before connection are unavailable."]</p><p>@Text["Call queues distribute calls among agents. QUEUE stands for automatic call distribution. This monitor does not create queues or replace their management screen."]</p></details>
     </div>
 </section>
@@ -199,7 +195,7 @@ else
         @if (Demo) { <p>@Text["Local demonstration: fictional customers and events. No telephone action will be performed."]</p> }
     </div>;
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
-    private RenderFragment CompanyFilter => @<details class="company-filter" open="@(!BoardPage)"><summary>@Text["Context"]: @(Context.HasValue ? ClientName : Text["All authorized contexts"])</summary>
+    private RenderFragment CompanyFilter => @<details class="company-filter" open="@Searched"><summary>@Text["Context"]: @(Context.HasValue ? ClientName : Text["All authorized contexts"])</summary>
     @if (!Permissions.GlobalPanel)
     {
         <SUISelect TValue="string" Label="@Text["Context"]" Value="@(Context?.ToString("D") ?? "")" ValueChanged="SelectAuthorizedContext" Disabled="Busy">
@@ -229,8 +225,7 @@ else
     private RenderFragment BoardContent => @<div class="board-focus" id="board-focus">
             @if (!BoardPage)
             {
-            @if (Demo) { <span class="board-demo-label">@Text["Local demo"]</span> }
-            <div class="board-focus-toolbar"><strong>@Text["Operator board"]</strong><span class="muted">@(Context.HasValue ? ClientName : Text["Entire exchange"])</span><span class="board-focus-spacer"></span><LanguagePicker /><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton></div>
+            <h2 class="sr-only">@Text["Operator board"] · @(Context.HasValue ? ClientName : Text["Entire exchange"])</h2>
             @if (FullscreenError) { <SUIAlert ToneValue="SUITone.Warning">@Text["Full screen is not available in this browser. The dedicated board remains available."]</SUIAlert> }
             @BoardFilters
             }
@@ -296,6 +291,7 @@ else
                 </fieldset>
                 <SUIButton OnClick="ToggleObservedChannels" VariantValue="@(OnlyObservedChannels ? SUIVariant.Filled : SUIVariant.Outlined)" aria-pressed="@(OnlyObservedChannels ? "true" : "false")">@Text["Only with observed channels"]</SUIButton>
                 <SUIButton OnClick="ResetFilters" VariantValue="SUIVariant.Text">@Text["Clear filters"]</SUIButton>
+                @if (!BoardPage) { <span class="board-focus-spacer"></span><SUIButton OnClick="ToggleFullscreen" VariantValue="SUIVariant.Text"><span class="fullscreen-enter">@Text["Full screen"]</span><span class="fullscreen-exit">@Text["Exit full screen"]</span></SUIButton> }
             </div>
         }
         </header>;

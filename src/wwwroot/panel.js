@@ -55,7 +55,11 @@ window.telephonyPanel = (() => {
             document.documentElement.lang = language;
             try { localStorage.setItem('telephony-panel-language', language); } catch {}
         },
-        dark: () => { try { return localStorage.getItem('telephony-panel-theme') === 'dark'; } catch { return false; } },
+        dark: () => {
+            // An explicit choice wins; otherwise follow the operating system on first visit.
+            try { const saved = localStorage.getItem('telephony-panel-theme'); if (saved) return saved === 'dark'; } catch {}
+            return window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
+        },
         theme: dark => { try { localStorage.setItem('telephony-panel-theme', dark ? 'dark' : 'light'); } catch {} },
         enableSound: async () => { audio ??= new (window.AudioContext || window.webkitAudioContext)(); await play(); },
         alert: play

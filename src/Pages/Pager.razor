@@ -1,0 +1,16 @@
+@* Shared pagination: hidden when everything fits on one page. *@
+@if (Pages > 1)
+{
+    <div class="pager">
+        <span>@Text.Format("Page {0} of {1}", Page + 1, Pages)</span>
+        <SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page == 0)" OnClick="() => PageChanged.InvokeAsync(Page - 1)">@Text["Previous page"]</SUIButton>
+        <SUIButton VariantValue="SUIVariant.Text" Disabled="@(Page + 1 >= Pages)" OnClick="() => PageChanged.InvokeAsync(Page + 1)">@Text["Next page"]</SUIButton>
+    </div>
+}
+@code {
+    [Parameter] public int Total { get; set; }
+    [Parameter] public int Page { get; set; }
+    [Parameter] public int PageSize { get; set; } = 30;
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+    private int Pages => (Total + PageSize - 1) / PageSize;
+}

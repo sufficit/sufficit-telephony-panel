@@ -57,23 +57,34 @@ Infra:     rota /infrastructure própria
 
 ## Etapas
 
-1. [pendente] Shell único: `MainLayout` com cabeçalho, navegação e barra de status;
+1. [concluído 21/10] Shell único: `MainLayout` com cabeçalho, navegação e barra de status;
    uma escala de título e um gutter para todas as rotas; rotas próprias para
    `/`, `/queues`, `/infrastructure`, `/board`, `/board/settings`. Contexto (empresa)
    vira um seletor só, compartilhado e persistido na URL.
-2. [pendente] Ao vivo: mosaico na primeira dobra; filtros compactos em uma linha;
+2. [concluído 21/10] Ao vivo: mosaico na primeira dobra; filtros compactos em uma linha;
    vistas secundárias como segmented control; remover "Configurar quadro" e
    "Recursos lembrados" do fluxo principal; disclaimers em ajuda contextual.
 3. [pendente] Quebrar `LiveOperations.razor` em componentes (`ContextPicker`,
    `StreamStatus`, `BoardFilters`, `CallsView`, `ChannelsView`, `EventsView`) e mover
    para `Pages/` (rotas) × `Components/` (peças).
-4. [pendente] Filas e Infra no mesmo padrão; paginação e botões uniformes; chip de
+4. [concluído 21/10] Filas e Infra no mesmo padrão; paginação e botões uniformes; chip de
    demonstração discreto; tema escuro seguindo o sistema na primeira visita.
 5. [pendente] CSS: escopo por componente (`.razor.css`), `panel.css` só tokens e
    quadro; remover overrides de SUI que existam por causa do layout antigo.
-6. [pendente] Validação: testes `tests/*.browser.cjs` atualizados, capturas
+6. [concluído 21/10] Validação: testes `tests/*.browser.cjs` atualizados, capturas
    desktop/mobile claro/escuro em `.impeccable/review/`, revisão com `impeccable`
    e `web-design-guidelines`.
+
+Entregue em 21/10 (etapas 1, 2, 4, 6): navegação das três áreas no cabeçalho, rota
+`/infrastructure` (links `?area=infrastructure` continuam válidos), título/gutter únicos,
+status do stream ao lado do título, "Configurar mesa" como botão (alterna `tab=settings`),
+contexto recolhido, limites de observação e "Recursos lembrados" recolhidos abaixo do
+mosaico, tela cheia na linha de filtros, chip "Demonstração local" no cabeçalho no lugar
+das faixas de alerta, paginação compartilhada (`Pager`, oculta com uma página só) e tema
+escuro seguindo o sistema na primeira visita. Mosaico desktop começa em ≈420px (antes ≈920px).
+Desvio do alvo: `/board/settings` não foi criado; a configuração segue em `tab=settings`
+para manter links e testes existentes. Pendentes: etapas 3 e 5 (quebra de
+`LiveOperations.razor` e escopo de CSS por componente).
 
 Restrições: textos novos em `Localization/Portuguese.json`; nada de feature nova;
 `/board` (TV) não pode regredir; supervisão continua exigindo confirmação explícita.

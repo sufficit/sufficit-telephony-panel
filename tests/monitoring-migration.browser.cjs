@@ -72,7 +72,7 @@ const fs = require('node:fs');
     for (const label of ['Telefonia ao vivo', 'Infraestrutura e histórico']) {
       await page.goto(origin + '/queues?preview=true&' + scope);
       await page.getByRole('link', { name: label, exact: true }).click();
-      await page.waitForURL(url => url.pathname === '/');
+      await page.waitForURL(url => url.pathname === (label === 'Telefonia ao vivo' ? '/' : '/infrastructure'));
       for (const [key, value] of new URLSearchParams(scope)) assert.equal(new URL(page.url()).searchParams.get(key), value);
       await page.reload();
       for (const [key, value] of new URLSearchParams(scope)) assert.equal(new URL(page.url()).searchParams.get(key), value);

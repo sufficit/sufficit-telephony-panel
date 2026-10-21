@@ -1,6 +1,7 @@
 @page "/"
 @page "/board"
 @page "/queues"
+@page "/infrastructure"
 @using Sufficit.Telephony.Panel.Operations
 @implements IAsyncDisposable
 @inject PanelAccess Access
@@ -18,8 +19,17 @@
     @if (!BoardPage || (Ready && !Allowed))
     {
     <header class="panel-header">
-        <a class="brand" href="./"><img src="panel-icon.png" width="44" height="44" alt="" /><span>Sufficit <strong>Telephony Panel</strong></span></a>
+        <a class="brand" href="@(Preview ? "./?preview=true" : "./")"><img src="panel-icon.png" width="36" height="36" alt="" /><span>Sufficit <strong>Telephony Panel</strong></span></a>
+        @if (Ready && Allowed && !BoardPage)
+        {
+            <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
+                <a href="@AreaHref("")" class="@(LivePage ? "active" : "")" aria-current="@(LivePage ? "page" : null)">@Text["Live telephony"]</a>
+                <a href="@AreaHref("queues")" class="@(QueuePage ? "active" : "")" aria-current="@(QueuePage ? "page" : null)">@Text["Queues and registration"]</a>
+                @if (Manager) { <a href="@AreaHref("infrastructure")" class="@(InfraPage ? "active" : "")" aria-current="@(InfraPage ? "page" : null)">@Text["Infrastructure and history"]</a> }
+            </nav>
+        }
         <div class="header-actions">
+            @if (Preview) { <span class="demo-chip" title="@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]">@Text["Local demo"]</span> }
             <LanguagePicker />
             @if (BoardPage) { <SUIButton Href="@(Preview ? "./?preview=true" : "./")" VariantValue="SUIVariant.Text">@Text["Back to panel"]</SUIButton> }
             <SUIButton OnClick="ToggleTheme" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton>
@@ -47,29 +57,23 @@
     }
     else
     {
-        @if (!BoardPage) { <nav class="panel-navigation" aria-label="@Text["Monitoring area"]">
-            <SUIButton Href="@AreaUrl(false)" OnClick="() => Operational = true" VariantValue="@(Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Live telephony"]</SUIButton>
-            <SUIButton Href="@("queues" + new Uri(Navigation.Uri).Query)" VariantValue="@(QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Queues and registration"]</SUIButton>
-            @if (Manager) { <SUIButton Href="@AreaUrl(true)" OnClick="() => Operational = false" VariantValue="@(!Operational && !QueuePage ? SUIVariant.Filled : SUIVariant.Text)">@Text["Infrastructure and history"]</SUIButton> }
-        </nav> }
         @if (QueuePage)
         {
             <QueueMonitor Preview="Preview" />
         }
-        else if (Operational || BoardPage || !Manager)
+        else if (!InfraPage || BoardPage || !Manager)
         {
             <LiveOperations @key="BoardPage" Preview="Preview" BoardPage="BoardPage" Dark="Dark" ThemeChanged="ToggleTheme" />
         }
         else
         {
         <section class="heading">
-            <div><h1>@Text["Telephony operations"]</h1><p class="muted">@Text["Three PBXs. One clear infrastructure view."]</p></div>
+            <div><h1>@Text["Infrastructure and history"]</h1><p class="muted">@Text["Three PBXs. One clear infrastructure view."]</p></div>
             <div class="tools">
                 <SUIButton OnClick="ToggleSound" VariantValue="SUIVariant.Outlined">@(Sound ? Text["Mute alerts"] : Text["Enable sounds"])</SUIButton>
                 <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Filled" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
             </div>
         </section>
-        @if (Preview) { <SUIAlert ToneValue="SUITone.Warning">@Text["Local demonstration — synthetic values for UI validation, not actual server readings."]</SUIAlert> }
         <div class="freshness" role="status"><span class="pulse @(Busy ? "reading" : "")"></span><span>@(Busy ? Text["Querying the exchange…"] : Text["Automatically refreshed every 30 seconds"])</span><span class="muted">@(Snapshot is null ? Text["Waiting for the first reading"] : Text.Format("Query: {0}", Snapshot.FetchedAt.ToLocalTime().ToString("T", Text.Culture)))</span></div>
         @if (Snapshot?.Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Snapshot.Error)</SUIAlert> }
         <div class="operations">
@@ -138,9 +142,12 @@
 @code {
     private bool BoardPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/board", StringComparison.Ordinal);
     private bool QueuePage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/queues", StringComparison.Ordinal);
+    // Legacy ?area=infrastructure links keep working; the canonical address is /infrastructure.
+    private bool InfraPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/infrastructure", StringComparison.Ordinal)
+        || Navigation.Uri.Contains("area=infrastructure", StringComparison.Ordinal);
+    private bool LivePage => !QueuePage && !InfraPage && !BoardPage;
     private string LoginUrl => "login?returnUrl=" + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
     private bool Ready, Allowed, Busy, Sound, Dark, Preview, HistoryBusy;
-    private bool Operational = true;
     private string Selected = "apoint-voip", Metric = "calls";
     private int Hours = 1;
     private FleetSnapshot? Snapshot;
@@ -153,7 +160,8 @@
     private DateTimeOffset HistoryStart, HistoryEnd;
     private HashSet<string> PreviousAlerts = [];
     private bool LoginFailed => Navigation.Uri.Contains("login=failed", StringComparison.Ordinal);
-    private string AreaUrl(bool infrastructure) => "./" + new Uri(Navigation.GetUriWithQueryParameter("area", infrastructure ? "infrastructure" : (string?)null)).Query;
+    // Area links keep the shared scope (preview, context, server, search) and drop the legacy area switch.
+    private string AreaHref(string path) => "./" + path + new Uri(Navigation.GetUriWithQueryParameter("area", (string?)null)).Query;
     private NodeSnapshot? Current => Snapshot?.Nodes.FirstOrDefault(n => n.Id == Selected);
     private string Number(double? value) => value?.ToString("N0", Text.Culture) ?? "—";
     private double Scale(double value) => Metric == "memory" ? value / 1048576 : value;
@@ -185,7 +193,7 @@
         await JS.InvokeVoidAsync("telephonyPanel.setLanguage", Text.Language);
         Dark = await JS.InvokeAsync<bool>("telephonyPanel.dark");
         Preview = Environment.IsDevelopment() && Navigation.Uri.Contains("preview=true", StringComparison.Ordinal);
-        Operational = !Navigation.Uri.Contains("area=infrastructure", StringComparison.Ordinal);
+        Navigation.LocationChanged += AreaChanged;
         await Refresh(); Ready = true; StateHasChanged();
         loop = Poll();
     }
@@ -204,7 +212,7 @@
             Allowed = Preview || await Access.AllowedAsync(lifetime.Token);
             Manager = Preview ? CustomerAccessPreview.Read(Navigation.Uri).Manager : await Access.IsManagerAsync(lifetime.Token);
             if (!Allowed) { Snapshot = null; Points = []; return; }
-            if (!Manager) { Operational = true; Snapshot = null; Points = []; return; }
+            if (!Manager) { Snapshot = null; Points = []; return; }
             if (QueuePage) return;
             Snapshot = Preview ? PreviewSnapshot() : await Metrics.ReadAsync(lifetime.Token);
             var active = Snapshot.Alerts.Where(a => a.State == "firing").Select(a => a.Name + a.Node).ToHashSet();
@@ -245,5 +253,11 @@
     private static FleetSnapshot PreviewSnapshot() => new(DateTimeOffset.UtcNow,
         FleetMetrics.NodeIds.Select((id, i) => new NodeSnapshot(id, new[] { "Apoint", "Eveo", "Google" }[i], true, true, 12, 18 + i * 31, 36 + i * 62, (410 + i * 330) * 1048576, 84 + i * 20, 0, 0, 0, null, DateTimeOffset.UtcNow.AddSeconds(-12))).ToArray(), [], null);
     private void LanguageChanged() => _ = InvokeAsync(StateHasChanged);
-    public async ValueTask DisposeAsync() { Text.Changed -= LanguageChanged; lifetime.Cancel(); if (loop is not null) await loop; lifetime.Dispose(); }
+    // The three areas share this component, so a client-side navigation must reload what the new area needs.
+    private void AreaChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) => _ = InvokeAsync(async () =>
+    {
+        if (InfraPage && Manager && Snapshot is null) await Refresh();
+        StateHasChanged();
+    });
+    public async ValueTask DisposeAsync() { Text.Changed -= LanguageChanged; Navigation.LocationChanged -= AreaChanged; lifetime.Cancel(); if (loop is not null) await loop; lifetime.Dispose(); }
 }

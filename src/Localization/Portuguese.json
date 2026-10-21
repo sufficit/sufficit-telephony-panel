@@ -484,6 +484,7 @@
   "No calls observed in this period.": "Nenhuma chamada observada nesse período.",
   "Next page": "Próxima página",
   "Previous page": "Página anterior",
+  "Page {0} of {1}": "Página {0} de {1}",
   "Call timeline": "Linha do tempo da chamada",
   "Wait before connection": "Espera antes da conexão",
   "Observed call times are not billed duration or proof of a debit. Billing must be checked against the actual call record.": "Os tempos observados não representam o tempo tarifado nem comprovam débito. A tarifação deve ser conferida no registro real da chamada.",

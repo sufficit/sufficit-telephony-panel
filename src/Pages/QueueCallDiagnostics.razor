@@ -25,8 +25,7 @@
                 <SUITd DataLabel="@Text["Answered within SLA"]">@context.AnsweredWithinSla / @context.Entered</SUITd></RowTemplate>
         </SUITable>
         <p class="muted">@Text["Reports count visits on this source, not unique cross-server calls. They do not include missing or interrupted observations as successful calls."]</p>
-        <SUIButton OnClick="() => ReportPage=Math.Max(0,ReportPage-1)" Disabled="@(ReportPage==0)">@Text["Previous page"]</SUIButton>
-        <SUIButton OnClick="() => ReportPage++" Disabled="@((ReportPage+1)*30>=Report.Items.Length)">@Text["Next page"]</SUIButton>
+        <Pager Total="Report.Items.Length" Page="ReportPage" PageChanged="value => ReportPage = value" />
     }
     @if (Calls is not null)
     {

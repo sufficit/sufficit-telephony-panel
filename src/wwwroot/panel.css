@@ -134,7 +134,6 @@ footer { display:flex; justify-content:space-between; gap:16px; border-top:1px s
 @media(max-width:1000px) { .panel-shell { padding:0 24px; }.operations { grid-template-columns:1fr; gap:20px; }.history-heading { align-items:stretch; flex-direction:column; }.entry { gap:30px; } }
 @media(max-width:600px) { .panel-shell { padding:0 16px; }.panel-header { gap:12px; }.brand { font-size:12px; gap:6px; }.brand strong { font-size:14px; }.brand img { width:32px; height:32px; }.header-actions { gap:0; }.header-actions .sui-button { font-size:12px; }main { padding:28px 0; }.heading { align-items:stretch; flex-direction:column; gap:12px; }.tools>* { flex:1; }.node-row { gap:8px; padding:18px 8px; grid-template-columns:1fr 1fr .7fr; }.node-name { font-size:18px; }.node-state { font-size:12px; }.node-number { font-size:23px; }.detail { padding:20px; }.readings dd { font-size:23px; }.history-controls { min-width:0; }.entry { display:block; padding:20px 0; }.entry aside { margin-top:36px; }footer { flex-direction:column; }.alert-row { flex-wrap:wrap; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
-.panel-navigation { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:32px; }
 .client-picker { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:24px 0 16px; }
 .client-picker > .sui-field { flex:1 1 280px; max-width:540px; }
 .client-results { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
@@ -159,12 +158,6 @@ input { caret-color:var(--sui-color-primary); }
 .call-group .resource-status small { display:block; margin-top:6px; color:var(--sui-text-secondary); }
 /* User-pinned operator desk: dense status grid and independent trunk/channel rail.
    State colors always include a text label; these are observations, not availability guarantees. */
-.panel-shell:has(.board-mode) { max-width:none; padding:0 18px; }
-.panel-shell:has(.board-mode) .panel-header { padding:12px 0; }
-.panel-shell:has(.board-mode) main { padding:16px 0; }
-.panel-shell:has(.board-mode) .panel-navigation { margin-bottom:12px; }
-.board-mode .heading h1 { font-size:24px; margin-bottom:4px; }
-.board-mode .heading p { margin-bottom:0; font-size:13px; }
 .board-mode .client-picker { margin:12px 0 8px; }
 .board-mode .client-heading { margin-top:12px; }
 .board-mode .client-heading h2 { font-size:18px; }
@@ -248,3 +241,51 @@ input { caret-color:var(--sui-color-primary); }
 /* Keep touch supervision controls readable beside their blocking explanation. */
 .live-table td.supervision-cell { min-width: 240px; }
 .call-actions .sui-btn { flex-shrink: 0; white-space: nowrap; overflow-wrap: normal; }
+
+/* One shell for every area: compact header with the area navigation, same gutter and title scale. */
+.panel-shell, .panel-shell:has(.board-mode) { max-width:none; padding:0 24px; }
+.panel-header { padding:10px 0; gap:24px; }
+.brand img { width:36px; height:36px; }
+.brand strong { font-size:16px; }
+.panel-navigation { display:flex; align-self:stretch; gap:4px; margin:0 auto 0 12px; }
+.panel-navigation a { display:flex; align-items:center; padding:0 14px; margin-bottom:-11px; border-bottom:2px solid transparent; color:var(--sui-text-secondary); text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap; }
+.panel-navigation a:hover { color:var(--sui-text-primary); background:var(--sui-surface-2); }
+.panel-navigation a.active { color:var(--sui-color-primary); border-bottom-color:var(--sui-color-primary); }
+.header-actions { gap:4px; }
+.signout { padding:8px 12px; font-size:14px; }
+.demo-chip { font-size:12px; padding:3px 10px; border:1px dashed var(--sui-color-warning); border-radius:999px; color:var(--sui-color-warning); white-space:nowrap; }
+main { padding:20px 0 32px; }
+main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.015em; }
+.heading { align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap; }
+.heading p { margin:4px 0 0; font-size:13px; }
+.heading-title { display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; }
+.heading-title .state-label { display:inline-flex; align-items:center; gap:6px; }
+.tools { gap:4px; flex-wrap:wrap; }
+.company-filter { margin:0 0 4px; }
+.company-filter summary, .observation-details summary, .board-retention summary { font-size:14px; }
+.live-tabs, .board-mode .live-tabs { margin-top:4px; margin-bottom:12px; }
+.observation-details { margin-top:16px; font-size:13px; }
+.live-help { margin-top:4px; }
+.freshness { padding:4px 0 20px; }
+.filter-hint { font-size:12px; margin:6px 0 16px; }
+.pager { display:flex; align-items:center; gap:4px; margin:8px 0; color:var(--sui-text-secondary); font-size:13px; }
+.pager > span { margin-right:8px; }
+.entry h1 { font-size:clamp(38px,5vw,62px); }
+@media(max-width:900px) {
+ .panel-header { flex-wrap:wrap; row-gap:4px; }
+ .panel-navigation { order:3; flex-basis:100%; margin:0; overflow-x:auto; }
+ .panel-navigation a { padding:10px 12px; margin-bottom:-11px; }
+}
+@media(max-width:600px) {
+ .panel-shell, .panel-shell:has(.board-mode) { padding:0 12px; }
+ .heading .tools { width:100%; }
+ .heading .tools > * { flex:1 1 auto; }
+ .demo-chip { display:none; }
+}
+.board-filter-options { padding:4px 0; }
+.queue-monitor section > p.muted, .queue-monitor > p.muted { font-size:13px; }
+.queue-monitor h2 { font-size:18px; margin-top:24px; }
+@media(max-width:600px) {
+ .live-tabs { flex-wrap:nowrap; overflow-x:auto; }
+ .live-tabs button { flex:0 0 auto; white-space:nowrap; }
+}

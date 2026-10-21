@@ -11,7 +11,7 @@ const fs = require('node:fs');
         page.on('pageerror', e => errors.push(e.message));
         await page.addInitScript(() => localStorage.setItem("telephony-panel-language", "pt-BR"));
         await page.goto('http://127.0.0.1:5169/?preview=true');
-        await page.getByText('Demonstração local: clientes e eventos fictícios.', { exact: false }).waitFor();
+        await page.locator('.demo-chip').waitFor();
         const calls = page.getByRole('button', { name: /^Chamadas 1$/ });
         await calls.click();
         await page.locator('.call-group').first().waitFor();
