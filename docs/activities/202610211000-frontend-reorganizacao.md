@@ -60,3 +60,8 @@ de alguma coisa." Mudança:
 - Testes ajustados: board-inventory, board-only, board-settings, call-grouping,
   error-diagnostics, operator-board. Resultado: 971 checks + 16/16 navegador PASS,
   zero exceções no log do servidor.
+
+Publicado em 21/10 ≈10:50 -03: release `board-fill-20261021-f7802ac` (anterior preservado
+`frontend-reorg-20261021-7d99719`), DLL `80aa4737546ba50029b90a6a00f460145c1ea59113788da804acb7001275800e`,
+pacote `9394c9e2f30a578371144d9eb15331c859134d43ef6f8872c76fe9ded79aece7`; appsettings idêntico,
+gate de health passou, `/health` 200, `/api/fleet` anônimo 401, CSS novo com `.board-fill`.
