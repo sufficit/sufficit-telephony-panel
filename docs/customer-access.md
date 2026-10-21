@@ -50,6 +50,11 @@ the trailing channel separator. Actions remain Listen/Whisper only.
 
 ## Current delivery limits
 
+Update 2026-10-21: production Identity now delivers `telephony.panel` and `telephony.monitor`
+as server-resolved grants (all three nodes). The first customer test grant exists for
+`teste@sufficit.com.br` in context `026246a851a7485991e0b06e1bebb045`; real sign-in and
+cross-context denial still need to be verified before enabling customers.
+
 Implementation and local tests are not a customer production rollout. No new
 customer grants, issuer configuration or live calls were applied by this change.
 Deploy the generic Identity feature/configuration first, then Endpoints, then

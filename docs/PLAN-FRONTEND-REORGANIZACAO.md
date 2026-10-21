@@ -140,7 +140,7 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
    - **Testes**: teste de navegador com stub do SDK, validando atributos enviados, ausência de
      segredos e as duas situações; teste unitário do HMAC e do cookie de contexto.
 
-8. [pendente, bloqueia acesso de cliente] **Entrega das permissões pelo Identity.** Produção
+8. [concluído 21/10 11:05] **Entrega das permissões pelo Identity.** Produção
    (`ff8c411`, nós eveo/apoint/castrum-apps) já tem o recurso, mas não tem
    `Sufficit:Identity:ClaimScopeMap:ServerResolvedEntitlementKeys = ["telephony.panel",
    "telephony.monitor"]` (ver `deploy/identity-server-resolved-entitlements.json`). Sem isso,
@@ -148,3 +148,6 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
    painel e ainda vai dentro dos access tokens. Aplicar nos 3 nós, reiniciando um por vez,
    **antes** de conceder `telephony.panel`/`telephony.monitor` a qualquer usuário. Depois disso,
    validar com `teste@sufficit.com.br` o login de cliente e que um contexto não enxerga outro.
+   Aplicado nos 3 nós em 21/10 (backup e registro em `sufficit-identity/docs/activities/202610211105-server-resolved-entitlement-keys.md`).
+   Pendente: validar o login de cliente com `teste@sufficit.com.br`, que já tem
+   `telephony.panel` e `telephony.monitor` no contexto `026246a851a7485991e0b06e1bebb045`.
