@@ -3,7 +3,7 @@
 Pedido explícito do mantenedor: atualizar todos os contratos, inclusive persistência,
 sem aliases de compatibilidade. Esta decisão substitui a preservação dos nomes ACD
 na entrega0.15.0. Não equivale a retirar normalização funcional de agentes SIP/GUID/WSS.
-Plano completo: /mnt/sufficit/sufficit-ari/docs/PLAN-QUEUE-WITHOUT-ALIASES.md.
+Plano completo: /mnt/sufficit/sufficit-ari/docs/activities/202610152240-queue-without-aliases-plan.md.
 
 Fontes alteradas em worktrees isolados de Blazor, Panel e EndPoints; núcleo ARI0.16.0
 e dialplan local atualizados. Sem rewrite /api/acd, header antigo, ambiente traduzido
