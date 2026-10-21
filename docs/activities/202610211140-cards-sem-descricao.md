@@ -17,4 +17,8 @@ Sugestão de cadastro: preencher a descrição desses 5 ramais no portal.
 Observação: todos os cards do cliente mostravam "sem informação" porque a observação é parcial.
 O estado só aparece depois que chega um evento de registro, qualify ou chamada do ramal. O painel
 foi reiniciado várias vezes hoje, e o contexto de cliente ainda não tinha inventário lembrado.
-Não é filtragem: eventos de ramal (peer) não dependem de AccountCode para o cliente.
+**Correção desta conclusão (mesmo dia):** era filtragem. `AuthorizedObservation.ForCustomer`
+descartava toda linha sem AccountCode, e os eventos de registro de ramal não têm AccountCode.
+O gestor via os ramais verdes no mesmo contexto e o cliente não. Corrigido na v0.14.4: o status do
+ramal é atribuído ao contexto selecionado só por igualdade exata com um ramal catalogado da própria
+empresa. Ver `docs/customer-access.md`.

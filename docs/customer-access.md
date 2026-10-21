@@ -35,7 +35,12 @@ into the **deployment's** Identity configuration. This file is not an Identity
 provisioning manifest and must not be sent to the provisioning API. Its keys do
 not belong in Identity source defaults.
 
-Unknown or foreign event ownership is excluded before rendering. Contextual
+Unknown or foreign event ownership is excluded before rendering. Exception (2026-10-21):
+endpoint status events (registration/qualify, `Kind == "peer"`) carry no AccountCode, so they are
+attributed to the **selected** context only when the key exactly equals one of that context's own
+extension cards (anchored literal `^SIP/<title>`; extension titles are globally unique in the portal
+registry). Wildcards, alternations, unanchored display patterns, trunks, calls and foreign
+AccountCodes never qualify, and nothing is attributed without a selected context. Contextual
 snapshots are validated and filtered. Customers cannot read fleet diagnostics or
 shared manager board rules, or modify shared rules/inventory. Same-named endpoints
 in different authorized contexts retain distinct card identities.

@@ -12,8 +12,14 @@ public sealed class AuthorizedObservation
         context = permissions.SelectContext(context);
         // Unknown ownership and foreign accounts are never exposed. In particular,
         // matching a display regex is not proof that a shared trunk belongs here.
-        var rows = source.Where(row => Guid.TryParse(row.Account, out var account)
-            && permissions.CanRead(account) && (!context.HasValue || account == context)).ToArray();
+        // Endpoint status events (registration, qualify) carry no AccountCode. They are attributed to
+        // the selected context only when the key is exactly one of its own catalogued extensions
+        // (anchored literal "^SIP/0000286651" from the portal registry, whose titles are globally unique).
+        // Calls always need the tenant AccountCode; foreign accounts are never re-attributed.
+        var owned = context.HasValue ? OwnedEndpoints(cards) : [];
+        var rows = source.Where(row => Guid.TryParse(row.Account, out var account) && account != Guid.Empty
+            ? permissions.CanRead(account) && (!context.HasValue || account == context)
+            : row.Kind == "peer" && owned.Contains(row.Key)).ToArray();
         if (context is { } selected) return Create(cards, rows, selected);
         var result = new AuthorizedObservation { Rows = rows };
         foreach (var group in rows.GroupBy(row => Guid.Parse(row.Account!)))
@@ -25,6 +31,15 @@ public sealed class AuthorizedObservation
         }
         return result;
     }
+    private static readonly System.Text.RegularExpressions.Regex ExtensionPattern = new(@"^\^((?:SIP|PJSIP|IAX2)/[A-Za-z0-9_.-]+)\$?$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(10));
+    /// <summary>Exact endpoint identities of the context's own extension cards; wildcards and display patterns never qualify.</summary>
+    public static HashSet<string> OwnedEndpoints(IEnumerable<EventsPanelCardInfo> cards) => cards
+        .Where(card => card.Kind == EventsPanelCardKind.PEER)
+        .SelectMany(card => card.Channels)
+        .Select(channel => ExtensionPattern.Match(channel))
+        .Where(match => match.Success).Select(match => match.Groups[1].Value)
+        .ToHashSet(StringComparer.Ordinal);
     /// <summary>Only for the upstream manager ALL stream, after server-side role validation.</summary>
     public static AuthorizedObservation ForManager(IEnumerable<ObservedResource> source)
     {
