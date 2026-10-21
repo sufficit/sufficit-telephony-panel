@@ -27,3 +27,20 @@ a interface "confusa e bagunçada"; implementar e publicar. Plano:
   por mudança intencional: `board-inventory` (abre "Recursos lembrados"),
   `call-grouping` (chip de demonstração), `monitoring-migration` (Infra em `/infrastructure`).
 - Capturas desktop/mobile, claro/escuro: sem overflow horizontal nem erros de página.
+
+## Publicação no Eveo Apps
+Autorização do usuário: "faça e implemente e deploy". Ativado em 21/10/2026 ≈10:05 -03.
+
+- Release: `/opt/sufficit-telephony-panel/releases/frontend-reorg-20261021-7d99719`
+  (commit `7d99719`); anterior preservado: `error-diagnostics-20261021-0918`.
+- SHA256 DLL `e9f0c7f4e1e3c725673691ef23d73e8d043bf544c016993c591e1e2000a4c874`;
+  pacote `362332e0d94fc4ff9e6267ff28019d2328bf70d6266902e7a1c7640c11586096`, conferido no host.
+- `appsettings.json` copiado do release anterior e confirmado idêntico (`cmp`).
+- `deploy/release-panel.py` passou o gate de health pelo socket; sem rollback. PID 9877.
+- `/health` público 200; `/api/fleet` anônimo 401; CSS novo (`panel.54hp91l9js.css`)
+  servido com `.demo-chip`; briefing de design ausente do HTML; sem warnings no journal.
+- Não validado em produção com sessão manager (sem login nesta sessão); Nginx,
+  Identity, PBXs e coletores não foram tocados.
+
+Rollback: apontar `current` para `error-diagnostics-20261021-0918` e reiniciar só
+`sufficit-telephony-panel` (manifesto em `/var/backups/sufficit-telephony-panel/frontend-reorg-20261021-7d99719/`).
