@@ -387,7 +387,7 @@ public partial class LiveOperations
     {
         var user = (await Authentication.GetAuthenticationStateAsync()).User;
         var context = TargetContext(blocked.Channel);
-        var contextId = context == Guid.Empty ? "não identificado" : context.ToString("N");
+        var contextId = context == Guid.Empty ? "unknown" : context.ToString("N");
         var monitorMissing = blocked.Reason.StartsWith("Your account", StringComparison.Ordinal);
         var missing = new List<string>();
         if (monitorMissing && !Permissions.CanRead(context)) missing.Add("telephony.panel:" + contextId);
@@ -396,7 +396,7 @@ public partial class LiveOperations
             user.FindFirst("sub")?.Value ?? "", SupportChat.DisplayName(user), user.FindFirst("email")?.Value ?? "",
             Context.HasValue && ClientName.Length > 0 ? $"{contextId} ({ClientName})" : contextId,
             SupportChat.Describe(Permissions),
-            monitorMissing ? string.Join(", ", missing) : "Cadastrar o ramal preferido de supervisão do usuário no portal",
+            monitorMissing ? string.Join(", ", missing) : "Register the user's preferred supervision extension in the portal",
             SupportChat.Reference(new Uri(Navigation.Uri).AbsolutePath) + $" · {blocked.Channel.Node} {BoardRuleEngine.EndpointKey(blocked.Channel.Key, true)}");
         if (!await JS.InvokeAsync<bool>("telephonyPanel.openSupport", Support.Payload(request, Text.Language, Dark)))
             Toast.Add(Text["The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp."], SUITone.Warning, 10000);

@@ -46,7 +46,7 @@ public sealed class SupportChat
         secret is null ? "" : Convert.ToHexStringLower(HMACSHA256.HashData(secret, Encoding.UTF8.GetBytes(identifier)));
 
     public static string Describe(CurrentAuthorization permissions) =>
-        $"manager={(permissions.Manager ? "sim" : "não")}; telephony.panel=[{string.Join(", ", permissions.PanelContexts.Order().Select(c => c.ToString("N")))}]; " +
+        $"manager={(permissions.Manager ? "yes" : "no")}; telephony.panel=[{string.Join(", ", permissions.PanelContexts.Order().Select(c => c.ToString("N")))}]; " +
         $"telephony.monitor=[{string.Join(", ", permissions.MonitorContexts.Order().Select(c => c.ToString("N")))}]";
 
     public static string Reference(string path) => $"telephony-panel {Release} · {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC · {path}";
@@ -64,8 +64,8 @@ public sealed class SupportChat
     {
         var contexts = KnownContexts(principal);
         return new("login-denied", principal?.FindFirst("sub")?.Value ?? "", DisplayName(principal), principal?.FindFirst("email")?.Value ?? "",
-            contexts.Length == 0 ? "não identificado" : string.Join(", ", contexts), Describe(permissions),
-            contexts.Length == 0 ? "telephony.panel:<contexto da empresa>" : string.Join(", ", contexts.Select(c => "telephony.panel:" + c)),
+            contexts.Length == 0 ? "unknown" : string.Join(", ", contexts), Describe(permissions),
+            contexts.Length == 0 ? "telephony.panel:<company context>" : string.Join(", ", contexts.Select(c => "telephony.panel:" + c)),
             Reference("/login"));
     }
 
@@ -98,12 +98,12 @@ public sealed class SupportChat
         },
         attributes = new Dictionary<string, string>
         {
-            ["painel_motivo"] = request.Reason,
-            ["painel_usuario"] = request.Subject,
-            ["painel_contexto"] = request.Context,
-            ["painel_permissoes"] = request.Permissions,
-            ["painel_pedido"] = request.Request,
-            ["painel_referencia"] = request.Reference
+            ["panel.reason"] = request.Reason,
+            ["panel.user"] = request.Subject,
+            ["panel.context"] = request.Context,
+            ["panel.permissions"] = request.Permissions,
+            ["panel.request"] = request.Request,
+            ["panel.reference"] = request.Reference
         }
     };
 }

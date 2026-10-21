@@ -3,14 +3,14 @@
 When access is insufficient, the panel opens the Hermes web chat (Chatwoot SDK, inbox
 "Atendimento") with the context support needs, instead of sending the user elsewhere.
 
-| Situation | Where | `painel_motivo` | `painel_pedido` |
+| Situation | Where | `panel.reason` | `panel.request` |
 |---|---|---|---|
 | Identity signed in, panel denied | "Talk to support" on the denial page | `login-denied` | `telephony.panel:<known context>` |
 | No supervision permission for the company | "Request access from support" beside the block reason | `monitor-missing` | missing `telephony.panel`/`telephony.monitor` grants |
 | No preferred supervision extension | same | `preferred-extension-missing` | register the preferred extension in the portal |
 
-Contact attributes also carry `painel_usuario` (Identity `sub`), `painel_contexto`,
-`painel_permissoes` (current grants) and `painel_referencia` (release, UTC time, path and, for
+Contact attributes also carry `panel.user` (Identity `sub`), `panel.context`,
+`panel.permissions` (current grants) and `panel.reference` (release, UTC time, path and, for
 channels, node + endpoint). Contact name/email are set with `setUser` only together with
 `identifier_hash` (HMAC-SHA256 of the `sub` with the inbox secret, computed on the server); without a
 verified subject the chat stays anonymous.

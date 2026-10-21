@@ -42,6 +42,8 @@ static class SupportChatChecks
             var json = JsonSerializer.Serialize(support.Payload(denied, "pt-BR", true));
             check(!json.Contains("test-secret") && json.Contains("8559e8e5e30c7af8") && json.Contains("\"locale\":\"pt_BR\""),
                 "Browser payload carries the per-user hash, never the HMAC secret");
+            check(json.Contains("\"panel.reason\":\"login-denied\"") && json.Contains("\"panel.request\"") && !json.Contains("painel_"),
+                "Support attributes use the English panel.* object keys");
             check(JsonSerializer.Serialize(support.Payload(denied with { Subject = "" }, "en", false)).Contains("\"user\":null"),
                 "Without a verified subject the chat stays anonymous");
         }

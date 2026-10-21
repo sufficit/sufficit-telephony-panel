@@ -147,8 +147,8 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
      Os atributos de conversa só valem depois da primeira mensagem.
    - **Decisões em aberto**:
      1) usar a caixa "Atendimento" ou criar uma caixa "Painel de Telefonia";
-     2) criar na conta 1 as definições de atributo de contato `painel_motivo`,
-        `painel_contexto`, `painel_permissoes`, `painel_pedido` e `painel_referencia`;
+     2) criar na conta 1 as definições de atributo de contato `panel.reason`,
+        `panel.context`, `panel.permissions`, `panel.request` e `panel.reference`;
      3) guardar o segredo HMAC da caixa no Vault do Identity e entregá-lo ao painel como
         credencial do systemd. Sem HMAC, `setUser` com identificador permitiria assumir
         o histórico de outro contato, então não será usado.
@@ -166,8 +166,8 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
    `telephony.panel` e `telephony.monitor` no contexto `026246a851a7485991e0b06e1bebb045`.
 
 Etapa 7 entregue em 21/10 (v0.14.0): caixa "Atendimento" (decisão do usuário); campos de contato
-`painel_motivo`, `painel_usuario`, `painel_contexto`, `painel_permissoes`, `painel_pedido` e
-`painel_referencia` criados na conta 1 do Hermes (ids 883–888, pelo modelo do Rails); segredo HMAC
+`panel.reason`, `panel.user`, `panel.context`, `panel.permissions`, `panel.request` e
+`panel.reference` criados na conta 1 do Hermes (ids 883–888, pelo modelo do Rails); segredo HMAC
 no Vault (`hermes/web-widget/atendimento-hmac`, contexto global) e em
 `/etc/sufficit/telephony-panel/hermes-widget-hmac`; drop-in `deploy/60-support-chat.conf`.
 Botões: "Falar com o suporte" no acesso negado (contexto em cookie protegido de 10 min, endpoint
