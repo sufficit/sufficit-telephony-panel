@@ -1,0 +1,21 @@
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.Monitor
+@* Observed channels with per-channel supervision. Authorization and confirmation stay in the owner. *@
+<div class="live-table-wrap" role="region" tabindex="0" aria-label="@Text["Observed channels, horizontally scrollable table"]">
+    <table class="live-table"><thead><tr><th>@Text["Channel"]</th><th>@Text["Channel state"]</th><th>@Text["Source → destination"]</th><th>@Text["Observed for"]</th><th>@Text["Server"]</th><th>@Text["Channel supervision"]</th></tr></thead><tbody>
+    @foreach (var channel in Channels)
+    {
+        var blocked = BlockReason(channel);
+        var linked = channel.Details.GetValueOrDefault("linkedid");
+        <tr @key="channel.Id"><td><strong>@Label(channel)</strong><small>@channel.Key</small><small>@(string.IsNullOrWhiteSpace(linked) ? Text["Uncorrelated"] : $"Linkedid: {linked}")</small></td><td>@Format.State(channel.State)<small>@Text.Format("Event {0}", channel.Updated.ToLocalTime().ToString("T", Text.Culture))</small></td><td>@LiveFormat.Display(channel.Caller) → @LiveFormat.Display(channel.Destination)</td><td class="numeric">@LiveFormat.Duration(channel.FirstSeen)</td><td>@channel.Node</td><td class="supervision-cell"><div class="call-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Listen))">@Text["Listen"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Whisper))">@Text["Whisper"]</SUIButton></div>@if (blocked is not null) { <small class="supervision-block-reason">@Text[blocked]</small> }</td></tr>
+    }
+    </tbody></table>
+</div>
+@code {
+    [Parameter, EditorRequired] public ObservedResource[] Channels { get; set; } = [];
+    [Parameter, EditorRequired] public Func<ObservedResource, string> Label { get; set; } = r => r.Key;
+    /// <summary>Untranslated reason key, or null when the channel may be supervised.</summary>
+    [Parameter, EditorRequired] public Func<ObservedResource, string?> BlockReason { get; set; } = _ => null;
+    [Parameter] public EventCallback<(ObservedResource Channel, TelephonyMonitorActionMode Mode)> Prepare { get; set; }
+    private LiveFormat Format => new(Text);
+}

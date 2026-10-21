@@ -52,12 +52,7 @@ else
         else if (Tab == "events")
         {
             <p class="muted">@Text["Latest observed event per resource. This diagnostic view is bounded, not a complete AMI event log."]</p>
-            <SUITable T="ObservedResource" Items="VisibleEvents.Skip(Page * PageSize).Take(PageSize)" Dense="true" StackOnMobile="true" ColumnCount="5">
-                <HeaderContent><SUITh>@Text["Server"]</SUITh><SUITh>@Text["Resource"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Last event"]</SUITh><SUITh>@Text["Details"]</SUITh></HeaderContent>
-                <RowTemplate><SUITd DataLabel="@Text["Server"]">@context.Node</SUITd><SUITd DataLabel="@Text["Resource"]">@context.Key</SUITd><SUITd DataLabel="@Text["Observed state"]">@ResourceState(context)</SUITd><SUITd DataLabel="@Text["Last event"]">@Timestamp(context.Updated)<br />@context.Peer?.LastEventType</SUITd>
-                    <SUITd DataLabel="@Text["Details"]"><details><summary>@Text["View details"]</summary>@foreach (var pair in context.Details) { <p>@pair.Key: @pair.Value</p> }</details></SUITd></RowTemplate>
-                <NoRecordsContent>@Text["No observed events match these filters."]</NoRecordsContent>
-            </SUITable>
+            <EventsView Items="VisibleEvents.Skip(Page * PageSize).Take(PageSize).ToArray()" />
         }
         else if (Tab == "calls")
         {
@@ -237,14 +232,6 @@ else
             </div>
         }
         </header>;
-    private RenderFragment RenderChannels(ObservedResource[] channels) => @<div class="live-table-wrap" role="region" tabindex="0" aria-label="@Text["Observed channels, horizontally scrollable table"]">
-        <table class="live-table"><thead><tr><th>@Text["Channel"]</th><th>@Text["Channel state"]</th><th>@Text["Source → destination"]</th><th>@Text["Observed for"]</th><th>@Text["Server"]</th><th>@Text["Channel supervision"]</th></tr></thead><tbody>
-        @foreach (var channel in channels)
-        {
-            var blocked = SupervisionBlockReason(channel);
-            <tr @key="channel.Id"><td><strong>@LabelFor(channel)</strong><small>@channel.Key</small><small>@(string.IsNullOrWhiteSpace(channel.Details.GetValueOrDefault("linkedid")) ? Text["Uncorrelated"] : $"Linkedid: {channel.Details["linkedid"]}")</small></td><td>@State(channel.State)<small>@Text.Format("Event {0}", channel.Updated.ToLocalTime().ToString("T", Text.Culture))</small></td><td>@Display(channel.Caller) → @Display(channel.Destination)</td><td class="numeric">@Duration(channel.FirstSeen)</td><td>@channel.Node</td><td class="supervision-cell"><div class="call-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare(channel, TelephonyMonitorActionMode.Listen)">@Text["Listen"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare(channel, TelephonyMonitorActionMode.Whisper)">@Text["Whisper"]</SUIButton></div>@if (blocked is not null) { <small class="supervision-block-reason">@Text[blocked]</small> }</td></tr>
-        }
-        </tbody></table>
-    </div>;
+    private RenderFragment RenderChannels(ObservedResource[] channels) => @<ChannelTable Channels="channels" Label="LabelFor" BlockReason="SupervisionBlockReason" Prepare="@(a => Prepare(a.Channel, a.Mode))" />;
     [Parameter] public bool Preview { get; set; }
 }

@@ -1,0 +1,12 @@
+@using Sufficit.Telephony.Panel.Operations
+@* Latest observed event per resource (bounded diagnostic view). *@
+<SUITable T="ObservedResource" Items="Items" Dense="true" StackOnMobile="true" ColumnCount="5">
+    <HeaderContent><SUITh>@Text["Server"]</SUITh><SUITh>@Text["Resource"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Last event"]</SUITh><SUITh>@Text["Details"]</SUITh></HeaderContent>
+    <RowTemplate><SUITd DataLabel="@Text["Server"]">@context.Node</SUITd><SUITd DataLabel="@Text["Resource"]">@context.Key</SUITd><SUITd DataLabel="@Text["Observed state"]">@Format.ResourceState(context)</SUITd><SUITd DataLabel="@Text["Last event"]">@Format.Timestamp(context.Updated)<br />@context.Peer?.LastEventType</SUITd>
+        <SUITd DataLabel="@Text["Details"]"><details><summary>@Text["View details"]</summary>@foreach (var pair in context.Details) { <p>@pair.Key: @pair.Value</p> }</details></SUITd></RowTemplate>
+    <NoRecordsContent>@Text["No observed events match these filters."]</NoRecordsContent>
+</SUITable>
+@code {
+    [Parameter, EditorRequired] public ObservedResource[] Items { get; set; } = [];
+    private LiveFormat Format => new(Text);
+}

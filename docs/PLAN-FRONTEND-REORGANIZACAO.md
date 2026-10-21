@@ -94,5 +94,12 @@ em popup) e o CSS morto (`client-heading`, `board-focus-toolbar`, `board-demo-la
 lista (Ramais/Chamadas/Canais/Eventos) e mover o CSS da mesa para `OperatorBoard.razor.css`;
 ambas exigem tirar helpers de estado/supervisão de `LiveOperations` primeiro.
 
+Continuação (21/10): formatação pura extraída para `Operations/LiveFormat.cs`; tabela de canais
+com supervisão em `ChannelTable` (usada em Chamadas, Canais e no popup do recurso) e eventos em
+`EventsView`; as 50 regras da mesa saíram de `panel.css` para `OperatorBoard.razor.css` (separação
+automática por seletor, comparação de pixels antes/depois idêntica salvo timestamps do fixture).
+Resta inline em `LiveOperations`: lista de Ramais/Troncos/Filas e grupos de Chamadas, que dependem
+do índice `Observation.ByCard` e do filtro de status; extrair só junto com um modelo de vista.
+
 Restrições: textos novos em `Localization/Portuguese.json`; nada de feature nova;
 `/board` (TV) não pode regredir; supervisão continua exigindo confirmação explícita.

@@ -15,6 +15,7 @@ namespace Sufficit.Telephony.Panel.Pages;
 // State, URL sync, data loading and supervision logic. Markup and render fragments live in LiveOperations.razor.
 public partial class LiveOperations
 {
+    private LiveFormat Format => new(Text);
     [Parameter] public bool BoardPage { get; set; }
     // Start in the requested area so the board is never mounted and torn down before the URL is applied.
     protected override void OnInitialized()
@@ -198,11 +199,7 @@ public partial class LiveOperations
     private string? QueueError;
     private QueueBoardSample[] QueueSamples = [];
     private PanelDiagnostic? Failure, SearchFailure, ActionFailure, BoardFailure, InventoryFailure, SupervisorFailure;
-    private static string PhaseLabel(string phase) => phase switch
-    {
-        "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent",
-        "answered" => "Answered in queue", "waiting" => "Waiting in queue", _ => "Observed call flow"
-    };
+    private static string PhaseLabel(string phase) => LiveFormat.PhaseLabel(phase);
     private ObservedResource[] rows = [];
     private ObservedCallGroup[] callGroups = [];
     private ObservedResource[] Rows
@@ -228,7 +225,7 @@ public partial class LiveOperations
     private DateTimeOffset? Since => Demo ? DateTimeOffset.UtcNow.AddMinutes(-8) : Connection?.ConnectedAt;
     private DateTimeOffset? LastEvent => Demo ? DateTimeOffset.UtcNow : Connection?.Projection.LastEvent;
     private bool Overflow => Connection?.Projection.Overflow == true;
-    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string Display(string? value) => LiveFormat.Display(value);
     private bool MatchText(string text) => string.IsNullOrWhiteSpace(Filter) || text.Contains(Filter, StringComparison.OrdinalIgnoreCase);
     private bool MatchNode(ObservedResource row) => Node == "all" || row.Node == Node;
     private EventsPanelCardInfo[] VisibleCards => Cards.Where(c => c.Kind == TabKind(Tab) && MatchText(c.Label + " " + string.Join(" ", c.Channels)) && ((Node == "all" && StatusFilter == "all") || Related(c).Any(MatchStatus))).OrderBy(c => c.Order).ThenBy(c => c.Label).ToArray();
@@ -236,7 +233,7 @@ public partial class LiveOperations
     private ObservedResource[] VisibleChannels => Rows.Where(r => r.Kind == "call" && MatchesChannel(r)).OrderByDescending(r => r.FirstSeen).ToArray();
     private bool MatchStatus(ObservedResource row) => StatusFilter switch { "all" => true, "online" or "offline" => row.Peer?.Reachability == StatusFilter, "registered" or "unregistered" => row.Peer?.Registration == StatusFilter, "unknown" => row.Kind == "peer" && (row.Peer is null || row.Peer.Registration == "unknown"), "busy" => row.Kind == "call" || row.Peer?.DeviceLabel is "Em uso" or "Ocupado" or "Tocando" or "Tocando em uso", _ => false };
     private static string CardKey(EventsPanelCardInfo card) => card.Kind + "|" + card.Label + "|" + string.Join(";", card.Channels);
-    private string Timestamp(DateTimeOffset? value) => value?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not reported"];
+    private string Timestamp(DateTimeOffset? value) => Format.Timestamp(value);
     private ObservedResource[] VisibleEvents => Observation.Rows.Where(r => MatchNode(r) && MatchStatus(r) && MatchText(r.Key + " " + r.Caller + " " + r.State)).OrderByDescending(r => r.Updated).ToArray();
     private int TotalVisible => Tab == "events" ? VisibleEvents.Length : Tab == "calls" ? VisibleGroups.Length : Tab == "channels" ? VisibleChannels.Length : VisibleCards.Length;
     private int Pages => Math.Max(1, (TotalVisible + PageSize - 1) / PageSize);
@@ -244,8 +241,8 @@ public partial class LiveOperations
     private string LabelFor(ObservedResource row) => Observation.Labels.GetValueOrDefault(row.Id, row.Key);
     private int Count(string tab) => tab == "events" ? VisibleEvents.Length : tab == "settings" ? BoardConfiguration.Rules.Length : tab == "board" ? VisibleTiles.Length : tab == "calls" ? VisibleGroups.Count(g => g.Correlated) : tab == "channels" ? VisibleChannels.Length : Cards.Count(c => c.Kind == TabKind(tab));
     private static EventsPanelCardKind TabKind(string tab) => tab switch { "trunks" => EventsPanelCardKind.TRUNK, "queues" => EventsPanelCardKind.QUEUE, _ => EventsPanelCardKind.PEER };
-    private string KindLabel(EventsPanelCardKind kind) => kind switch { EventsPanelCardKind.TRUNK => Text["Trunk"], EventsPanelCardKind.QUEUE => Text["Call queue"], _ => Text["Extension"] };
-    private static string Duration(DateTimeOffset from) => (DateTimeOffset.UtcNow - from).ToString(@"hh\:mm\:ss");
+    private string KindLabel(EventsPanelCardKind kind) => Format.KindLabel(kind);
+    private static string Duration(DateTimeOffset from) => LiveFormat.Duration(from);
     private string ResourceSummary(ObservedResource[] related)
     {
         if (related.Length == 0) return Text["No observed state"];
@@ -254,14 +251,10 @@ public partial class LiveOperations
         var calls = related.Count(r => r.Kind == "call");
         return (peer is null ? Text["Registration not reported"] + " · " : peer.Node + ": " + Text.Observed(peer.Peer?.RegistrationLabel ?? Text["Registration not reported"]) + " · " + ResourceState(peer) + " · ") + Text.Format("Observed channels: {0}", calls);
     }
-    private string DetailValue(string value) => value switch { "true" => Text["yes"], "false" => Text["no"], _ => value };
-    private string ResourceState(ObservedResource row) => row.Kind == "agent" ? row.State.ToLowerInvariant() switch
-    {
-        "1" or "notinuse" or "not_inuse" => Text["Idle in event"], "2" or "inuse" => Text["In use"], "3" or "busy" => Text["Busy"],
-        "4" or "invalid" => Text["Invalid"], "5" or "unavailable" => Text["Unavailable"], "6" or "ringing" => Text["Ringing"], "7" or "ringinuse" => Text["Ringing while in use"], "8" or "onhold" => Text["On hold"], "0" => Text["Unknown state"], _ => State(row.State)
-    } : Text.Observed(row.Peer?.ReachabilityLabel ?? State(row.State));
-    private string State(string value) => value.ToLowerInvariant() switch { "up" or "6" => Text["Channel answered"], "ringing" or "5" => Text["Ringing"], "ring" or "4" => Text["Calling"], "down" or "0" => Text["Inactive in event"], "reachable" or "registered" => Text["Available in event"], "unreachable" or "unregistered" => Text["Unavailable in event"], "unknown" or "" => Text["Not reported"], _ => value };
-    private string DetailLabel(string key) => key switch { "paused" => Text["paused"], "calls" => Text["Calls"], "completed" => Text["answered"], "abandoned" => Text["abandoned"], "holdtime" => Text["wait (s)"], "talktime" => Text["talk (s)"], "penalty" => Text["priority"], "strategy" => Text["strategy"], "membername" => Text["agent"], "interface" => "interface", "status" => "status", _ => key };
+    private string DetailValue(string value) => Format.DetailValue(value);
+    private string ResourceState(ObservedResource row) => Format.ResourceState(row);
+    private string State(string value) => Format.State(value);
+    private string DetailLabel(string key) => Format.DetailLabel(key);
     protected override async Task OnAfterRenderAsync(bool first)
     {
         FlushUrl();
