@@ -2,12 +2,18 @@
 <section class="queue-diagnostics" aria-label="@Text["Extension diagnostics"]">
     <h3>@Text["Extension presence and registrations"]</h3>
     <p class="muted">@Text["Registration and queue membership are independent. History contains observed changes, not exact SIP message times."]</p>
+    <p class="muted">@Text["Extensions not watched by presence receive queue calls without a presence check."]</p>
     <SUITable T="QueueAgentOverview" Items="Agents.Skip(Page*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="8">
         <HeaderContent><SUITh>@Text["Extension"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Contact IP"]</SUITh><SUITh>@Text["Declared device"]</SUITh><SUITh>@Text["Registration"]</SUITh><SUITh>@Text["Reachability"]</SUITh><SUITh>@Text["Usage"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
         <RowTemplate Context="agent">
             <SUITd DataLabel="@Text["Extension"]"><code>@agent.Extension</code></SUITd>
             <SUITd DataLabel="@Text["Observed state"]">@Text[agent.State(DateTimeOffset.UtcNow)]<SUIText Typo="SUITypo.caption">@Time(agent.ObservedAt) · @Math.Max(0,(int)(DateTimeOffset.UtcNow-agent.ObservedAt).TotalSeconds) s</SUIText>
                 @if (agent.Observations.Any(o => !o.Fresh || !o.Agent.Fresh(DateTimeOffset.UtcNow))) { <SUIText Typo="SUITypo.caption">@Text["Includes historical readings"]</SUIText> }
+                @if (agent.UnwatchedNodes.Length > 0)
+                {
+                    <SUIText Typo="SUITypo.caption">@(agent.WatchedNodes.Length == 0 ? Text["Not watched by presence: queues ring it without a presence check"]
+                        : $"{Text["Presence watched only on"]} {string.Join(", ", agent.WatchedNodes)}; {Text["queues ring it without a presence check on"]} {string.Join(", ", agent.UnwatchedNodes)}")</SUIText>
+                }
             </SUITd>
             <SUITd DataLabel="@Text["Contact IP"]">@Contacts(agent.Contacts, c => c.IpAddress)</SUITd>
             <SUITd DataLabel="@Text["Declared device"]">@Contacts(agent.Contacts, c => c.UserAgent)</SUITd>

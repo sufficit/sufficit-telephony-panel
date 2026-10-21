@@ -585,5 +585,9 @@
   "A supervision request is already in progress.": "Já há uma solicitação de supervisão em andamento.",
   "Your account does not have supervision permission for this company.": "Sua conta não tem permissão de supervisão para esta empresa.",
   "Your session or permissions no longer allow this operation. Sign in again or contact an administrator.": "Sua sessão ou suas permissões não permitem mais esta operação. Entre novamente ou contate um administrador.",
-  "Could not load your supervision extension. Reconnect and refresh to try again.": "Não foi possível consultar seu ramal de supervisão. Use Reconectar e atualizar para tentar novamente."
+  "Could not load your supervision extension. Reconnect and refresh to try again.": "Não foi possível consultar seu ramal de supervisão. Use Reconectar e atualizar para tentar novamente.",
+  "Extensions not watched by presence receive queue calls without a presence check.": "Ramais sem monitoramento de presença recebem chamadas das filas sem checagem de presença.",
+  "Not watched by presence: queues ring it without a presence check": "Sem monitoramento de presença: as filas chamam este ramal sem checagem de presença",
+  "Presence watched only on": "Presença monitorada só em",
+  "queues ring it without a presence check on": "as filas chamam sem checagem de presença em"
 }

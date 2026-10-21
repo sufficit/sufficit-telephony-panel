@@ -6,7 +6,10 @@ public sealed record QueueRegistration(DateTimeOffset ObservedAt, string Event, 
     bool? Reachable, QueueContact[]? Contacts);
 public sealed record QueueAgentPresence(string ContextId, string Extension, DateTimeOffset ObservedAt,
     bool? Registered, bool? Reachable, bool? Busy, QueueContact[]? Contacts = null,
-    QueueRegistration[]? RegistrationHistory = null, DateTimeOffset? HistorySince = null)
+    QueueRegistration[]? RegistrationHistory = null, DateTimeOffset? HistorySince = null,
+    // False: no presence source on that node watches the extension, so queues ring it without a presence check.
+    // Older nodes omit the field and check every extension.
+    bool Monitored = true)
 {
     public bool Fresh(DateTimeOffset now) => ObservedAt >= now.AddSeconds(-15) && ObservedAt <= now.AddSeconds(2);
     public string State(DateTimeOffset now, bool sourceFresh) => !sourceFresh || !Fresh(now) ? "No current data"

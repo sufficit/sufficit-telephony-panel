@@ -19,6 +19,8 @@ public sealed record QueueOverview(Guid ContextId, string QueueId, QueueObservat
 public sealed record QueueAgentOverview(Guid ContextId, string Extension, QueueAgentObservation[] Observations)
 {
     public string Key => ContextId.ToString("N") + ":" + Extension;
+    public string[] WatchedNodes => Observations.Where(o => o.Agent.Monitored).Select(o => o.Source.Node).Distinct().ToArray();
+    public string[] UnwatchedNodes => Observations.Where(o => !o.Agent.Monitored).Select(o => o.Source.Node).Distinct().ToArray();
     public string State(DateTimeOffset now)
     {
         var states = Observations.Where(o => o.Fresh && o.Agent.Fresh(now)).Select(o => o.Agent.State(now, true)).Distinct().ToArray();
