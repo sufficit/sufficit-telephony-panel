@@ -32,6 +32,10 @@ internal static class BoardConfigurationChecks
         check(BoardRuleEngine.Apply(tiles, config with { ShowUnmatched = false }).Length == 2, "Unmatched resources can be hidden");
         check(BoardRuleEngine.Apply(tiles, config with { Rules = [trunk with { Enabled = false }] }).Length == 5, "Disabled rules do not match");
         check(BoardRuleEngine.EndpointKey("SIP/in-dtr-67", true) == "SIP/in-dtr-67", "Numbered endpoint is not stripped");
+        check(BoardRuleEngine.EndpointKey("IAX2/gateway-phonevox-10359", true) == "IAX2/gateway-phonevox", "IAX2 call number is stripped from channels");
+        check(BoardRuleEngine.EndpointKey("IAX2/143.208.224.21:26497-8551", true) == "IAX2/143.208.224.21:26497", "Host-addressed IAX2 channel groups by host");
+        check(BoardRuleEngine.EndpointKey("IAX2/trunk-2", false) == "IAX2/trunk-2", "IAX2 peer identity is never stripped");
+        check(BoardRuleEngine.EndpointKey("PJSIP/6007-000000ab", true) == "PJSIP/6007", "PJSIP channel suffix still stripped");
         check(!BoardRuleEngine.Matches(trunk, "SIP/wa-a", "eveo"), "SIP and PJSIP are not conflated");
         check(BoardRuleEngine.Apply([], config).Length == 0, "Configured identifiers do not invent unauthorized tiles");
         var mixed = new OperatorTile("mixed", "Portal aliases", "eveo", EventsPanelCardKind.PEER, [a, b]);

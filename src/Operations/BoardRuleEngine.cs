@@ -13,8 +13,13 @@ public static class BoardRuleEngine
     public static string EndpointKey(string key, bool channel)
     {
         var dash = key.LastIndexOf('-');
-        return channel && dash > 0 && key.Length - dash == 9 && key[(dash + 1)..].All(Uri.IsHexDigit)
-            ? key[..dash] : key;
+        if (!channel || dash <= 0) return key;
+        var suffix = key[(dash + 1)..];
+        // Channel names carry a per-call suffix: SIP/PJSIP use 8 hex digits, IAX2 uses the
+        // decimal call number (1..32767). Without stripping it every IAX2 call became a card.
+        var callSuffix = suffix.Length == 8 && suffix.All(Uri.IsHexDigit)
+            || key.StartsWith("IAX2/", StringComparison.Ordinal) && suffix.Length is >= 1 and <= 5 && suffix.All(char.IsAsciiDigit);
+        return callSuffix ? key[..dash] : key;
     }
 
     public static bool Matches(BoardRule rule, string key, string node) => rule.Enabled
