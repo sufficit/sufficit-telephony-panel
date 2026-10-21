@@ -8,6 +8,8 @@ internal static class OperatorBoardChecks
         var now = DateTimeOffset.UtcNow;
         var peer = new ObservedResource("peer", "eveo", "peer", "PJSIP/6007", "unknown", "", "", null, now, now, new Dictionary<string, string>());
         check(OperatorTile.Describe([]).Tone == "unknown", "Missing observations are not green availability");
+        check(OperationsApi.FallbackLabel(["^SIP/0000286651"]) == "SIP/0000286651", "Blank portal description falls back to the endpoint identifier");
+        check(OperationsApi.FallbackLabel([]) == "—", "Card without channels still gets a visible title");
         check(OperatorTile.Describe([peer with { Peer = new() { Registration = "registered" } }]).Label == "Registrado no evento", "Registration not relabeled free");
         check(OperatorTile.Describe([peer with { Peer = new() { Reachability = "offline" } }]).Tone == "offline", "Negative reachability retains distinct state");
         check(OperatorTile.Describe([peer with { Kind = "call", State = "Down" }]).Tone == "busy", "Observed Down channel not treated as a free extension");

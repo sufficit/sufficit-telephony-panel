@@ -43,8 +43,15 @@ public sealed class OperationsApi(IHttpClientFactory clients)
         if (cards.Length > 2000) throw new InvalidOperationException("Há mais de 2.000 recursos. Selecione um cliente para reduzir a consulta.");
         if (cards.Any(c => c.Channels is null || c.Channels.Count > 64 || c.Label is null || c.Label.Length > 256 || c.Channels.Any(p => p is null || p.Length > 256)))
             throw new InvalidOperationException("O cadastro de recursos excede os limites de segurança do painel. Revise os identificadores no portal.");
+        // The portal titles cards with the extension description, which may be empty.
+        // Never render a blank card: fall back to the endpoint identifier the operator dials.
+        foreach (var card in cards.Where(c => string.IsNullOrWhiteSpace(c.Label)))
+            card.Label = FallbackLabel(card.Channels);
         return cards;
     }
+    /// <summary>Card channels are anchored patterns such as <c>^SIP/0000286651</c>; show them without regex syntax.</summary>
+    public static string FallbackLabel(IEnumerable<string> channels) =>
+        channels.Select(c => c.TrimStart('^').TrimEnd('$')).FirstOrDefault(c => c.Length > 0) ?? "—";
     public Task<JsonElement> Search(string token, string text, CancellationToken ct) =>
         Send(token, "contact/search?results=20&filter=" + Uri.EscapeDataString(text[..Math.Min(text.Length, 100)]), ct);
     public async Task<(Guid Id, string Title)?> Supervisor(string token, CancellationToken ct)
