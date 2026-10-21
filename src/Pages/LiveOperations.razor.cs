@@ -383,21 +383,26 @@ public partial class LiveOperations
         await RefreshInventory();
     }
     /// <summary>Opens the Hermes chat with what support needs to unblock supervision of this channel.</summary>
-    private async Task OpenSupport((ObservedResource Channel, string Reason) blocked)
+    private Task OpenSupport((ObservedResource Channel, string Reason) blocked) => OpenSupport(
+        blocked.Reason.StartsWith("Your account", StringComparison.Ordinal) ? "monitor-missing" : "preferred-extension-missing",
+        TargetContext(blocked.Channel), $"{blocked.Channel.Node} {BoardRuleEngine.EndpointKey(blocked.Channel.Key, true)}");
+
+    /// <summary>Supervision dialog on the board: the only permission block there is the missing preferred extension.</summary>
+    private Task OpenBoardSupport(OperatorTile tile) => OpenSupport("preferred-extension-missing",
+        Context ?? (Guid.TryParse(tile.Rows.FirstOrDefault()?.Account, out var id) ? id : Guid.Empty), $"{tile.Node} {tile.Title}");
+
+    private async Task OpenSupport(string reason, Guid context, string resource)
     {
         var user = (await Authentication.GetAuthenticationStateAsync()).User;
-        var context = TargetContext(blocked.Channel);
         var contextId = context == Guid.Empty ? "unknown" : context.ToString("N");
-        var monitorMissing = blocked.Reason.StartsWith("Your account", StringComparison.Ordinal);
         var missing = new List<string>();
-        if (monitorMissing && !Permissions.CanRead(context)) missing.Add("telephony.panel:" + contextId);
-        if (monitorMissing && !Permissions.CanMonitor(context)) missing.Add("telephony.monitor:" + contextId);
-        var request = new SupportRequest(monitorMissing ? "monitor-missing" : "preferred-extension-missing",
-            user.FindFirst("sub")?.Value ?? "", SupportChat.DisplayName(user), user.FindFirst("email")?.Value ?? "",
+        if (reason == "monitor-missing" && !Permissions.CanRead(context)) missing.Add("telephony.panel:" + contextId);
+        if (reason == "monitor-missing" && !Permissions.CanMonitor(context)) missing.Add("telephony.monitor:" + contextId);
+        var request = new SupportRequest(reason, user.FindFirst("sub")?.Value ?? "", SupportChat.DisplayName(user), user.FindFirst("email")?.Value ?? "",
             Context.HasValue && ClientName.Length > 0 ? $"{contextId} ({ClientName})" : contextId,
             SupportChat.Describe(Permissions),
-            monitorMissing ? string.Join(", ", missing) : "Register the user's preferred supervision extension in the portal",
-            SupportChat.Reference(new Uri(Navigation.Uri).AbsolutePath) + $" · {blocked.Channel.Node} {BoardRuleEngine.EndpointKey(blocked.Channel.Key, true)}");
+            reason == "monitor-missing" ? string.Join(", ", missing) : "Register the user's preferred supervision extension in the portal",
+            SupportChat.Reference(new Uri(Navigation.Uri).AbsolutePath) + " · " + resource);
         if (!await JS.InvokeAsync<bool>("telephonyPanel.openSupport", Support.Payload(request, Text.Language, Dark)))
             Toast.Add(Text["The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp."], SUITone.Warning, 10000);
     }

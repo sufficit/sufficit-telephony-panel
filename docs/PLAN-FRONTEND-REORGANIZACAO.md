@@ -172,5 +172,5 @@ no Vault (`hermes/web-widget/atendimento-hmac`, contexto global) e em
 `/etc/sufficit/telephony-panel/hermes-widget-hmac`; drop-in `deploy/60-support-chat.conf`.
 Botões: "Falar com o suporte" no acesso negado (contexto em cookie protegido de 10 min, endpoint
 `/support/denied`) e "Pedir acesso ao suporte" ao lado dos bloqueios de permissão de supervisão e de
-ramal preferido (tabela de canais, chamadas e popup do recurso). Pendente: o diálogo de supervisão da
-mesa (`BoardSupervisionDialog`) ainda não tem o botão.
+ramal preferido (tabela de canais, chamadas e popup do recurso). O diálogo de supervisão da mesa
+(`BoardSupervisionDialog`) ganhou o botão em 21/10 (v0.14.3) para o caso de ramal preferido ausente.

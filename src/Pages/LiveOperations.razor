@@ -184,7 +184,7 @@ else
             <OperatorBoard Compact="true" HeaderTools="FilterTrigger" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" Page="Page" PageChanged="SetBoardPage" />
             @if (BoardAction is { } action)
             {
-                <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" SupervisorFailure="SupervisorFailure" Closed="() => BoardAction = null" />
+                <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" SupervisorFailure="SupervisorFailure" Closed="() => BoardAction = null" Support="@(Support.Enabled ? EventCallback.Factory.Create(this, () => OpenBoardSupport(action.Tile)) : default)" />
             }
             @if (SelectedTile is { } tile)
             {

@@ -48,6 +48,7 @@
         <p>@(Supervisor is { } supervisor ? Text.Format("Your extension {0} will be called. Answer it to begin. Use only with operational authorization.", supervisor.Title)
             : Text[SupervisorFailure is not null ? "Could not load your supervision extension. Reconnect and refresh to try again." : "Set your preferred extension in the portal to enable supervision."])</p>
         <ErrorDetails Diagnostic="SupervisorFailure" />
+        @if (Supervisor is null && SupervisorFailure is null && Support.HasDelegate) { <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="Support">@Text["Request access from support"]</SUIButton> }
         @if (Message is not null) { <SUIAlert ToneValue="@(Failed ? SUITone.Warning : SUITone.Info)" role="status">@Text.Observed(Message)<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
         @if (!Submitted)
         {
@@ -66,6 +67,8 @@
     [Parameter] public PanelDiagnostic? SupervisorFailure { get; set; }
     [Parameter] public (Guid Id, string Title)? Supervisor { get; set; }
     [Parameter] public EventCallback Closed { get; set; }
+    /// <summary>Opens the support chat when supervision is blocked by a missing preferred extension.</summary>
+    [Parameter] public EventCallback Support { get; set; }
     private readonly CancellationTokenSource lifetime = new();
     private string ChannelId = "", PrefixId = "";
     private bool Sending, Submitted, Failed;

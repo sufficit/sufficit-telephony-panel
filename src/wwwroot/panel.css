@@ -340,3 +340,4 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
 .board-options > p { font-size:13px; margin:8px 0 0; }
 .signed-user { font-size:13px; color:var(--sui-text-secondary); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 4px; }
 @media(max-width:600px) { .signed-user { max-width:120px; } }
+.entry aside .sui-btn { margin:4px 0 16px; }
