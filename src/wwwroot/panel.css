@@ -344,3 +344,26 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
 .board-blocked { max-width:640px; margin:12vh auto; padding:24px; border:1px solid var(--sui-border-strong); border-radius:8px; background:var(--sui-surface-2); }
 .board-blocked h2 { font-size:20px; }
 .board-blocked .tools { margin-top:16px; flex-wrap:wrap; }
+
+/* Filter popover: status first, then filters, context, actions and advanced sections, each separated. */
+.board-options > p.board-options-status { display:flex; align-items:center; gap:6px; font-size:13px; margin:0 0 16px; }
+.board-options .board-filter-header { padding-bottom:8px; }
+.board-options .company-filter, .board-options .board-retention, .board-options .observation-details { border-top:1px solid var(--sui-border); margin:0; padding-top:8px; }
+.board-options .board-options-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2px 8px; margin:0; padding:8px 0; border-top:1px solid var(--sui-border); }
+.board-options .board-options-actions .sui-btn { justify-content:flex-start; }
+.board-options-note { font-size:12px; color:var(--sui-text-secondary); margin:8px 0 0; }
+/* Phones: one compact header row (icon + actions), area navigation below. */
+@media(max-width:600px) {
+ .panel-header .brand span { display:none; }
+ .panel-header { flex-wrap:wrap; row-gap:0; padding:6px 0; }
+ .panel-header .header-actions { flex-wrap:nowrap; margin-left:auto; }
+ .panel-header .language-picker { min-width:108px; max-width:120px; }
+ .panel-header .header-actions .sui-btn, .panel-header .signout { font-size:13px; padding:6px 8px; }
+ .panel-navigation a { padding:10px 10px; font-size:13px; }
+}
+@media(max-width:600px) {
+ .live-panel .heading .tools { width:auto; gap:2px; }
+ .live-panel .heading .tools > * { flex:0 0 auto; }
+ .live-panel .heading .tools .sui-btn { font-size:13px; padding:6px 10px; min-height:0; }
+ .live-panel .section-hint, .live-panel > .operations-scope > .muted { font-size:12px; }
+}

@@ -107,6 +107,7 @@
   "The board could not be loaded": "Não foi possível carregar a mesa",
   "Your account does not have access to company {0}. Only the companies granted to you can be opened here.": "Sua conta não tem acesso à empresa {0}. Só é possível abrir aqui as empresas liberadas para você.",
   "Open my companies": "Abrir minhas empresas",
+  "{0} results with current filters": "{0} resultados com os filtros atuais",
   "Talk to support": "Falar com o suporte",
   "Request access from support": "Pedir acesso ao suporte",
   "The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp.": "Não foi possível abrir o chat de suporte. Entre novamente para atualizar o pedido ou fale com o suporte pelo WhatsApp.",
