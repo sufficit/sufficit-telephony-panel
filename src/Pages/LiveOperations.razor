@@ -12,6 +12,9 @@
 @inject BoardInventoryAccess InventoryAccess
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject SupportChat Support
+@inject AuthenticationStateProvider Authentication
+@inject Sufficit.Blazor.UI.Services.ISUIToast Toast
 
 @if (Fill)
 {
@@ -232,6 +235,6 @@ else
             </div>
         }
         </header>;
-    private RenderFragment RenderChannels(ObservedResource[] channels) => @<ChannelTable Channels="channels" Label="LabelFor" BlockReason="SupervisionBlockReason" Prepare="@(a => Prepare(a.Channel, a.Mode))" />;
+    private RenderFragment RenderChannels(ObservedResource[] channels) => @<ChannelTable Channels="channels" Label="LabelFor" BlockReason="SupervisionBlockReason" Prepare="@(a => Prepare(a.Channel, a.Mode))" Support="@(Support.Enabled ? EventCallback.Factory.Create<(ObservedResource Channel, string Reason)>(this, OpenSupport) : default)" />;
     [Parameter] public bool Preview { get; set; }
 }

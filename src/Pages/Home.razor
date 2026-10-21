@@ -11,6 +11,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider Authentication
 @inject Sufficit.Blazor.UI.Services.ISUIToast Toast
+@inject SupportChat Support
 
 <PageTitle>@Text["Telephony · Sufficit Panel"]</PageTitle>
 <CascadingValue Name="PanelLanguage" Value="Text.Language">
@@ -54,7 +55,8 @@
             <div><h1>@Text["Telephony under observation."]</h1><p>@Text["An operational view of the Apoint, Eveo and Google PBXs. Connection, load and history together, with the source and age of each reading."]</p>
             <SUIButton Href="@LoginUrl" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
             <aside><h2>@Text["Authorized access"]</h2><p>@Text["Sign in to view your authorized contexts. Permissions are checked on the server."]</p>
-            @if (LoginDenied) { <SUIAlert ToneValue="SUITone.Warning">@Text["Your Sufficit account signed in, but it has no access to the Telephony Panel. Ask a manager to grant access, or sign in with another account."]</SUIAlert> }
+            @if (LoginDenied) { <SUIAlert ToneValue="SUITone.Warning">@Text["Your Sufficit account signed in, but it has no access to the Telephony Panel. Ask a manager to grant access, or sign in with another account."]</SUIAlert>
+                @if (Support.Enabled) { <SUIButton OnClick="OpenDeniedSupport" VariantValue="SUIVariant.Outlined">@Text["Talk to support"]</SUIButton> } }
             @if (LoginFailed) { <SUIAlert ToneValue="SUITone.Warning">@Text["Sign-in could not be completed. Try again; if it persists, ask the team to check the application's Identity registration."]</SUIAlert> }
             <p class="muted">@Text["Listening and whispering require a separate supervision permission."]</p></aside>
         </section>
@@ -260,6 +262,11 @@
     private async Task Select(string node) { if (Busy) return; Selected = node; await ReadHistory(); }
     private async Task ChangeMetric(string value) { Metric = value; await ReadHistory(); }
     private async Task ChangeHours(int value) { Hours = value; await ReadHistory(); }
+    private async Task OpenDeniedSupport()
+    {
+        if (!await JS.InvokeAsync<bool>("telephonyPanel.openDeniedSupport", Text.Language, Dark))
+            Toast.Add(Text["The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp."], SUITone.Warning, 10000);
+    }
     private async Task ToggleTheme() { Dark = !Dark; await JS.InvokeVoidAsync("telephonyPanel.theme", Dark); }
     private async Task ToggleSound() { Sound = !Sound; if (Sound) await JS.InvokeVoidAsync("telephonyPanel.enableSound"); }
     private string AlertTitle(string name) => name switch

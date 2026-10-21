@@ -106,7 +106,7 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
 
 ## Próximas etapas (pedido do usuário em 21/10)
 
-7. [pendente] **Suporte em contexto pelo web chat do Hermes** quando faltar permissão.
+7. [concluído 21/10] **Suporte em contexto pelo web chat do Hermes** quando faltar permissão.
    Em vez de mandar o usuário ao WhatsApp, o painel abre direto o chat de suporte do Hermes
    (SDK `https://chatwoot.sufficit.com.br/packs/js/sdk.js`, o mesmo usado em
    `sufficit-web/src/Scripts/SufficitChatWoot.js`), já com o contexto preenchido para o
@@ -164,3 +164,13 @@ Restrições: textos novos em `Localization/Portuguese.json`; nada de feature no
    Aplicado nos 3 nós em 21/10 (backup e registro em `sufficit-identity/docs/activities/202610211105-server-resolved-entitlement-keys.md`).
    Pendente: validar o login de cliente com `teste@sufficit.com.br`, que já tem
    `telephony.panel` e `telephony.monitor` no contexto `026246a851a7485991e0b06e1bebb045`.
+
+Etapa 7 entregue em 21/10 (v0.14.0): caixa "Atendimento" (decisão do usuário); campos de contato
+`painel_motivo`, `painel_usuario`, `painel_contexto`, `painel_permissoes`, `painel_pedido` e
+`painel_referencia` criados na conta 1 do Hermes (ids 883–888, pelo modelo do Rails); segredo HMAC
+no Vault (`hermes/web-widget/atendimento-hmac`, contexto global) e em
+`/etc/sufficit/telephony-panel/hermes-widget-hmac`; drop-in `deploy/60-support-chat.conf`.
+Botões: "Falar com o suporte" no acesso negado (contexto em cookie protegido de 10 min, endpoint
+`/support/denied`) e "Pedir acesso ao suporte" ao lado dos bloqueios de permissão de supervisão e de
+ramal preferido (tabela de canais, chamadas e popup do recurso). Pendente: o diálogo de supervisão da
+mesa (`BoardSupervisionDialog`) ainda não tem o botão.

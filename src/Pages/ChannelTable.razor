@@ -7,7 +7,7 @@
     {
         var blocked = BlockReason(channel);
         var linked = channel.Details.GetValueOrDefault("linkedid");
-        <tr @key="channel.Id"><td><strong>@Label(channel)</strong><small>@channel.Key</small><small>@(string.IsNullOrWhiteSpace(linked) ? Text["Uncorrelated"] : $"Linkedid: {linked}")</small></td><td>@Format.State(channel.State)<small>@Text.Format("Event {0}", channel.Updated.ToLocalTime().ToString("T", Text.Culture))</small></td><td>@LiveFormat.Display(channel.Caller) → @LiveFormat.Display(channel.Destination)</td><td class="numeric">@LiveFormat.Duration(channel.FirstSeen)</td><td>@channel.Node</td><td class="supervision-cell"><div class="call-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Listen))">@Text["Listen"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Whisper))">@Text["Whisper"]</SUIButton></div>@if (blocked is not null) { <small class="supervision-block-reason">@Text[blocked]</small> }</td></tr>
+        <tr @key="channel.Id"><td><strong>@Label(channel)</strong><small>@channel.Key</small><small>@(string.IsNullOrWhiteSpace(linked) ? Text["Uncorrelated"] : $"Linkedid: {linked}")</small></td><td>@Format.State(channel.State)<small>@Text.Format("Event {0}", channel.Updated.ToLocalTime().ToString("T", Text.Culture))</small></td><td>@LiveFormat.Display(channel.Caller) → @LiveFormat.Display(channel.Destination)</td><td class="numeric">@LiveFormat.Duration(channel.FirstSeen)</td><td>@channel.Node</td><td class="supervision-cell"><div class="call-actions"><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Listen))">@Text["Listen"]</SUIButton><SUIButton VariantValue="SUIVariant.Text" Disabled="@(blocked is not null)" OnClick="() => Prepare.InvokeAsync((channel, TelephonyMonitorActionMode.Whisper))">@Text["Whisper"]</SUIButton></div>@if (blocked is not null) { <small class="supervision-block-reason">@Text[blocked]</small>@if (Support.HasDelegate && SupportReasons.Contains(blocked)) { <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="() => Support.InvokeAsync((channel, blocked))">@Text["Request access from support"]</SUIButton> } }</td></tr>
     }
     </tbody></table>
 </div>
@@ -17,5 +17,9 @@
     /// <summary>Untranslated reason key, or null when the channel may be supervised.</summary>
     [Parameter, EditorRequired] public Func<ObservedResource, string?> BlockReason { get; set; } = _ => null;
     [Parameter] public EventCallback<(ObservedResource Channel, TelephonyMonitorActionMode Mode)> Prepare { get; set; }
+    /// <summary>Opens the support chat for a permission-related block (channel, untranslated reason).</summary>
+    [Parameter] public EventCallback<(ObservedResource Channel, string Reason)> Support { get; set; }
+    /// <summary>Reasons support can resolve by granting access or registering data; other blocks are operational.</summary>
+    public static readonly HashSet<string> SupportReasons = ["Your account does not have supervision permission for this company.", "Set your preferred extension in the portal to enable supervision."];
     private LiveFormat Format => new(Text);
 }

@@ -2,6 +2,8 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components.Authorization;
+using Sufficit.Blazor.UI.Components;
 using Sufficit.Identity.Authorization;
 using Sufficit.Telephony.EventsPanel;
 using Sufficit.Telephony.Monitor;
@@ -379,6 +381,25 @@ public partial class LiveOperations
         Cards = Observation.Cards;
         Rows = Observation.Rows;
         await RefreshInventory();
+    }
+    /// <summary>Opens the Hermes chat with what support needs to unblock supervision of this channel.</summary>
+    private async Task OpenSupport((ObservedResource Channel, string Reason) blocked)
+    {
+        var user = (await Authentication.GetAuthenticationStateAsync()).User;
+        var context = TargetContext(blocked.Channel);
+        var contextId = context == Guid.Empty ? "não identificado" : context.ToString("N");
+        var monitorMissing = blocked.Reason.StartsWith("Your account", StringComparison.Ordinal);
+        var missing = new List<string>();
+        if (monitorMissing && !Permissions.CanRead(context)) missing.Add("telephony.panel:" + contextId);
+        if (monitorMissing && !Permissions.CanMonitor(context)) missing.Add("telephony.monitor:" + contextId);
+        var request = new SupportRequest(monitorMissing ? "monitor-missing" : "preferred-extension-missing",
+            user.FindFirst("sub")?.Value ?? "", SupportChat.DisplayName(user), user.FindFirst("email")?.Value ?? "",
+            Context.HasValue && ClientName.Length > 0 ? $"{contextId} ({ClientName})" : contextId,
+            SupportChat.Describe(Permissions),
+            monitorMissing ? string.Join(", ", missing) : "Cadastrar o ramal preferido de supervisão do usuário no portal",
+            SupportChat.Reference(new Uri(Navigation.Uri).AbsolutePath) + $" · {blocked.Channel.Node} {BoardRuleEngine.EndpointKey(blocked.Channel.Key, true)}");
+        if (!await JS.InvokeAsync<bool>("telephonyPanel.openSupport", Support.Payload(request, Text.Language, Dark)))
+            Toast.Add(Text["The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp."], SUITone.Warning, 10000);
     }
     private Guid TargetContext(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
     private void ClearAuthorizedState()

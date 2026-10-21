@@ -8,6 +8,7 @@ var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PanelTextChecks.Run(Check);
 PanelDiagnosticChecks.Run(Check);
+SupportChatChecks.Run(Check);
 RegistrationChecks.Run(Check);
 QueueDiagnosticChecks.Run(Check);
 await AccountingChecks.Run(Check);

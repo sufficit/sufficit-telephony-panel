@@ -89,6 +89,7 @@ builder.Services.AddScoped<BoardConfigurationAccess>();
 builder.Services.AddSingleton(new BoardInventoryStore(builder.Configuration["Panel:BoardInventoryFile"]
     ?? "/var/lib/sufficit-telephony-panel/known-resources.json"));
 builder.Services.AddScoped<BoardInventoryAccess>();
+builder.Services.AddSingleton<SupportChat>();
 builder.Services.AddScoped<Sufficit.Blazor.UI.Services.ISUIToast, Sufficit.Blazor.UI.Services.SUIToastService>();
 builder.Services.AddAuthentication(o =>
 {
@@ -151,6 +152,10 @@ builder.Services.AddAuthentication(o =>
         if (!permissions.PanelAllowed)
         {
             log.LogWarning("Sign-in denied: subject {Subject} has no panel permission", subject ?? "unknown");
+            // Keep only what support needs (no tokens) for 10 minutes, so the denial page can open the chat.
+            var support = ctx.HttpContext.RequestServices.GetRequiredService<SupportChat>();
+            ctx.Response.Cookies.Append(SupportChat.DeniedCookie, support.ProtectDenied(SupportChat.Denied(ctx.Principal, permissions)), new CookieOptions
+            { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromMinutes(10), Path = pathBase.Length > 0 ? pathBase : "/" });
             ctx.HandleResponse();
             ctx.Response.Redirect(pathBase + "/?login=denied");
             return;
@@ -218,6 +223,14 @@ app.MapGet("/login", async (HttpContext ctx) =>
         ctx.Response.Headers["Cache-Control"] = "no-store";
         ctx.Response.Redirect(pathBase + "/?login=failed");
     }
+});
+// Support chat context for a denied sign-in: read from the short-lived protected cookie, never from query input.
+app.MapGet("/support/denied", (HttpContext ctx, SupportChat support) =>
+{
+    if (!support.Enabled) return Results.NotFound();
+    var request = support.UnprotectDenied(ctx.Request.Cookies[SupportChat.DeniedCookie]);
+    return request is null ? Results.NotFound()
+        : Results.Ok(support.Payload(request, ctx.Request.Query["locale"] == "pt-BR" ? "pt-BR" : "en", ctx.Request.Query["dark"] == "true"));
 });
 app.MapPost("/logout", async (HttpContext ctx) =>
 {

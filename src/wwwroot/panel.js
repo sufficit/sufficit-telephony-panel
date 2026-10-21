@@ -19,7 +19,42 @@ window.telephonyPanel = (() => {
         tone.start(); tone.stop(audio.currentTime + .32);
         tone.onended = () => { tone.disconnect(); gain.disconnect(); };
     };
+    // Hermes web chat (Chatwoot SDK), loaded only when someone asks for support.
+    let supportSdk;
+    const loadSupportSdk = baseUrl => supportSdk ??= new Promise((resolve, reject) => {
+        if (window.chatwootSDK) return resolve();
+        const script = document.createElement('script');
+        script.src = baseUrl + '/packs/js/sdk.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => { supportSdk = undefined; reject(new Error('support chat unavailable')); };
+        document.head.appendChild(script);
+    });
+    const openSupport = async payload => {
+        try {
+            await loadSupportSdk(payload.baseUrl);
+            if (!window.$chatwoot?.hasLoaded) {
+                window.chatwootSettings = { hideMessageBubble: true, position: 'right', type: 'standard', locale: payload.locale, darkMode: payload.darkMode };
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('support chat timeout')), 15000);
+                    window.addEventListener('chatwoot:ready', () => { clearTimeout(timer); resolve(); }, { once: true });
+                    window.chatwootSDK.run({ websiteToken: payload.websiteToken, baseUrl: payload.baseUrl });
+                });
+            }
+            if (payload.user) window.$chatwoot.setUser(payload.user.identifier, { name: payload.user.name, email: payload.user.email, identifier_hash: payload.user.identifier_hash });
+            window.$chatwoot.setCustomAttributes(payload.attributes);
+            window.$chatwoot.toggle('open');
+            return true;
+        } catch { return false; }
+    };
     return {
+        openSupport,
+        openDeniedSupport: async (locale, dark) => {
+            try {
+                const response = await fetch(`support/denied?locale=${encodeURIComponent(locale)}&dark=${dark}`, { credentials: 'same-origin', cache: 'no-store' });
+                return response.ok && await openSupport(await response.json());
+            } catch { return false; }
+        },
         fitBoard: () => {
             boardObserver?.disconnect();
             if (fitBoard) window.removeEventListener('resize', fitBoard);
