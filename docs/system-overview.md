@@ -1,13 +1,13 @@
 # Sufficit telephony system overview
 
-**Canonical status:** 2026-09-14. This document records the current implementation
+**Canonical status:** 2026-10-21. This document records the current implementation
 and the decisions made during the internal pilot. Dated activity reports preserve
 historical evidence but do not override this guide.
 
 ## Product and ownership
 
-Sufficit Telephony Panel is the internal, manager-only operational observability
-application at <https://panel.sufficit.com.br/>. Its public URL has no application
+Sufficit Telephony Panel is the operational observability application (internal managers,
+plus a customer pilot through contextual grants) at <https://panel.sufficit.com.br/>. Its public URL has no application
 path suffix. It is built with .NET 10, Blazor and Sufficit.Blazor.UI (SUI), with
 English source code and English/Portuguese UI resources. Language and theme
 preferences are stored locally in the browser; English is the default.
@@ -42,36 +42,47 @@ flowchart LR
 
 ## Access and security
 
-- Only a current Identity role named exactly `manager` opens protected views.
+- Access opens with the exact Identity role `manager` (global) or a contextual grant
+  `telephony.panel:<context>`; supervision additionally needs `telephony.monitor:<context>`
+  (see [customer access](customer-access.md)). Identity delivers both keys only through
+  `userinfo?entitlements=current` (`ServerResolvedEntitlementKeys`, enabled 2026-10-21).
+- Permission is checked in the OIDC callback before a session exists. A person Identity
+  authenticated but without panel access gets an explicit denial (`?login=denied`) and a
+  "Talk to support" button; a failed callback that leaves an earlier session reports which
+  account remains (`?login=kept`). The header shows the signed-in user.
 - OIDC authorization code with PKCE and a server-side cookie is used. Tokens are
-  never stored in JavaScript or localStorage.
-- Authorization is revalidated server-side. Anonymous protected API calls return
-  401; UI denial remains fail-closed.
-- Token/session and permission caches are bounded. Access-token expiry requires a
-  new sign-in; a cached allow decision is not extended during an Identity failure.
-- The Panel Identity client receives a signed JWT access token compatible with the
-  existing APIs. Its exact-client rule was applied without changing other clients.
+  never stored in JavaScript or localStorage. Sessions are kept server-side in memory and,
+  when the key ring is persisted, as encrypted owner-only files so deploys do not sign users
+  out (bounded, ticket expiry honored, deleted on sign-out or lost permission).
+- Authorization is revalidated server-side at most every 60 seconds. Anonymous protected API
+  calls return 401; UI denial remains fail-closed. A cached allow decision is not extended
+  during an Identity failure.
+- Customer projections expose only rows owned by the selected context: calls need the tenant
+  AccountCode; extension status (no AccountCode) is attributed only by exact match with the
+  context's own catalogued extensions.
 - Manager fleet visibility does not make visual filters into permissions. Each
   supervision request is authorized again against a fresh concrete target.
 - Upstream keys live in protected server files and never in Git, browser responses,
-  URLs or logs. Previously supplied temporary tokens must be considered ephemeral
-  operator input, not documentation or application configuration.
-- Customer publication and customer notifications are intentionally deferred.
+  URLs or logs. Sign-in outcomes are logged by Identity subject only.
+- Permission problems open the Hermes web chat with `panel.*` context ([support chat](support-chat.md)).
 
-Authenticated manager use and the real Listen audio path have been exercised.
-Independent non-manager denial, live role revocation and real Whisper audio still
-need explicit acceptance evidence before customer publication.
+Authenticated manager use, real Listen audio, non-manager denial (2026-10-21, `teste@`) and
+customer sign-in in a single context have been exercised. Live revocation, cross-context URL
+denial in production and real Whisper audio still need explicit acceptance evidence.
 
 ## Routes and interaction model
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Full operational workspace with extensions, calls, channels, trunks, queues, events and settings |
+| `/` | Operation board (full-height mosaic below the header; controls in the filter popover) |
+| `/?tab=extensions\|calls\|channels\|queues\|events` | Live telephony lists |
+| `/?tab=settings` | Board configuration (managers) |
 | `/board` | Dedicated television/operator mosaic; only the board, compact controls and overlays |
 | `/queues` | Unified queue/runtime and endpoint-registration diagnostics |
-| `/?area=infrastructure` | PBX metrics and bounded infrastructure history |
+| `/infrastructure` | PBX metrics and bounded infrastructure history (`/?area=infrastructure` still works) |
 | `/mesa` | Permanent compatibility redirect to `/board` |
 | `/login`, `/logout` | Authentication entry/exit |
+| `/support/denied` | Support-chat context for a denied sign-in (protected 10-minute cookie only) |
 | `/health` | Service health |
 | `/api/fleet` | Manager-protected fleet snapshot |
 
@@ -283,10 +294,10 @@ Normal Panel deployment restarts only the Panel. It does not restart Asterisk,
 Identity, Blazor or PBX applications. Panel changes must not edit the checkout Nginx
 configuration. DNS/root routing is already established.
 
-| Component | Current observed state on 2026-09-14 |
+| Component | Observed state (Panel rows updated 2026-10-21; others as of 2026-09-14) |
 | --- | --- |
-| Panel source | 0.13.1; repository revision `4578a2f` before this documentation change |
-| Panel live | release `unified-monitoring-20260913`, healthy, no recorded systemd restarts |
+| Panel source | 0.15.0 (`56671bd`) |
+| Panel live | release `sessions-20261021-56671bd`, healthy; Identity `ff8c411` with server-resolved panel grants |
 | Eveo/Apoint ACD lab | controller 0.10.4, Asterisk active |
 | Google ACD | isolated controller 0.9.0 plus registration observer/facade; Asterisk active |
 | ACD repository | source 0.10.5; newer source is not evidence of Google deployment |
@@ -327,10 +338,11 @@ reliability, not customer publication:
    keypad exit, including the disabled-queue synchronization boundary.
 5. Validate join/leave, pause reasons, auto-pause, wrap-up and all supported
    distribution strategies.
-6. Exercise Whisper audio, non-manager denial and live role revocation.
+6. Exercise Whisper audio and live role revocation (non-manager denial confirmed 2026-10-21).
 7. Run sustained load/failure/HA tests and expand registration inventory beyond the
    current bounded pilot identities.
-8. Only after those gates, design entitlements and publication for customers.
+8. Customer entitlements are implemented and piloted with one test account (2026-10-21);
+   broad customer publication still waits for the gates above.
 
 ## Historical timeline
 

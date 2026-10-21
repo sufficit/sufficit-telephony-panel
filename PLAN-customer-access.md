@@ -24,8 +24,21 @@ clean at start. Keep tokens, claims and operational data out of logs and Git.
 4. [completed] Correct Identity business coupling: remove product keys and GUID
    interpretation, configure generic delivery rules outside the public project,
    and test/document the provider boundary (user's new priority).
-5. [pending] Validate builds/regressions, document migration and deployment
+5. [completed 2026-10-21] Validate builds/regressions, document migration and deployment
    prerequisites, deliver through the existing workflow where available.
+   Delivered: Identity `ServerResolvedEntitlementKeys` on the three nodes (backups and record in
+   `sufficit-identity/docs/activities/202610211105-server-resolved-entitlement-keys.md`), Panel
+   releases through `deploy/release-panel.py`, explicit denial before session creation, exact-owned
+   extension status for customers, support chat and persistent sessions. Panel checks: 1022.
+   Prerequisite order for any environment: Identity configuration → grants → Panel; never grant
+   before Identity delivers the keys (they would leak into tokens and be ignored by the Panel).
+
+## Remaining production acceptance (needs people, not code)
+- Cross-context denial: signed in as `teste@`, open `/?contextid=<another company>` and confirm denial.
+- Live revocation: remove `telephony.panel` from the test account and confirm the open panel loses
+  access within ~90 s.
+- Customer supervision: preferred receiving extension set, real Listen and Whisper on an own channel.
+- First real support chat from a denied account, checked by the attendants in Hermes.
 
 ## Decisions
 Resizable sections completed locally; evidence is in
