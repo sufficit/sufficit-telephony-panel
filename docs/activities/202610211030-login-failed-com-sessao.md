@@ -43,3 +43,14 @@ Correção:
   `?login=denied`, com a mensagem "Sua conta Sufficit entrou, mas não tem acesso ao Painel de Telefonia…".
 - O login concluído é registrado como Warning (trilha de auditoria visível com o nível atual).
 - O link "Entrar" não leva mais o parâmetro `login=` para o `returnUrl`.
+
+Confirmação no Identity (leitura): `teste@sufficit.com.br` (id `ee277377-f229-4552-b97a-c8f6e73fd36c`)
+não tem papel `manager` nem entitlement `telephony.panel`/`telephony.monitor`; só tem
+`telephonyclient`, `phonecalls`, `audioupdate`, `balanceview`, `payment` e `aiuser` no contexto
+`026246a851a7485991e0b06e1bebb045`. A negação está correta: não houve vazamento de dados para esse
+usuário. Para testar o acesso de cliente é preciso conceder `telephony.panel:<contexto>` (e
+`telephony.monitor:<contexto>` para supervisão) e fazer novo login.
+
+Publicado 21/10: release `login-denied-20261021-0efe90e` (anterior `login-kept-20261021-3d4b275`
+preservado), DLL `6eb7edc987c9f6d5b6b17fb169d72612e5b956632bfd639b5b141293e860ddc6`, appsettings
+idêntico, health 200, `/api/fleet` anônimo 401.
