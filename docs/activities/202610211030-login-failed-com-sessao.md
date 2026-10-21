@@ -26,3 +26,7 @@ Relato do usuário (21/10): login com usuário de teste em janela anônima termi
 Pendente com o usuário: confirmar se o usuário de teste tem papel `manager`. Se não tiver e
 mesmo assim o cabeçalho mostrar esse usuário com a mesa central, é falha de autorização e deve
 ser tratada como incidente.
+
+Publicado 21/10: release `login-kept-20261021-3d4b275` (anterior `views-css-20261021-32656b1`
+preservado), DLL `6cfeddd2c76be3ca3113c5fc93268cc65357aa6e752e27852968197e68263527`, appsettings
+idêntico, health 200, `/api/fleet` anônimo 401, `/login` redireciona para o authorize do Identity.
