@@ -8,6 +8,7 @@ When access is insufficient, the panel opens the Hermes web chat (Chatwoot SDK, 
 | Identity signed in, panel denied | "Talk to support" on the denial page | `login-denied` | `telephony.panel:<known context>` |
 | No supervision permission for the company | "Request access from support" beside the block reason | `monitor-missing` | missing `telephony.panel`/`telephony.monitor` grants |
 | No preferred supervision extension | same | `preferred-extension-missing` | register the preferred extension in the portal |
+| Company in the URL not granted | "Request access from support" on the "No access to this company" notice | `context-not-authorized` | `telephony.panel:<context>` |
 
 Contact attributes also carry `panel.user` (Identity `sub`), `panel.context`,
 `panel.permissions` (current grants) and `panel.reference` (release, UTC time, path and, for

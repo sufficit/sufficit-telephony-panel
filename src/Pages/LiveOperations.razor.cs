@@ -79,6 +79,9 @@ public partial class LiveOperations
     private async Task ResetFilters() { Filter = ""; Node = "all"; StatusFilter = "all"; OnlyObservedChannels = false; TextKinds = BoardViewQuery.Kinds.ToArray(); Page = 0; if (Context.HasValue) await ClearCompany(); WriteUrl(); }
     private bool Demo => Preview && Environment.IsDevelopment();
     private Guid? Context;
+    /// <summary>Context requested in the URL that the current permissions do not cover (shown instead of an empty board).</summary>
+    private Guid? DeniedContext;
+    private CurrentAuthorization DeniedGrants = CurrentAuthorization.None;
     private CurrentAuthorization Permissions = CurrentAuthorization.None;
     private string ClientName = "", SearchText = "", Filter = "", Node = "all", Tab = "board";
     private string? SelectedTileId;
@@ -291,6 +294,7 @@ public partial class LiveOperations
         if (ActionBusy || InventoryBusy) return;
         var version = ++selectionVersion;
         inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
+        DeniedContext = null;
         Busy = true; Error = null; Failure = null; SupervisorFailure = null; QueueSamples = []; QueueError = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
         Context = id; ClientName = title; SelectedTileId = null; BoardAction = null;
         if (writeUrl) WriteUrl();
@@ -329,7 +333,17 @@ public partial class LiveOperations
             { SupervisorFailure = Diagnostics.Report(e, "supervisor-extension-read"); }
             if (version == selectionVersion) await ReadRows();
         }
-        catch (Exception e) { if (version == selectionVersion) { ClearAuthorizedState(); Failure = Diagnostics.Report(e, "live-observation"); Error = ErrorText(e); } }
+        catch (Exception e)
+        {
+            if (version == selectionVersion)
+            {
+                // Read the permissions before they are cleared: a valid session asking for a foreign company.
+                var granted = Permissions;
+                ClearAuthorizedState(); Failure = Diagnostics.Report(e, "live-observation"); Error = ErrorText(e);
+                if (e is UnauthorizedAccessException && id is { } requested && requested != Guid.Empty && granted.PanelAllowed && !granted.CanRead(requested))
+                { DeniedContext = requested; DeniedGrants = granted; }
+            }
+        }
         finally { if (version == selectionVersion) Busy = false; }
     }
     private Task Reload() => SelectClient(Context, ClientName);
@@ -388,6 +402,9 @@ public partial class LiveOperations
         TargetContext(blocked.Channel), $"{blocked.Channel.Node} {BoardRuleEngine.EndpointKey(blocked.Channel.Key, true)}");
 
     /// <summary>Supervision dialog on the board: the only permission block there is the missing preferred extension.</summary>
+    private Task OpenContextSupport() => DeniedContext is { } denied
+        ? OpenSupport("context-not-authorized", denied, "contextid=" + denied.ToString("N")) : Task.CompletedTask;
+    private string OwnContextsUrl => Navigation.GetUriWithQueryParameters(Navigation.BaseUri, new Dictionary<string, object?> { ["preview"] = Demo ? "true" : null, ["previewaccess"] = Demo ? Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).GetValueOrDefault("previewaccess").ToString() is { Length: > 0 } access ? access : null : null, ["tab"] = BoardPage ? null : (Tab == "board" ? null : Tab) });
     private Task OpenBoardSupport(OperatorTile tile) => OpenSupport("preferred-extension-missing",
         Context ?? (Guid.TryParse(tile.Rows.FirstOrDefault()?.Account, out var id) ? id : Guid.Empty), $"{tile.Node} {tile.Title}");
 
@@ -396,12 +413,13 @@ public partial class LiveOperations
         var user = (await Authentication.GetAuthenticationStateAsync()).User;
         var contextId = context == Guid.Empty ? "unknown" : context.ToString("N");
         var missing = new List<string>();
+        if (reason == "context-not-authorized") missing.Add("telephony.panel:" + contextId);
         if (reason == "monitor-missing" && !Permissions.CanRead(context)) missing.Add("telephony.panel:" + contextId);
         if (reason == "monitor-missing" && !Permissions.CanMonitor(context)) missing.Add("telephony.monitor:" + contextId);
         var request = new SupportRequest(reason, user.FindFirst("sub")?.Value ?? "", SupportChat.DisplayName(user), user.FindFirst("email")?.Value ?? "",
-            Context.HasValue && ClientName.Length > 0 ? $"{contextId} ({ClientName})" : contextId,
-            SupportChat.Describe(Permissions),
-            reason == "monitor-missing" ? string.Join(", ", missing) : "Register the user's preferred supervision extension in the portal",
+            Context.HasValue && ClientName.Length > 0 && !Guid.TryParse(ClientName, out _) ? $"{contextId} ({ClientName})" : contextId,
+            SupportChat.Describe(reason == "context-not-authorized" ? DeniedGrants : Permissions),
+            reason is "monitor-missing" or "context-not-authorized" ? string.Join(", ", missing) : "Register the user's preferred supervision extension in the portal",
             SupportChat.Reference(new Uri(Navigation.Uri).AbsolutePath) + " · " + resource);
         if (!await JS.InvokeAsync<bool>("telephonyPanel.openSupport", Support.Payload(request, Text.Language, Dark)))
             Toast.Add(Text["The support chat could not be opened. Sign in again to refresh your request, or contact support on WhatsApp."], SUITone.Warning, 10000);

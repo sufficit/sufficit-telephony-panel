@@ -43,6 +43,12 @@ const assert = require('node:assert/strict');
     await page.locator('.company-filter summary').click();
     assert.equal(await page.locator('.company-filter').getByRole('textbox').count(), 1, 'Global access keeps context search');
     assert.equal(new URL(page.url()).searchParams.has('contextid'), false);
+    await page.goto('http://127.0.0.1:5169/?preview=true&previewaccess=single&contextid=22222222222272228222222222222222');
+    await page.locator('.board-blocked').waitFor();
+    assert.equal(await page.locator('.board-tile').count(), 0, 'Foreign company shows a denial notice, never an empty or foreign board');
+    await page.getByRole('link', { name: 'Open my companies', exact: true }).click();
+    await page.locator('.board-tile').first().waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('contextid'), '11111111111171118111111111111111', 'Recovery opens the granted company');
     assert.deepEqual(errors, []);
     console.log('PASS: single/multiple/global context UI, reload/URL, mobile and view-only card actions (synthetic Development fixture).');
   } finally { await browser.close(); }

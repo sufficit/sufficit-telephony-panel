@@ -20,7 +20,8 @@
 {
     <section class="live-panel board-mode board-fill" aria-label="@Text["Operator board"]">
         <h1 class="sr-only">@Text["Operator board"]</h1>
-        @BoardContent
+        @if (Error is not null && !Busy) { @BlockedNotice }
+        else { @BoardContent }
     </section>
 }
 else
@@ -194,6 +195,17 @@ else
                 </BoardResourceDialog>
             }
             </div>;
+    // Shown instead of an empty board when the selection failed, so a denial is never a blank screen.
+    private RenderFragment BlockedNotice => @<div class="board-blocked" role="alert">
+        <h2>@(DeniedContext.HasValue ? Text["No access to this company"] : Text["The board could not be loaded"])</h2>
+        <p>@(DeniedContext.HasValue ? Text.Format("Your account does not have access to company {0}. Only the companies granted to you can be opened here.", DeniedContext.Value.ToString("N")) : Error)</p>
+        <div class="tools">
+            <SUIButton Href="@OwnContextsUrl" VariantValue="SUIVariant.Filled">@Text["Open my companies"]</SUIButton>
+            @if (DeniedContext.HasValue && Support.Enabled) { <SUIButton OnClick="OpenContextSupport" VariantValue="SUIVariant.Outlined">@Text["Request access from support"]</SUIButton> }
+            @if (!DeniedContext.HasValue) { <SUIButton OnClick="Reload" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton> }
+        </div>
+        <ErrorDetails Diagnostic="Failure" />
+    </div>;
     private RenderFragment ResourceDetails(OperatorTile tile) => @<div class="resource-details">
                     <p>@Text.Observed(tile.Status.Label) · @(tile.Remembered ? Text["Saved last observation (approximate)"] : Text["Last observation"]): @Timestamp(tile.Updated)</p>
                     @if (tile.Queue is { } queue)

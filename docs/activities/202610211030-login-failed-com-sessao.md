@@ -54,3 +54,12 @@ usuário. Para testar o acesso de cliente é preciso conceder `telephony.panel:<
 Publicado 21/10: release `login-denied-20261021-0efe90e` (anterior `login-kept-20261021-3d4b275`
 preservado), DLL `6eb7edc987c9f6d5b6b17fb169d72612e5b956632bfd639b5b141293e860ddc6`, appsettings
 idêntico, health 200, `/api/fleet` anônimo 401.
+
+## Aceite: outra empresa (21/10, ~13:52)
+O usuário abriu `/?contextid=d21cfb049d37473b837c67591a26feed` logado como `teste@`. A negação funcionou:
+`UnauthorizedAccessException` registrada como aviso de diagnóstico e nenhum dado entregue. Mas a mesa
+ficou em branco, porque na mesa em tela cheia o erro só aparecia dentro do popover do funil. Correção na
+v0.15.3: o aviso "Sem acesso a esta empresa" aparece no lugar da mesa, com "Abrir minhas empresas" e
+"Pedir acesso ao suporte" (`panel.reason=context-not-authorized`, `panel.request=telephony.panel:<contexto>`,
+`panel.permissions` com as permissões atuais). Outros erros de carga mostram "Não foi possível carregar a
+mesa" com reconectar. Teste de navegador `customer-access` estendido. 1029 checks e 16/16 navegador PASS.
