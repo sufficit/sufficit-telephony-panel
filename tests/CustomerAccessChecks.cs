@@ -52,6 +52,14 @@ internal static class CustomerAccessChecks
             "Trunk cards never attribute unowned status (trunks may be shared)");
         check(AuthorizedObservation.ForCustomer([own], [Row("own", "")], multi, null).Rows.Length == 0,
             "Without a selected context, unowned status stays hidden");
+        // Parity: for the same context, catalogue and stream, a customer sees the same extension
+        // status a manager sees (only status of its own catalogued extensions, never calls of others).
+        var catalogue = new[] { own, new Sufficit.Telephony.EventsPanel.EventsPanelCardInfo { Label = "Second", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER, Channels = ["^SIP/0000286651"] } };
+        var stream = new[] { Row("p1", ""), Row("p2", "") with { Key = "SIP/0000286651" }, Row("x", "") with { Key = "SIP/0000999999" } };
+        var managerTiles = OperatorTile.Create(catalogue, AuthorizedObservation.Create(catalogue, stream, a).ByCard);
+        var customerTiles = OperatorTile.Create(catalogue, AuthorizedObservation.ForCustomer(catalogue, stream, single, a).ByCard);
+        check(managerTiles.Select(t => (t.Title, t.Node, t.Status.Tone)).SequenceEqual(customerTiles.Select(t => (t.Title, t.Node, t.Status.Tone))),
+            "Customer and manager see the same extension status for the same context");
         var all = AuthorizedObservation.ForCustomer([], [Row("a", a.ToString()), Row("b", b.ToString())], multi, null);
         check(all.Rows.Length == 2, "Aggregate projection contains only authorized contexts");
         var tiles = OperatorTile.Create(all.Cards, all.ByCard, true);
