@@ -88,6 +88,7 @@ builder.Services.AddScoped<BoardConfigurationAccess>();
 builder.Services.AddSingleton(new BoardInventoryStore(builder.Configuration["Panel:BoardInventoryFile"]
     ?? "/var/lib/sufficit-telephony-panel/known-resources.json"));
 builder.Services.AddScoped<BoardInventoryAccess>();
+builder.Services.AddScoped<Sufficit.Blazor.UI.Services.ISUIToast, Sufficit.Blazor.UI.Services.SUIToastService>();
 builder.Services.AddAuthentication(o =>
 {
     o.DefaultScheme = "panel";
@@ -137,11 +138,24 @@ builder.Services.AddAuthentication(o =>
         { ctx.HandleResponse(); ctx.Response.StatusCode = 401; }
         return Task.CompletedTask;
     };
-    o.Events.OnRemoteFailure = ctx =>
+    o.Events.OnTokenValidated = ctx =>
+    {
+        ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login")
+            .LogInformation("Sign-in completed for subject {Subject}", ctx.Principal?.FindFirst("sub")?.Value ?? "unknown");
+        return Task.CompletedTask;
+    };
+    o.Events.OnRemoteFailure = async ctx =>
     {
         ctx.HandleResponse();
-        ctx.Response.Redirect(pathBase + "/?login=failed");
-        return Task.CompletedTask;
+        // A failed callback (stale/duplicate state, missing correlation cookie) does not
+        // sign anyone out: a session already present in this browser stays active.
+        // Tell the user which account remains instead of a misleading "failed" over live data.
+        var existing = await ctx.HttpContext.AuthenticateAsync("panel");
+        var subject = existing.Succeeded ? existing.Principal?.FindFirst("sub")?.Value : null;
+        ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login")
+            .LogWarning("Sign-in callback failed ({Failure}); existing session kept for subject {Subject}",
+                ctx.Failure?.GetType().Name ?? "unknown", subject ?? "none");
+        ctx.Response.Redirect(pathBase + (subject is null ? "/?login=failed" : "/?login=kept"));
     };
 });
 builder.Services.AddOptions<CookieAuthenticationOptions>("panel")

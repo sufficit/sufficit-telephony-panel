@@ -10,6 +10,7 @@
 @inject IWebHostEnvironment Environment
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider Authentication
+@inject Sufficit.Blazor.UI.Services.ISUIToast Toast
 
 <PageTitle>@Text["Telephony · Sufficit Panel"]</PageTitle>
 <CascadingValue Name="PanelLanguage" Value="Text.Language">
@@ -36,6 +37,7 @@
             <SUIButton OnClick="ToggleTheme" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton>
             @if (Allowed)
             {
+                @if (UserName is { Length: > 0 }) { <span class="signed-user" title="@Text.Format("Signed in as {0}", UserName)">@UserName</span> }
                 <form method="post" action="logout"><AntiforgeryToken /><button class="signout" type="submit">@Text["Sign out"]</button></form>
             }
         </div>
@@ -135,6 +137,7 @@
         }
     }
     </main>
+    <SUIToastHost />
     @if (!BoardPage) { <footer><span>@Text["Sufficit Telephony Panel · testing on Eveo"]</span><span>@Text["Internal manager access · per-customer permissions"]</span></footer> }
 </div>
 </SUIThemeProvider>
@@ -155,6 +158,7 @@
     private int Hours = 1;
     private FleetSnapshot? Snapshot;
     private bool Manager;
+    private string UserName = "";
     private IReadOnlyList<HistoryPoint> Points = [];
     private string? HistoryError;
     private readonly CancellationTokenSource lifetime = new();
@@ -198,7 +202,15 @@
         Dark = await JS.InvokeAsync<bool>("telephonyPanel.dark");
         Preview = Environment.IsDevelopment() && Navigation.Uri.Contains("preview=true", StringComparison.Ordinal);
         Navigation.LocationChanged += AreaChanged;
-        await Refresh(); Ready = true; StateHasChanged();
+        var user = (await Authentication.GetAuthenticationStateAsync()).User;
+        UserName = user.FindFirst("name")?.Value ?? user.FindFirst("preferred_username")?.Value ?? user.FindFirst("email")?.Value ?? "";
+        await Refresh();
+        if (Allowed && Navigation.Uri.Contains("login=", StringComparison.Ordinal))
+        {
+            // The callback failed but an earlier session in this browser is still valid.
+            Toast.Add(Text.Format("Sign-in was not completed. You are still signed in as {0}. To use another account, sign out first.", UserName.Length > 0 ? UserName : Text["the current account"]), SUITone.Warning, 12000);
+            Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("login", (string?)null), replace: true);
+        } Ready = true; StateHasChanged();
         loop = Poll();
     }
     private async Task Poll()
