@@ -103,3 +103,48 @@ do índice `Observation.ByCard` e do filtro de status; extrair só junto com um 
 
 Restrições: textos novos em `Localization/Portuguese.json`; nada de feature nova;
 `/board` (TV) não pode regredir; supervisão continua exigindo confirmação explícita.
+
+## Próximas etapas (pedido do usuário em 21/10)
+
+7. [pendente] **Suporte em contexto pelo web chat do Hermes** quando faltar permissão.
+   Em vez de mandar o usuário ao WhatsApp, o painel abre direto o chat de suporte do Hermes
+   (SDK `https://chatwoot.sufficit.com.br/packs/js/sdk.js`, o mesmo usado em
+   `sufficit-web/src/Scripts/SufficitChatWoot.js`), já com o contexto preenchido para o
+   suporte agir sem perguntar nada.
+   - **Situações**:
+     a) login negado antes de entrar no painel (`?login=denied`: autenticado no Identity, sem
+        `manager` nem `telephony.panel`);
+     b) dentro do painel, quando uma ação esbarra em permissão: supervisão sem
+        `telephony.monitor`, sem ramal preferido, contexto não autorizado.
+   - **Interface**: botão "Falar com o suporte" na mensagem de acesso negado e ao lado do motivo
+     de bloqueio. O widget fica sem bolha (`hideMessageBubble`) e o botão o abre com
+     `$chatwoot.toggle('open')`. Locale conforme o idioma do painel; `darkMode` seguindo o tema.
+   - **Contexto enviado** (atributos de contato/conversa, `setUser` + `setCustomAttributes`/
+     `setConversationCustomAttributes`, label `painel-telefonia`):
+     - quem: `sub`, nome e e-mail do usuário;
+     - onde: aplicação `telephony-panel`, release, URL sem segredos e horário UTC;
+     - o que falta: motivo (`login-denied`, `monitor-missing`, `preferred-extension-missing`,
+       `context-not-authorized`), contexto solicitado e permissões atuais
+       (`manager`, contextos de `telephony.panel`/`telephony.monitor`);
+     - pedido pronto: permissão necessária no formato do preset, por exemplo
+       `telephony.panel:<contexto>`; referência de erro (`PanelDiagnostic.Reference`) quando houver.
+   - **Segurança**:
+     - o contexto é montado no servidor, nunca a partir de parâmetros do navegador;
+     - identidade verificada por `identifier_hash` (HMAC do inbox calculado no servidor; o
+       segredo HMAC fica no Vault do Identity, nunca no JS nem no repositório);
+     - nunca enviar tokens, claims crus, cookies nem dados de chamadas;
+     - no caso (a) não existe sessão do painel: guardar só `sub`/nome/e-mail/permissões atuais num
+       cookie protegido por DataProtection, de curta duração (10 min) e só leitura.
+   - **Inbox**: decidir entre o inbox web atual do site e um inbox dedicado "Painel de
+     Telefonia"; incluir `panel.sufficit.com.br` em `allowed_domains` e ligar `hmac_mandatory`.
+   - **Testes**: teste de navegador com stub do SDK, validando atributos enviados, ausência de
+     segredos e as duas situações; teste unitário do HMAC e do cookie de contexto.
+
+8. [pendente, bloqueia acesso de cliente] **Entrega das permissões pelo Identity.** Produção
+   (`ff8c411`, nós eveo/apoint/castrum-apps) já tem o recurso, mas não tem
+   `Sufficit:Identity:ClaimScopeMap:ServerResolvedEntitlementKeys = ["telephony.panel",
+   "telephony.monitor"]` (ver `deploy/identity-server-resolved-entitlements.json`). Sem isso,
+   `userinfo?entitlements=current` devolve `grants: []`: uma permissão concedida é ignorada pelo
+   painel e ainda vai dentro dos access tokens. Aplicar nos 3 nós, reiniciando um por vez,
+   **antes** de conceder `telephony.panel`/`telephony.monitor` a qualquer usuário. Depois disso,
+   validar com `teste@sufficit.com.br` o login de cliente e que um contexto não enxerga outro.
