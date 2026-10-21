@@ -65,3 +65,11 @@ Publicado em 21/10 ≈10:09 -03: release `board-fill-20261021-f7802ac` (anterior
 `frontend-reorg-20261021-7d99719`), DLL `80aa4737546ba50029b90a6a00f460145c1ea59113788da804acb7001275800e`,
 pacote `9394c9e2f30a578371144d9eb15331c859134d43ef6f8872c76fe9ded79aece7`; appsettings idêntico,
 gate de health passou, `/health` 200, `/api/fleet` anônimo 401, CSS novo com `.board-fill`.
+
+## Etapas 3 e 5 parciais (refatoração, sem mudança de comportamento)
+Commit `d5a863c`: `LiveOperations.razor.cs` com a lógica; componentes `ContextPicker`,
+`RetentionControls`, `ObservationNote`; inspetor inline e CSS morto removidos.
+975 checks + 16/16 navegador PASS, zero exceções no servidor. Publicado como
+`refactor-20261021-d5a863c` (anterior `iax2-group-20261021-b8d9c5c` preservado), DLL
+`c54833afee2ea4a31de514985272c04a83fe0693c8f408c20879b9ef1cbd8c5f`, appsettings idêntico,
+health 200, `/api/fleet` anônimo 401, sem warnings no journal.
