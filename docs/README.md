@@ -12,6 +12,7 @@ When a dated activity report conflicts with it, the system overview wins.
 | Normal operational workspace | [Operational monitor](operational-monitor.md) |
 | Dedicated television board | [Operator board](operator-board.md) |
 | Board classification rules | [Board configuration](board-configuration.md) |
+| Errors, sources and blocked supervision | [Error diagnostics](error-diagnostics.md) |
 | Listen and Whisper | [Board supervision](board-supervision.md) |
 | Calls versus channel legs | [Call correlation](call-channel-correlation.md) |
 | Remembered resources | [Retained resources](retained-resources.md) |

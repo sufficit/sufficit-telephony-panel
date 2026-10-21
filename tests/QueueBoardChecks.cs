@@ -72,12 +72,13 @@ internal static class QueueBoardChecks
             check(QueueBoardReader.ValidSource(source), "Private VPN source accepted");
             foreach (var url in new[] { "http://0.0.0.0:18189", "http://8.8.8.8", "https://example.com", "http://user:pass@127.0.0.1", "http://127.0.0.1/?token=x", "file:///tmp/queue" })
                 check(!QueueBoardReader.ValidSource(source with { BaseUrl = url }), "Unsafe QUEUE source rejected");
-            using var reader = new QueueBoardReader([source], http, clock);
+            using var reader = new QueueBoardReader([source], http, clock, new PanelDiagnostics(Microsoft.Extensions.Logging.Abstractions.NullLogger<PanelDiagnostics>.Instance, clock));
             var all = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => reader.Read(context, default)));
             check(http.Requests == 1 && all.All(r => r.Single().Available), "Concurrent panels share one QUEUE snapshot fetch");
             check((await reader.Read(other, default)).Length == 0 && http.Requests == 1, "Unconfigured context causes no private request");
             clock.Now = now.AddSeconds(3); http.Status = HttpStatusCode.ServiceUnavailable;
             var failed = (await reader.Read(context, default)).Single();
+            check(failed.HttpStatus == 503 && failed.Diagnostic is { Category: "HttpRequestException" }, "Source failure carries safe HTTP status and a diagnostic reference");
             check(!failed.Available && failed.Snapshot is not null, "Failed refresh retains catalog but marks activity unavailable");
             clock.Now = now.AddSeconds(6); http.Status = HttpStatusCode.Forbidden;
             check((await reader.Read(context, default)).Single().Snapshot is null, "Upstream authorization failure drops cached snapshot");

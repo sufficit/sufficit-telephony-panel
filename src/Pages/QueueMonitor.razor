@@ -71,10 +71,7 @@
         </section>
         <QueueRegistrationTable Agents="overview.Agents" />
         <details class="queue-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
-        <details class="queue-sources"><summary>@Text["Collection diagnostics"] (@FilteredSamples.Count())</summary>
-            @foreach (var sample in FilteredSamples)
-            { <p>@sample.Node · @Text[sample.Available && sample.Snapshot?.Fresh(DateTimeOffset.UtcNow) == true ? "Current collection" : "No current data"] · @Time(sample.Snapshot?.ObservedAt)<br /><span class="muted">@Text["Context"]: @sample.ContextId.ToString("N")</span></p> }
-        </details>
+        <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
 </section>
 

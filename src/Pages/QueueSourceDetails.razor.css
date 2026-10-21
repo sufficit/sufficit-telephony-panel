@@ -1,0 +1,4 @@
+summary { cursor: pointer; padding-block: .5rem; }
+section { padding-block: .75rem; border-block-start: 1px solid var(--sui-border); }
+small { display: block; overflow-wrap: anywhere; }
+p { margin-block: .5rem; }

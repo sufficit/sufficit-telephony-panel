@@ -1,5 +1,6 @@
 @using Sufficit.Telephony.Panel.Operations
 @using Sufficit.Telephony.Monitor
+@inject PanelDiagnostics Diagnostics
 @inject OperationsAccess Access
 @inject SupervisionPrefixPolicy PrefixPolicy
 @implements IDisposable
@@ -45,8 +46,9 @@
             ? "Listening does not transmit your microphone to the call."
             : "Whispering sends your voice to the selected channel, not automatically to an agent. Choose the agent leg, not the caller or trunk leg."]</p>
         <p>@(Supervisor is { } supervisor ? Text.Format("Your extension {0} will be called. Answer it to begin. Use only with operational authorization.", supervisor.Title)
-            : Text["Set your preferred extension in the portal to enable supervision."])</p>
-        @if (Message is not null) { <SUIAlert ToneValue="@(Failed ? SUITone.Warning : SUITone.Info)" role="status">@Text.Observed(Message)</SUIAlert> }
+            : Text[SupervisorFailure is not null ? "Could not load your supervision extension. Reconnect and refresh to try again." : "Set your preferred extension in the portal to enable supervision."])</p>
+        <ErrorDetails Diagnostic="SupervisorFailure" />
+        @if (Message is not null) { <SUIAlert ToneValue="@(Failed ? SUITone.Warning : SUITone.Info)" role="status">@Text.Observed(Message)<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
         @if (!Submitted)
         {
             <div class="tools"><SUIButton OnClick="Confirm" Disabled="@(!Ready)">@(Sending ? Text["Sending…"] : Text["Confirm and call my extension"])</SUIButton></div>
@@ -61,12 +63,14 @@
     [Parameter] public bool Connected { get; set; }
     [Parameter] public bool Demo { get; set; }
     [Parameter] public bool DemoEndpointResolution { get; set; }
+    [Parameter] public PanelDiagnostic? SupervisorFailure { get; set; }
     [Parameter] public (Guid Id, string Title)? Supervisor { get; set; }
     [Parameter] public EventCallback Closed { get; set; }
     private readonly CancellationTokenSource lifetime = new();
     private string ChannelId = "", PrefixId = "";
     private bool Sending, Submitted, Failed;
     private string? Message;
+    private PanelDiagnostic? Failure;
     private Guid ContextFor(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
     private ObservedResource[] Channels => Request.Tile.DetailChannels.Where(row =>
         MonitorActionGuard.Allows(Demo ? row with { Updated = DateTimeOffset.UtcNow } : row, ContextFor(row), Connected, DateTimeOffset.UtcNow)).ToArray();
@@ -94,7 +98,7 @@
     private async Task Confirm()
     {
         if (!Ready) return;
-        Sending = true; Message = null; Failed = false;
+        Sending = true; Message = null; Failed = false; Failure = null;
         try
         {
             if (Demo) Message = "Demonstration: confirmation validated. No call was sent.";
@@ -118,9 +122,8 @@
         catch (Exception e)
         {
             Failed = true;
-            Message = (e is UnauthorizedAccessException or InvalidOperationException ? Text.Observed(e.Message)
-                : Text["Could not query the telephony service. Try refreshing; if it persists, check the connection and permissions."])
-                + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
+            Failure = Diagnostics.Report(e, "board-supervision");
+            Message = Text[PanelDiagnostics.UserMessage(e)] + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
             // An ambiguous network response must never result in an automatic second call.
             Submitted = true;
         }

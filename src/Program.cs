@@ -65,6 +65,7 @@ builder.Services.AddHttpClient("operations", client =>
     client.MaxResponseContentBufferSize = 2 * 1024 * 1024;
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<OperationsApi>();
+builder.Services.AddSingleton<PanelDiagnostics>();
 builder.Services.AddSingleton<SharedTelemetry>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SharedTelemetry>());
 builder.Services.AddSingleton<OperationsPool>();
@@ -76,7 +77,7 @@ builder.Services.AddHttpClient("queue-board", client =>
     client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton(sp => new QueueBoardReader(builder.Configuration.GetSection("Panel:QueueSources")
-    .Get<QueueBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>()));
+    .Get<QueueBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<PanelDiagnostics>()));
 builder.Services.AddSingleton<QueueDiagnosticsReader>();
 builder.Services.AddScoped<QueueBoardAccess>();
 builder.Services.AddSingleton(new SupervisionPrefixPolicy(builder.Configuration

@@ -1,0 +1,14 @@
+@using Sufficit.Telephony.Panel.Operations
+@if (Diagnostic is { } diagnostic)
+{
+    <details class="panel-error-details">
+        <summary>@Text["Error details"]</summary>
+        <dl>
+            <dt>@Text["Reference"]</dt><dd><code>@diagnostic.Reference</code></dd>
+            <dt>@Text["Occurred at (UTC)"]</dt><dd>@diagnostic.OccurredAt.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</dd>
+            <dt>@Text["Category"]</dt><dd>@diagnostic.Category</dd>
+        </dl>
+        <p>@Text["Send this reference to support to locate the server log. Credentials and technical exception messages are not displayed."]</p>
+    </details>
+}
+@code { [Parameter] public PanelDiagnostic? Diagnostic { get; set; } }

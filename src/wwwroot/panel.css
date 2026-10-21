@@ -244,3 +244,7 @@ input { caret-color:var(--sui-color-primary); }
 .board-card-menu hr { width: 100%; border: 0; border-top: 1px solid var(--sui-border); }
 .board-supervision { display: grid; gap: 16px; }
 .board-supervision p { margin: 0; }
+
+/* Keep touch supervision controls readable beside their blocking explanation. */
+.live-table td.supervision-cell { min-width: 240px; }
+.call-actions .sui-btn { flex-shrink: 0; white-space: nowrap; overflow-wrap: normal; }

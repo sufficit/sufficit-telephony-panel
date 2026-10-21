@@ -18,11 +18,12 @@ public sealed class QueueBoardReader : IDisposable
     public QueueBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source;
     private readonly IHttpClientFactory clients;
     private readonly TimeProvider clock;
+    private readonly PanelDiagnostics? diagnostics;
     private readonly SemaphoreSlim requests = new(4);
     public bool Configured => slots.Length > 0;
-    public QueueBoardReader(IEnumerable<QueueBoardSource> sources, IHttpClientFactory clients, TimeProvider clock)
+    public QueueBoardReader(IEnumerable<QueueBoardSource> sources, IHttpClientFactory clients, TimeProvider clock, PanelDiagnostics? diagnostics = null)
     {
-        this.clients = clients; this.clock = clock;
+        this.clients = clients; this.clock = clock; this.diagnostics = diagnostics;
         var definitions = sources.ToArray();
         if (definitions.Length > 16 || definitions.Any(s => !ValidSource(s)) ||
             definitions.Sum(s => s.ContextIds.Length) > 64 ||
@@ -67,8 +68,6 @@ public sealed class QueueBoardReader : IDisposable
                 $"/api/queue/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot");
             request.Headers.Authorization = new("Bearer", key);
             using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
-            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                return slot.Value = new(slot.Source.Node, slot.Context, null, false, slot.Source.NodeId);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(budget);
             if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("QUEUE snapshot exceeds its bound.");
@@ -79,7 +78,12 @@ public sealed class QueueBoardReader : IDisposable
         catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or JsonException or UnauthorizedAccessException or OperationCanceledException)
         {
             caller.ThrowIfCancellationRequested();
-            var failed = new QueueBoardSample(slot.Source.Node, slot.Context, slot.Value?.Snapshot, false, slot.Source.NodeId);
+            var denied = e is HttpRequestException { StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden };
+            var failed = new QueueBoardSample(slot.Source.Node, slot.Context, denied ? null : slot.Value?.Snapshot, false, slot.Source.NodeId)
+            {
+                Diagnostic = diagnostics?.Report(e, "queue-source-read"),
+                HttpStatus = e is HttpRequestException http && http.StatusCode is { } status ? (int)status : null
+            };
             if (locked) { slot.Attempted = clock.GetUtcNow(); slot.Value = failed; }
             return failed;
         }

@@ -1,0 +1,24 @@
+@using Sufficit.Telephony.Panel.Operations
+<details class="queue-source-details queue-sources">
+    <summary>@Text["Source details"]</summary>
+    @if (Samples.Length == 0) { <p>@Text["No queue sources are configured for this view."]</p> }
+    @foreach (var sample in Samples)
+    {
+        var problem = QueueSourceHealth.Problem(sample, DateTimeOffset.UtcNow);
+        <section>
+            <strong>@sample.Node</strong>
+            <small>@Text["Context"]: @sample.ContextId</small>
+            <p>@Text[problem ?? "Source is current."]</p>
+            @if (sample.HttpStatus is { } status) { <small>HTTP: @status</small> }
+            <ErrorDetails Diagnostic="sample.Diagnostic" />
+            @if (sample.Snapshot is { } snapshot)
+            {
+                <small>@Text["Controller connection"]: @Text[snapshot.ControllerConnected ? "Connected" : "Disconnected"]</small>
+                <small>@Text["Last observation (UTC)"]: @(snapshot.ObservedAt == default ? Text["Not reported"] : snapshot.ObservedAt.ToString("yyyy-MM-dd HH:mm:ss 'UTC'"))</small>
+            }
+            @if (problem is not null)
+            { <p>@Text["Reconnect and refresh to query the sources again. If the problem persists, contact the administrator of this source."]</p> }
+        </section>
+    }
+</details>
+@code { [Parameter] public QueueBoardSample[] Samples { get; set; } = []; }
