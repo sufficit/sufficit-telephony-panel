@@ -15,6 +15,8 @@ Limites: só conta o que acontecer depois do passo 3; nome amigável da fila (ex
 
 Publicado em 22/10/2026: coletor `queue-distribution-20261022-253d869` (anterior `queue-flow-20260911-1503`, troca pelo link `current`), painel `queue-distribution-20261022-26278bd` (anterior `shared-prefix-fix-20261022-5433a24`). Filtro no google-voip com backup `manager_local_observation.conf.bak-20261022-distribution`; o filtro só vale após novo login AMI, por isso o coletor foi reiniciado. Sonda no socket privado minutos depois: 4 filas, 13 ramais, eventos de toque, atendimento e indisponível chegando. apoint-voip e eveo-voip ainda sem os eventos `Agent*`.
 
+Filas novas (controlador Queue) entram desde 22/10 pela API de diagnóstico do controlador, com histórico persistido de 24 h e nome amigável; release `controller-distribution-20261022-790695b`.
+
 ## Fase 2: turnos e horários por fila, configurados pelo cliente
 
 Pedido do usuário em 22/10/2026: configuração na fila para horários e turnos de trabalho, com métricas e estatísticas por turno, definida pelo próprio cliente.
