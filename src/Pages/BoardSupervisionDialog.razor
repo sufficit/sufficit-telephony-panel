@@ -15,11 +15,13 @@
             {
             <SUISelect TValue="string" Label="@Text["Authorized prefix"]" @bind-Value="PrefixId" Disabled="@(Sending || Submitted)">
                 <SUISelectItem Value="@string.Empty">@Text["Choose a prefix"]</SUISelectItem>
-                @foreach (var rule in PrefixChoices) { <SUISelectItem Value="@rule.Id">@rule.Prefix · @rule.ContextId.ToString("N")</SUISelectItem> }
+                @foreach (var rule in PrefixChoices) { <SUISelectItem Value="@rule.Id">@rule.Prefix · @(IsShared(rule.Id) ? Text["several companies"] : rule.ContextId.ToString("N"))</SUISelectItem> }
             </SUISelect>
             }
             else if (PrefixChoices.SingleOrDefault() is { } onlyPrefix)
             { <p>@Text["Authorized prefix"]: <code>@onlyPrefix.Prefix</code></p> }
+            @if (IsShared(PrefixId))
+            { <SUIAlert ToneValue="SUITone.Warning">@Text["Shared trunk: this prefix carries calls of several companies. Available to managers only; the session is recorded with the companies observed."]</SUIAlert> }
             <p>@Text["Continuous supervision follows matching channels on this server, one at a time, including future calls. It does not mix all calls. Press * on your phone to move to the next channel; hang up to stop. Maximum session: 30 minutes."]</p>
             @if (PrefixChoices.Length == 0)
             {
@@ -77,6 +79,11 @@
     [Parameter] public EventCallback Support { get; set; }
     private readonly CancellationTokenSource lifetime = new();
     private string ChannelId = "", PrefixId = "";
+    [Parameter] public bool Manager { get; set; }
+    private static bool IsShared(string id) => id.StartsWith("shared:", StringComparison.Ordinal);
+    // Managers: shared trunk prefixes from the card's observed channels (never offered to customers).
+    private SupervisionPrefixRule[] SharedPrefixes => SharedSupervisionPrefix.For(Request.Tile, Manager, Connected)
+        .Select(prefix => new SupervisionPrefixRule { Id = "shared:" + prefix, Node = Request.Tile.Node, CardKey = Request.Tile.Title, Prefix = prefix }).ToArray();
     private bool Sending, Submitted, Failed;
     private string? Message;
     private PanelDiagnostic? Failure;
@@ -92,7 +99,7 @@
                 ? "Local/queue-demo@demo-" : Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.TRUNK ? "PJSIP/trunk-demo-" : "PJSIP/6007-" }]
         : PrefixPolicy.For(Request.Tile, Context);
     private EndpointSupervisionTarget[] EndpointTargets => Demo && !DemoEndpointResolution ? [] : EndpointSupervisionTarget.For(Request.Tile, Context, Connected, DateTimeOffset.UtcNow);
-    private SupervisionPrefixRule[] PrefixChoices => Prefixes.Concat(EndpointTargets.Select(target => new SupervisionPrefixRule
+    private SupervisionPrefixRule[] PrefixChoices => Prefixes.Concat(SharedPrefixes).Concat(EndpointTargets.Select(target => new SupervisionPrefixRule
         { Id = target.Id, ContextId = target.ContextId, Node = target.Node, CardKey = target.PeerKey, Prefix = target.Prefix }))
         .DistinctBy(rule => (rule.ContextId, rule.Node, rule.Prefix)).ToArray();
     private bool Ready => !Sending && !Submitted && Supervisor.HasValue && Connected
@@ -104,7 +111,8 @@
         // once; refreshes, failed requests and later observations never auto-submit.
         if (Request.Continuous && PrefixChoices is [var prefix]) PrefixId = prefix.Id;
         if (!Request.Continuous && Channels is [var channel]) ChannelId = channel.Id;
-        if (Request.Mode == TelephonyMonitorActionMode.Listen && Ready) await Confirm();
+        // A shared trunk prefix always needs an explicit confirmation after reading the warning.
+        if (Request.Mode == TelephonyMonitorActionMode.Listen && Ready && !IsShared(PrefixId)) await Confirm();
         StateHasChanged();
     }
     private async Task Confirm()
@@ -119,6 +127,7 @@
                 if (Request.Continuous)
                 {
                     var endpoint = EndpointTargets.SingleOrDefault(target => target.Id == PrefixId);
+                    if (IsShared(PrefixId)) { await Access.MonitorSharedPrefix(Request.Tile.Node, PrefixId["shared:".Length..], Request.Mode, lifetime.Token); Message = "Request accepted by the exchange. Answer your extension. This does not confirm audio is connected yet."; Submitted = true; return; }
                     if (endpoint is not null) await Access.MonitorEndpointPrefix(endpoint, Request.Mode, lifetime.Token);
                     else await Access.MonitorPrefix(PrefixId, Request.Mode, lifetime.Token);
                 }

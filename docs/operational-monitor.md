@@ -139,7 +139,14 @@ the board dialog lists the concrete reason per channel.
 For managers, a call leg without AccountCode (usually the trunk leg) inherits the company of the
 other legs of the same call (same node and Linkedid) when they agree on exactly one company, so
 trunk and queue cards can be supervised from the central view. Customer projections never
-inherit (trunks may be shared); the Endpoints API still checks permission and ownership. Actions are serialized per session,
+inherit (trunks may be shared); the Endpoints API still checks permission and ownership.
+
+Managers can also supervise a shared trunk continuously by the prefix of its observed channels
+(e.g. `SIP/IN-DATORA-`, decided by the user on 2026-10-22). The server re-checks the `manager` role,
+requires a current call on that prefix and server, sends the request with the company of the
+manager's preferred supervision extension (the attribution of the supervisor call), and logs every
+session at Warning with subject, node, prefix and the companies observed on it. The dialog warns that
+the prefix carries calls of several companies and never auto-confirms. Customers never get this path. Actions are serialized per session,
 limited to one every 15 seconds, and never retried automatically. API
 `accepted=true` means originate was accepted, not that media is connected.
 On uncertain response, check the supervisor endpoint before retrying.

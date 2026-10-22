@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components.Authorization;
 using Sufficit.Telephony.EventsPanel;
 using Sufficit.Telephony.Monitor;
@@ -8,7 +9,7 @@ namespace Sufficit.Telephony.Panel.Operations;
 
 /// <summary>All upstream access remains server-side and acts as the current user.</summary>
 public sealed class OperationsAccess(AuthenticationStateProvider authentication, PanelSessions sessions,
-    OperationsPool pool, OperationsApi api, SupervisionPrefixPolicy prefixes)
+    OperationsPool pool, OperationsApi api, SupervisionPrefixPolicy prefixes, ILogger<OperationsAccess> logger)
 {
     private async Task<string> Token(CancellationToken ct)
     {
@@ -105,6 +106,39 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
                 ContextId = rule.ContextId, Mode = mode, SupervisorExtension = "wss-" + supervisor.Id.ToString("N"),
                 SupervisorProtocol = "PJSIP", SupervisorChannel = "PJSIP/wss-" + supervisor.Id.ToString("N"),
                 TargetPeerKey = rule.Prefix, TargetChannelKey = null, Node = rule.Node, Timeout = 30000,
+                CallerId = "Sufficit Monitor"
+            }, ct);
+        }
+        finally { connection.ActionGate.Release(); }
+    }
+    /// <summary>Managers: continuous supervision of a shared trunk prefix (see <see cref="SharedSupervisionPrefix"/>).</summary>
+    public async Task MonitorSharedPrefix(string node, string prefix, TelephonyMonitorActionMode mode, CancellationToken ct)
+    {
+        var permissions = await Permissions(ct);
+        if (!permissions.Manager) throw new UnauthorizedAccessException();
+        if (mode is not (TelephonyMonitorActionMode.Listen or TelephonyMonitorActionMode.Whisper)) throw new InvalidOperationException("Invalid supervision mode.");
+        if (string.IsNullOrWhiteSpace(node) || !SupervisionPrefixPolicy.SafePrefix(prefix) || prefix.StartsWith("Local/", StringComparison.Ordinal))
+            throw new InvalidOperationException("Invalid supervision prefix.");
+        var connection = await Connection(ct);
+        if (!await connection.ActionGate.WaitAsync(0, ct)) throw new InvalidOperationException("A request is already in progress.");
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (now - connection.LastAction < TimeSpan.FromSeconds(15)) throw new InvalidOperationException("Wait 15 seconds before starting another supervision request.");
+            var token = await Token(ct);
+            var supervisor = await api.Supervisor(token, ct) ?? throw new InvalidOperationException("Set your preferred extension in the portal to enable supervision.");
+            var supervisorContext = await api.SupervisorContext(token, ct) ?? throw new InvalidOperationException("Your preferred supervision extension has no company.");
+            var rows = connection.Connected ? connection.Projection.Snapshot(now) : [];
+            var companies = SharedSupervisionPrefix.Companies(rows, node, prefix);
+            if (companies.Length == 0) throw new InvalidOperationException("The prefix has no current observed call on this server.");
+            connection.LastAction = now;
+            logger.LogWarning("Shared-prefix supervision by manager {Subject}: mode={Mode} node={Node} prefix={Prefix} companies={Companies}",
+                (await authentication.GetAuthenticationStateAsync()).User.FindFirst("sub")?.Value ?? "unknown", mode, node, prefix, string.Join(",", companies));
+            await api.Action(token, new TelephonyMonitorActionRequest
+            {
+                ContextId = supervisorContext, Mode = mode, SupervisorExtension = "wss-" + supervisor.Id.ToString("N"),
+                SupervisorProtocol = "PJSIP", SupervisorChannel = "PJSIP/wss-" + supervisor.Id.ToString("N"),
+                TargetPeerKey = prefix, TargetChannelKey = null, Node = node, Timeout = 30000,
                 CallerId = "Sufficit Monitor"
             }, ct);
         }

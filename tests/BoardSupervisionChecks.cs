@@ -20,7 +20,8 @@ public static class BoardSupervisionChecks
         check(!SupervisionPrefixPolicy.Authorized(rule, [new() { Channels = [".*"] }]), "Broad API regex is not substituted for configured card identity");
         check(SupervisionPrefixPolicy.Observed(rule, [row], true, now), "Fresh observed target permits configured prefix");
         check(!SupervisionPrefixPolicy.Observed(rule, [row], false, now), "Disconnected stream rejects prefix");
-        check(!SupervisionPrefixPolicy.Observed(rule, [row], true, now.AddSeconds(31)), "Stale prefix rejected");
+        check(SupervisionPrefixPolicy.Observed(rule, [row], true, now.AddMinutes(30)), "An observed answered call keeps a configured prefix available");
+        check(!SupervisionPrefixPolicy.Observed(rule, [row], false, now), "A disconnected stream rejects a configured prefix");
         check(!SupervisionPrefixPolicy.Observed(rule, [row], true, now.AddSeconds(-1)), "Future event rejected");
         check(!SupervisionPrefixPolicy.Observed(rule, [row with { Key = "PJSIP/60070-00000001" }], true, now), "6007 prefix cannot match 60070");
         check(!SupervisionPrefixPolicy.Observed(rule, [row, row with { Account = Guid.NewGuid().ToString("N") }], true, now), "Conflicting tenant on shared trunk denies continuous supervision");

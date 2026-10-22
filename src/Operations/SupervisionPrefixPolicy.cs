@@ -25,7 +25,7 @@ public sealed class SupervisionPrefixPolicy
     public static bool Authorized(SupervisionPrefixRule rule, IEnumerable<EventsPanelCardInfo> cards) =>
         cards.Any(card => card.Channels.Contains(rule.CardKey));
     public static bool Observed(SupervisionPrefixRule rule, IEnumerable<ObservedResource> rows, bool connected, DateTimeOffset now) =>
-        connected && rows.Any(row => row.Node == rule.Node && now >= row.Updated && now - row.Updated <= TimeSpan.FromSeconds(30)
+        connected && rows.Any(row => row.Node == rule.Node && now >= row.Updated
             && (row.Key == rule.CardKey || row.Key.StartsWith(rule.Prefix, StringComparison.Ordinal))
             && (!Guid.TryParse(row.Account, out var account) || account == rule.ContextId))
         && !rows.Any(row => row.Node == rule.Node && row.Key.StartsWith(rule.Prefix, StringComparison.Ordinal)

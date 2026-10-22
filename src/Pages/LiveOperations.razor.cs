@@ -438,7 +438,8 @@ public partial class LiveOperations
     // companies' calls and never qualify; their current call stays available as a single channel.
     private bool CanSuperviseContinuously(OperatorTile tile) => Demo && Permissions.Manager
         || PrefixPolicy.For(tile, Context).Length > 0
-        || EndpointSupervisionTarget.For(tile, Context, Connected, DateTimeOffset.UtcNow).Length > 0;
+        || EndpointSupervisionTarget.For(tile, Context, Connected, DateTimeOffset.UtcNow).Length > 0
+        || SharedSupervisionPrefix.For(tile, Permissions.Manager, Connected).Length > 0;
     private BoardSupervisionAction? BoardAction;
     private bool DemoEndpointResolution => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query)
         .TryGetValue("supervisionpreview", out var scenario) && scenario == "idle";

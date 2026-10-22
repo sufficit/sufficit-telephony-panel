@@ -107,6 +107,8 @@
   "The board could not be loaded": "Não foi possível carregar a mesa",
   "Your account does not have access to company {0}. Only the companies granted to you can be opened here.": "Sua conta não tem acesso à empresa {0}. Só é possível abrir aqui as empresas liberadas para você.",
   "Open my companies": "Abrir minhas empresas",
+  "several companies": "várias empresas",
+  "Shared trunk: this prefix carries calls of several companies. Available to managers only; the session is recorded with the companies observed.": "Tronco compartilhado: este prefixo transporta chamadas de várias empresas. Disponível só para gestores; a sessão fica registrada com as empresas observadas.",
   "Listen to {0}": "Ouvir {0}",
   "Whisper to {0}": "Sussurrar para {0}",
   "Listen: hear the call without speaking": "Ouvir: escutar a chamada sem falar",

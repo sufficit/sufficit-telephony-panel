@@ -54,6 +54,15 @@ public sealed class OperationsApi(IHttpClientFactory clients)
         channels.Select(c => c.TrimStart('^').TrimEnd('$')).FirstOrDefault(c => c.Length > 0) ?? "—";
     public Task<JsonElement> Search(string token, string text, CancellationToken ct) =>
         Send(token, "contact/search?results=20&filter=" + Uri.EscapeDataString(text[..Math.Min(text.Length, 100)]), ct);
+    /// <summary>Company of the user's preferred supervision endpoint (the call to it is attributed there).</summary>
+    public async Task<Guid?> SupervisorContext(string token, CancellationToken ct)
+    {
+        var json = await Send(token, "telephony/chromeextension/preferred", ct);
+        if (json.ValueKind != JsonValueKind.Object) return null;
+        foreach (var name in new[] { "contextId", "contextID", "ContextId" })
+            if (json.TryGetProperty(name, out var value) && value.TryGetGuid(out var id) && id != Guid.Empty) return id;
+        return null;
+    }
     public async Task<(Guid Id, string Title)?> Supervisor(string token, CancellationToken ct)
     {
         // Preferred is read-only. Unlike Config it does not auto-create a preference.
