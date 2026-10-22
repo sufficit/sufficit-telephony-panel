@@ -652,5 +652,9 @@
   "Partial data": "Dados parciais",
   "No live queue controller source for these filters. Native PBX queues appear only in the distribution above.": "Sem fonte do controlador de filas ao vivo para estes filtros. Filas nativas do PABX aparecem só na distribuição acima.",
   "Queue applied as a filter. Click it again to show all queues.": "Fila aplicada como filtro. Clique de novo para ver todas.",
-  "No calls right now": "Sem chamadas agora"
+  "No calls right now": "Sem chamadas agora",
+  "Busiest queues": "Ranking das filas",
+  "All queues": "Todas as filas",
+  "calls": "chamadas",
+  "Open this queue's distribution": "Abrir a distribuição desta fila"
 }

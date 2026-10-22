@@ -58,3 +58,18 @@
   .member-meta { grid-column: 1; }
   .hour-bars { height: 110px; gap: 2px; }
 }
+
+.ranking { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ranking-row { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 28px minmax(140px, 260px) 1fr auto; grid-template-areas: "pos name bar total" "pos name meta meta"; gap: 2px 14px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.ranking-row:hover { background: var(--sui-surface-2); }
+.ranking-row:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: 1px; }
+.ranking-position { grid-area: pos; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sui-text-secondary); text-align: right; }
+.ranking-name { grid-area: name; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-bar { grid-area: bar; height: 14px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 4px; overflow: hidden; }
+.ranking-bar .fill { display: flex; height: 100%; min-width: 3px; }
+.ranking-bar .seg { background: var(--tone); flex-basis: 0; }
+.ranking-total { grid-area: total; font-size: .85rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ranking-meta { grid-area: meta; font-size: .78rem; color: var(--sui-text-secondary); }
+@media (max-width: 640px) {
+  .ranking-row { grid-template-columns: 24px 1fr auto; grid-template-areas: "pos name total" "pos bar bar" "pos meta meta"; }
+}

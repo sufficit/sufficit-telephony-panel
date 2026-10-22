@@ -9,7 +9,9 @@
     <div class="distribution-head monitor-card-head">
         <h2 id="distribution-title">@Text["Queue distribution"]</h2>
         <span class="info-dot" title="@(Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."] + (Reply is null ? "" : " " + Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)))">i</span>
-        <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == SelectedKey) is { } current ? QueueLabel(current) + " · " : "")@WindowLabel(Window)</span>
+        <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == ActiveKey) is { } current ? QueueLabel(current) : Text["Busiest queues"]) · @WindowLabel(Window)</span>
+        @if (Detail is not null && SelectedKey.Length > 0 && QueueId.Length == 0)
+        { <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="() => SelectQueue(string.Empty)">← @Text["All queues"]</SUIButton> }
         <SUIButton Class="distribution-options-trigger" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="distribution-options">@Text["Queue and period"]</SUIButton>
     </div>
     <div id="distribution-options" class="board-options page-options" popover="auto" role="region" aria-label="@Text["Queue and period"]">
@@ -19,6 +21,7 @@
             @if (Queues.Length > 1)
             {
                 <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
+                    <SUISelectItem Value="@string.Empty">@Text["Busiest queues"]</SUISelectItem>
                     @foreach (var queue in Queues)
                     { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @Text.Format("{0} calls", queue.Entered)</SUISelectItem> }
                 </SUISelect>
@@ -34,6 +37,34 @@
 
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }
     else if (Reply is null) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading queue distribution"]" /> }
+    else if (Detail is null && Ranking.Length > 0)
+    {
+        var maxEntered = Math.Max(1, Ranking[0].Entered);
+        <ol class="ranking" aria-label="@Text["Busiest queues"]">
+            @foreach (var (item, index) in Ranking.Take(RankLimit).Select((q, i) => (q, i)))
+            {
+                <li @key="item.Key">
+                    <button type="button" class="ranking-row" @onclick="() => SelectQueue(item.Key)" title="@Text["Open this queue's distribution"]">
+                        <span class="ranking-position">@(index + 1)</span>
+                        <span class="ranking-name">@QueueLabel(item)</span>
+                        <span class="ranking-bar"><span class="fill" style="width:@Css(100.0 * item.Entered / maxEntered)%">
+                            @if (item.Answered > 0) { <span class="seg good" style="flex-grow:@item.Answered"></span> }
+                            @if (item.Abandoned > 0) { <span class="seg bad" style="flex-grow:@item.Abandoned"></span> }
+                            @if (item.Other > 0) { <span class="seg neutral" style="flex-grow:@item.Other"></span> }
+                        </span></span>
+                        <span class="ranking-total"><b>@item.Entered</b> @Text["calls"]</span>
+                        <span class="ranking-meta">@Percent(item.AnswerRate) @Text["answered"] · @Text["wait"] @Duration(item.AverageWait)</span>
+                    </button>
+                </li>
+            }
+        </ol>
+        @if (Ranking.Length > RankLimit) { <SUIButton VariantValue="SUIVariant.Text" OnClick="() => RankLimit += 20">@Text["Show more"] (@(Ranking.Length - RankLimit))</SUIButton> }
+        <ul class="legend" aria-label="@Text["Legend"]">
+            <li><span class="dot good"></span>@Text["Answered call"]</li>
+            <li><span class="dot bad"></span>@Text["Abandoned call"]</li>
+            <li><span class="dot neutral"></span>@Text["Left the queue"]</li>
+        </ul>
+    }
     else if (Detail is null)
     {
         @if (Search.Length > 0 || NodeFilter.Length > 0)
@@ -144,7 +175,9 @@
     private DistributionReply? Reply;
     private DistributionQueue[] Queues = [];
     private DistributionDetail? Detail;
-    private string SelectedKey = "", LoadedContext = "";
+    private string SelectedKey = "", LoadedContext = "", ActiveKey = "";
+    private DistributionQueue[] Ranking = [];
+    private int RankLimit = 20;
     private int Window = 24, CallLimit = 30;
     private string? Error;
     private bool Busy, Disposed;
@@ -194,13 +227,16 @@
             {
                 // The summary lists the queues; the detail brings members and calls of the selected one only.
                 var summary = await Access.Read(context, NodeFilter, "", true, Lifetime.Token, Search.Trim());
+                // Without a chosen queue the card shows the ranking (summary only); a queue opens its detail.
+                var candidates = QueueDistributionView.Queues(summary, 24);
                 var top = SelectedKey.Length > 0 && summary.Queues.Any(q => q.Node + "|" + q.Queue == SelectedKey) ? SelectedKey
-                    : QueueDistributionView.Queues(summary, 24).FirstOrDefault(q => QueueId.Length == 0 || q.Queue == QueueId)?.Key ?? "";
+                    : QueueId.Length > 0 ? candidates.FirstOrDefault(q => q.Queue == QueueId)?.Key ?? ""
+                    : Search.Trim().Length > 0 && candidates.Length == 1 ? candidates[0].Key : "";
                 var detail = top.Length == 0 ? new DistributionReply()
                     : await Access.Read(context, top.Split('|')[0], top[(top.IndexOf('|') + 1)..], false, Lifetime.Token);
                 detail.Queues.Clear(); detail.Queues.AddRange(summary.Queues);
                 detail.StartedAtMs = summary.StartedAtMs; detail.NowMs = summary.NowMs;
-                Reply = detail; SelectedKey = top;
+                Reply = detail; ActiveKey = top;
             }
             LoadedContext = requested; LoadedKey = FilterKey;
             Error = null;
@@ -217,8 +253,10 @@
         if (Reply is null) return;
         Queues = QueueDistributionView.Queues(Reply, 24);
         if (QueueId.Length > 0) Queues = Queues.Where(q => q.Queue == QueueId).ToArray();
-        if (SelectedKey.Length == 0 || Queues.All(q => q.Key != SelectedKey)) SelectedKey = Queues.FirstOrDefault()?.Key ?? "";
-        var parts = SelectedKey.Split('|', 2);
+        Ranking = QueueDistributionView.Queues(Reply, Window).Where(q => q.Entered > 0).ToArray();
+        if (Demo) ActiveKey = SelectedKey.Length > 0 && Queues.Any(q => q.Key == SelectedKey) ? SelectedKey
+            : QueueId.Length > 0 ? Queues.FirstOrDefault()?.Key ?? "" : Search.Trim().Length > 0 && Queues.Length == 1 ? Queues[0].Key : "";
+        var parts = ActiveKey.Split('|', 2);
         Detail = parts.Length == 2 ? QueueDistributionView.Detail(Reply, parts[0], parts[1], Window) : null;
         CommonPrefix = Detail is null ? 0 : Prefix(Detail.Calls.SelectMany(c => c.Attempts).Select(a => QueueDistributionView.Extension(a.Member))
             .Concat(Detail.Members.Select(m => m.Extension)).Distinct().ToArray());

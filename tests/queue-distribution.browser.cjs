@@ -8,6 +8,12 @@ const { chromium } = require('playwright');
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('http://127.0.0.1:5169/queues?preview=true');
       const section = page.locator('.distribution');
+      // No queue chosen: ranking of the busiest queues; clicking one opens its distribution.
+      await section.locator('.ranking-row').first().waitFor({ timeout: 30000 });
+      if (await section.locator('.ranking-row').count() !== 2) throw new Error('two queues in the ranking');
+      if (!(await section.locator('.ranking-row').first().innerText()).includes('0007366500')) throw new Error('busiest queue first');
+      await section.locator('.ranking-row').first().click();
+      await page.waitForURL(url => url.searchParams.has('dqueue'));
       await section.locator('.member').first().waitFor({ timeout: 30000 });
       if (await section.locator('.member').count() !== 6) throw new Error('six members expected');
       if (await section.locator('.hour').count() !== 24) throw new Error('24 hourly bars by default');
