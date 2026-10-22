@@ -88,3 +88,7 @@
 @keyframes ring-pulse { 50% { background: color-mix(in srgb, var(--sui-color-primary) 45%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .attempt.ringing { animation: none; } }
 @media (max-width: 640px) { .now { grid-template-columns: 1fr; } }
+
+.config-line { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: .85rem; margin: 0 0 var(--sui-space-2); }
+.member-flags { font-size: .72rem; color: var(--sui-text-secondary); }
+.idle-members { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-top: var(--sui-space-2); border-top: 1px solid var(--sui-border); font-size: .8rem; }

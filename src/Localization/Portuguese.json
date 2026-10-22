@@ -665,5 +665,22 @@
   "capacity not reported": "capacidade não informada pelo PABX",
   "No calls waiting in this queue right now.": "Nenhuma chamada aguardando nesta fila agora.",
   "waiting": "aguardando",
-  "not offered to any extension yet": "ainda não ofertada a nenhum ramal"
+  "not offered to any extension yet": "ainda não ofertada a nenhum ramal",
+  "Ring all at once": "Tocar todos ao mesmo tempo",
+  "In order (linear)": "Em ordem (linear)",
+  "Round robin": "Rodízio",
+  "Random": "Aleatório",
+  "Fewest answered calls first": "Quem atendeu menos primeiro",
+  "Longest since last call first": "Quem está há mais tempo sem chamada primeiro",
+  "In groups": "Em grupos",
+  "Distribution": "Distribuição",
+  "of {0}": "de {0}",
+  "Ring per extension": "Toque por ramal",
+  "no limit": "sem limite",
+  "Penalty escalation": "Escalonamento de penalidade",
+  "Max penalty": "Penalidade máxima",
+  "Members that did not ring in this period": "Membros que não tocaram no período",
+  "penalty {0}": "penalidade {0}",
+  "disabled": "desativado",
+  "logged out": "deslogado"
 }

@@ -70,4 +70,19 @@ public sealed class QueueDistributionAccess(PanelAccess access, SharedTelemetry 
         catch (InvalidOperationException) { return null; }
         catch (HttpRequestException) { return null; }
     }
+
+    /// <summary>Strategy and member penalties of a Queue controller queue (read-only monitoring route); null when unavailable.</summary>
+    public async Task<QueueConfigurationItem?> Configuration(Guid context, string node, string queueId, CancellationToken ct)
+    {
+        if (queueBoard is null || !Guid.TryParseExact(queueId, "N", out _)) return null;
+        try
+        {
+            var source = (await queueBoard.Read(context, ct)).FirstOrDefault(s => s.Node == node && s.NodeId != Guid.Empty);
+            if (source is null) return null;
+            var set = await queueBoard.Diagnostic<QueueConfigurationSet>(context, source.NodeId, "configuration", ct);
+            return set.Items.FirstOrDefault(i => i.QueueId == queueId);
+        }
+        // Older controllers (before 0.20.9) refuse the route: the panel simply shows no configuration.
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException) { return null; }
+    }
 }

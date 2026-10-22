@@ -104,6 +104,14 @@ public static class QueueDistributionView
         return result;
     }
 
+    /// <summary>English label key for a Queue controller strategy (translated by PanelText).</summary>
+    public static string StrategyLabel(string strategy) => strategy switch
+    {
+        "ringall" => "Ring all at once", "linear" => "In order (linear)", "roundRobin" => "Round robin", "random" => "Random",
+        "fewestCalls" => "Fewest answered calls first", "leastRecent" => "Longest since last call first", "groups" => "In groups",
+        _ => strategy
+    };
+
     /// <summary>Hour labels for the last N buckets ending at <paramref name="now"/> (local time of the viewer).</summary>
     public static DateTimeOffset[] HourStarts(DateTimeOffset now, int hours)
     {

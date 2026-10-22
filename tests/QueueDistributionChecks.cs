@@ -51,6 +51,10 @@ internal static class QueueDistributionChecks
         var detailNew = QueueDistributionView.Detail(built, "google-voip", queueId.ToString("N"), 24)!;
         check(QueueDistributionView.Queues(built, 24)[0].Label == "Suporte" && detailNew.Members.Length == 5, "Controller queue in the view");
         check(QueueDistributionView.Filter(built, "", "suporte").Queues.Count == 1 && QueueDistributionView.Filter(built, "", "6002").Queues.Count == 1, "Search by title and extension");
+        check(QueueDistributionView.StrategyLabel("ringall") == "Ring all at once" && QueueDistributionView.StrategyLabel("custom") == "custom", "Strategy labels");
+        var configuration = new QueueConfigurationSet(context, Guid.NewGuid(), [new(queueId.ToString("N"), "Suporte", true, 20, 60, "ringall", 3, 15, 1000000, [new(30, 5)],
+            [new("6001", "Ana", 0, false, true, true, false, 1)])]);
+        check(QueueDiagnosticsReader.Valid(configuration, context, configuration.NodeId) && !QueueDiagnosticsReader.Valid(configuration, Guid.NewGuid(), configuration.NodeId), "Configuration bound to its context");
         var starts = QueueDistributionView.HourStarts(new DateTimeOffset(2026, 10, 22, 14, 37, 0, TimeSpan.FromHours(-3)), 4);
         check(starts[^1].Hour == 14 && starts[0].Hour == 11 && starts[0].Minute == 0, "Hour labels end at the current hour");
     }

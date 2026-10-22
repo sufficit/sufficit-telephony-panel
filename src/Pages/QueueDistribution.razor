@@ -139,11 +139,23 @@
                 <li><span class="dot bad"></span>@Text["Unavailable"]</li>
                 <li><span class="dot neutral"></span>@Text["Someone else answered or caller hung up"]</li>
             </ul>
+            @if (Config is { } config)
+            {
+                <p class="config-line">
+                    <span><span class="muted">@Text["Distribution"]</span> <b>@Text[QueueDistributionView.StrategyLabel(config.Strategy)]</b>@(config.Strategy == "groups" ? " " + Text.Format("of {0}", config.GroupSize) : "")</span>
+                    <span><span class="muted">@Text["Ring per extension"]</span> <b>@Duration(config.AgentTimeoutSeconds)</b></span>
+                    <span><span class="muted">@Text["Capacity"]</span> <b>@(config.MaxWaiting == 0 ? Text["no limit"] : config.MaxWaiting.ToString())</b></span>
+                    @if (config.PenaltySteps is { Length: > 0 } steps)
+                    { <span><span class="muted">@Text["Penalty escalation"]</span> <b>@string.Join(" → ", steps.OrderBy(p => p.AfterSeconds).Select(p => $"{p.AfterSeconds}s ≤ {p.MaxPenalty}"))</b></span> }
+                    else if (config.MaxPenalty < 1000000) { <span><span class="muted">@Text["Max penalty"]</span> <b>@config.MaxPenalty</b></span> }
+                </p>
+            }
             @if (Detail.Members.Length == 0) { <p class="muted">@Text["No extension rang in this period."]</p> }
             @foreach (var member in Detail.Members)
             {
                 <div class="member" @key="member.Member">
-                    <div class="member-name"><strong>@member.Label</strong>@if (member.Label != member.Extension) { <small>@member.Extension</small> }</div>
+                    <div class="member-name"><strong>@member.Label</strong>@if (member.Label != member.Extension) { <small>@member.Extension</small> }
+                        @if (ConfigMember(member.Extension) is { } configured) { <span class="member-flags">@MemberFlags(configured)</span> }</div>
                     <div class="track" role="img" aria-label="@MemberSummary(member)" title="@MemberSummary(member)">
                         <div class="fill" style="width:@Css(100.0 * member.Offered / maxRung)%">
                             @if (member.Answered > 0) { <span class="seg good" style="flex-grow:@member.Answered">@member.Answered</span> }
@@ -159,6 +171,13 @@
                         <span>@Text["Talk"] <b>@Duration(member.AverageTalk)</b></span>
                         <span>@Text["Last answer"] <b>@Ago(member.LastAnswered)</b></span>
                     </div>
+                </div>
+            }
+            @if (Config?.Members is { } all && all.Where(m => Detail.Members.All(d => d.Extension != m.Extension)).ToArray() is { Length: > 0 } idle)
+            {
+                <div class="idle-members"><span class="muted">@Text["Members that did not ring in this period"]:</span>
+                    @foreach (var m in idle.OrderBy(m => m.Penalty).ThenBy(m => m.Extension))
+                    { <span class="attempt neutral" title="@(m.Title ?? m.Extension)">@Short(m.Extension) @MemberFlags(m)</span> }
                 </div>
             }
         </section>
@@ -206,6 +225,13 @@
     private DistributionQueue[] Queues = [];
     private DistributionDetail? Detail;
     private string SelectedKey = "", LoadedContext = "", ActiveKey = "";
+    private QueueConfigurationItem? Config;
+    private QueueConfigurationMember? ConfigMember(string extension) => Config?.Members?.FirstOrDefault(m => m.Extension == extension);
+    private string MemberFlags(QueueConfigurationMember m) => string.Join(" · ", new[]
+    {
+        Text.Format("penalty {0}", m.Penalty),
+        m.Paused ? Text["paused"] : null, !m.Enabled ? Text["disabled"] : null, m.Dynamic && !m.LoggedIn ? Text["logged out"] : null
+    }.OfType<string>());
     private DistributionQueue[] Ranking = [];
     private int RankLimit = 20;
     private int Window = 24, CallLimit = 30;
@@ -275,6 +301,11 @@
                 detail.Queues.Clear(); detail.Queues.AddRange(summary.Queues);
                 detail.StartedAtMs = summary.StartedAtMs; detail.NowMs = summary.NowMs;
                 Reply = detail; ActiveKey = top;
+                // Strategy and penalties exist only for Queue controller queues (queue id is a GUID).
+                Config = null;
+                if (top.Split('|', 2) is [var node, var queue] && Guid.TryParseExact(queue, "N", out _)
+                    && summary.Queues.FirstOrDefault(q => q.Node == node && q.Queue == queue) is { } stat && Guid.TryParse(stat.Account, out var owner))
+                    Config = await Access.Configuration(owner, node, queue, Lifetime.Token);
             }
             LoadedContext = requested; LoadedKey = FilterKey;
             Error = null;
