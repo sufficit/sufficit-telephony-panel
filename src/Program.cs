@@ -207,6 +207,12 @@ app.Use(async (ctx, next) =>
     await next();
 });
 app.UseAuthentication();
+app.Use(async (ctx, next) =>
+{
+    if (AutoSignIn.Applies(ctx.Request, ctx.User.Identity?.IsAuthenticated == true))
+    { ctx.Response.Redirect(AutoSignIn.LoginPath(ctx.Request, pathBase)); return; }
+    await next();
+});
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
@@ -244,7 +250,8 @@ app.MapPost("/logout", async (HttpContext ctx) =>
 {
     await ctx.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>().ValidateRequestAsync(ctx);
     await ctx.SignOutAsync("panel");
-    return Results.LocalRedirect(pathBase + "/");
+    // ?signedout=1 keeps the landing page instead of starting a new automatic sign-in.
+    return Results.LocalRedirect(pathBase + "/?signedout=1");
 });
 app.MapGet("/api/fleet", async (HttpContext ctx, PanelSessions sessions, FleetMetrics metrics) =>
     await sessions.IsManagerAsync(ctx.User, ctx.RequestAborted)
