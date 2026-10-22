@@ -82,6 +82,20 @@ public static class QueueDistributionView
         return new(Queue(stat, hours), members, calls);
     }
 
+    /// <summary>Same node/search rules as the collector; used only for the preview fixture.</summary>
+    public static DistributionReply Filter(DistributionReply reply, string node, string search)
+    {
+        bool Has(string value) => search.Length == 0 || value.Contains(search, StringComparison.OrdinalIgnoreCase);
+        var keep = reply.Queues.Where(q => (node.Length == 0 || q.Node == node)
+                && (Has(q.Queue) || reply.Members.Any(m => m.Node == q.Node && m.Queue == q.Queue && (Has(m.Interface) || Has(m.Name)))))
+            .Select(q => (q.Node, q.Queue)).ToHashSet();
+        var result = new DistributionReply { StartedAtMs = reply.StartedAtMs, NowMs = reply.NowMs };
+        result.Queues.AddRange(reply.Queues.Where(q => keep.Contains((q.Node, q.Queue))));
+        result.Members.AddRange(reply.Members.Where(m => keep.Contains((m.Node, m.Queue))));
+        result.Calls.AddRange(reply.Calls.Where(c => keep.Contains((c.Node, c.Queue))));
+        return result;
+    }
+
     /// <summary>Hour labels for the last N buckets ending at <paramref name="now"/> (local time of the viewer).</summary>
     public static DateTimeOffset[] HourStarts(DateTimeOffset now, int hours)
     {

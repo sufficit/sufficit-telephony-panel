@@ -1,11 +1,13 @@
-.distribution { margin-top: var(--sui-space-6); display: grid; gap: var(--sui-space-5); }
-.distribution-head { display: flex; flex-wrap: wrap; gap: var(--sui-space-4); justify-content: space-between; align-items: end; }
+.distribution { margin-top: var(--sui-space-6); padding-top: var(--sui-space-5); border-top: 1px solid var(--sui-border); display: grid; gap: var(--sui-space-5); }
+.distribution-head { display: grid; gap: var(--sui-space-1); }
 .distribution-head h2 { margin: 0; }
-.distribution-head p { margin: var(--sui-space-1) 0 0; }
-.distribution-controls { display: flex; flex-wrap: wrap; gap: var(--sui-space-3); align-items: end; }
-.distribution-controls ::deep .sui-field { min-width: 220px; }
-.windows { display: inline-flex; border: 1px solid var(--sui-border); border-radius: 999px; overflow: hidden; }
-.windows button { border: 0; background: transparent; color: inherit; padding: 6px 14px; font: inherit; cursor: pointer; }
+.distribution-head p { margin: 0; font-size: .875rem; max-width: 70ch; }
+.distribution-toolbar { display: flex; flex-wrap: wrap; gap: var(--sui-space-3) var(--sui-space-4); align-items: end; }
+.distribution-toolbar ::deep .sui-field { flex: 0 1 360px; min-width: 220px; }
+.single-queue { display: grid; gap: 2px; font-size: .875rem; }
+.filter-note { font-size: .8rem; align-self: center; }
+.windows { display: inline-flex; height: 40px; border: 1px solid var(--sui-border); border-radius: 999px; overflow: hidden; }
+.windows button { border: 0; background: transparent; color: inherit; padding: 0 14px; font: inherit; font-size: .875rem; cursor: pointer; }
 .windows button + button { border-left: 1px solid var(--sui-border); }
 .windows button.active { background: var(--sui-color-primary); color: var(--sui-color-primary-contrast, #fff); }
 .windows button:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: -2px; }
@@ -24,7 +26,7 @@
 
 .hours { margin: 0; }
 .hours figcaption { font-weight: 600; margin-bottom: var(--sui-space-2); }
-.hour-bars { display: flex; gap: 3px; align-items: stretch; height: 140px; }
+.hour-bars { display: flex; gap: 3px; align-items: stretch; height: 120px; max-width: 1200px; }
 .hour { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .stack { display: flex; flex-direction: column; border-radius: 4px 4px 0 0; overflow: hidden; min-height: 0; }
 .stack .seg { background: var(--tone); flex-basis: 0; min-height: 2px; }
@@ -57,6 +59,5 @@
   .member { grid-template-columns: 1fr; }
   .member-meta { grid-column: 1; }
   .hour-bars { height: 110px; gap: 2px; }
-  .distribution-controls { width: 100%; }
-  .distribution-controls ::deep .sui-field { flex: 1 1 100%; min-width: 0; }
+  .distribution-toolbar ::deep .sui-field { flex: 1 1 100%; min-width: 0; }
 }

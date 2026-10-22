@@ -3,33 +3,38 @@
 @using Sufficit.Telephony.Streaming
 @inject QueueDistributionAccess Access
 @inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
 
 <section class="distribution" aria-labelledby="distribution-title">
-    <div class="distribution-head">
-        <div>
-            <h2 id="distribution-title">@Text["Queue distribution"]</h2>
-            <p class="muted">@Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."]</p>
+    <header class="distribution-head">
+        <h2 id="distribution-title">@Text["Queue distribution"]</h2>
+        <p class="muted">@Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."]</p>
+    </header>
+    <div class="distribution-toolbar">
+        @if (Queues.Length > 1)
+        {
+            <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
+                @foreach (var queue in Queues)
+                { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @Text.Format("{0} calls", queue.Entered)</SUISelectItem> }
+            </SUISelect>
+        }
+        else if (Queues.Length == 1) { <div class="single-queue"><span class="muted">@Text["Queue"]</span><strong>@QueueLabel(Queues[0])</strong></div> }
+        <div class="windows" role="group" aria-label="@Text["Period"]">
+            @foreach (var hours in QueueDistributionView.Windows)
+            { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
         </div>
-        <div class="distribution-controls">
-            @if (Queues.Length > 1)
-            {
-                <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
-                    @foreach (var queue in Queues)
-                    { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @queue.Entered</SUISelectItem> }
-                </SUISelect>
-            }
-            <div class="windows" role="group" aria-label="@Text["Period"]">
-                @foreach (var hours in QueueDistributionView.Windows)
-                { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
-            </div>
-        </div>
+        @if (Search.Length > 0 || NodeFilter.Length > 0)
+        { <span class="muted filter-note">@Text["Following the page filters above."]</span> }
     </div>
 
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }
     else if (Reply is null) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading queue distribution"]" /> }
     else if (Detail is null)
     {
-        <p class="operation-empty">@Text["No queue calls observed in this period. Counting starts when the collector receives the PBX queue events."]</p>
+        @if (Search.Length > 0 || NodeFilter.Length > 0)
+        { <p class="operation-empty">@Text.Format("No queue with calls matches the filters (search \"{0}\"). Search by queue number, extension or member name.", Search)</p> }
+        else
+        { <p class="operation-empty">@Text["No queue calls observed in this period. Counting starts when the collector receives the PBX queue events."]</p> }
     }
     else
     {
@@ -123,6 +128,12 @@
 @code {
     [Parameter] public string Context { get; set; } = "";
     [Parameter] public bool Preview { get; set; }
+    /// <summary>Page search (queue number, extension or member name) and server filter, shared with the rest of the page.</summary>
+    [Parameter] public string Search { get; set; } = "";
+    [Parameter] public string Node { get; set; } = "all";
+    private string NodeFilter => Node is "" or "all" ? "" : Node;
+    private string LoadedKey = "";
+    private string FilterKey => Context + "|" + NodeFilter + "|" + Search.Trim();
     private bool Demo => Preview && Environment.IsDevelopment();
     private DistributionReply? Reply;
     private DistributionQueue[] Queues = [];
@@ -134,15 +145,34 @@
     private readonly CancellationTokenSource Lifetime = new();
     private Task? Loop;
 
-    protected override async Task OnInitializedAsync() { await Refresh(); Loop = Poll(); }
+    protected override async Task OnInitializedAsync()
+    {
+        ReadUrl(); Navigation.LocationChanged += LocationChanged;
+        await Refresh(); Loop = Poll();
+    }
     protected override async Task OnParametersSetAsync()
     {
-        if (LoadedContext == Context) return;
-        SelectedKey = ""; Detail = null; Reply = null;
+        if (LoadedKey == FilterKey || Reply is null && LoadedKey.Length == 0) return;
+        Detail = null; Reply = null;
         await Refresh();
     }
-    private async Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; await Refresh(); }
-    private void SetWindow(int hours) { Window = hours; Rebuild(); }
+    /// <summary>Queue and period live in the URL (dqueue, dperiod) like the page filters.</summary>
+    private void ReadUrl()
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (query.TryGetValue("dqueue", out var queue) && queue.Count == 1 && queue[0] is { Length: > 2 and <= 260 } key && key.Contains('|')) SelectedKey = key;
+        Window = query.TryGetValue("dperiod", out var period) && int.TryParse(period, out var hours) && QueueDistributionView.Windows.Contains(hours) ? hours : 24;
+    }
+    private void WriteUrl() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        { ["dqueue"] = SelectedKey.Length == 0 ? null : SelectedKey, ["dperiod"] = Window == 24 ? null : Window }), replace: true);
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        var (key, window) = (SelectedKey, Window);
+        ReadUrl();
+        if (key != SelectedKey || window != Window) _ = InvokeAsync(async () => { CallLimit = 30; await Refresh(); });
+    }
+    private Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; WriteUrl(); return Task.CompletedTask; }
+    private void SetWindow(int hours) { Window = hours; WriteUrl(); }
 
     private async Task Refresh()
     {
@@ -152,12 +182,12 @@
         {
             var context = Guid.TryParse(Context, out var id) ? id : (Guid?)null;
             var requested = Context;
-            if (Demo) Reply = QueueDistributionFixture.Create(DateTimeOffset.UtcNow);
+            if (Demo) Reply = QueueDistributionView.Filter(QueueDistributionFixture.Create(DateTimeOffset.UtcNow), NodeFilter, Search.Trim());
             else if (!Access.Enabled) { Error = "Queue distribution is not configured on this server."; return; }
             else
             {
                 // The summary lists the queues; the detail brings members and calls of the selected one only.
-                var summary = await Access.Read(context, "", "", true, Lifetime.Token);
+                var summary = await Access.Read(context, NodeFilter, "", true, Lifetime.Token, Search.Trim());
                 var top = SelectedKey.Length > 0 && summary.Queues.Any(q => q.Node + "|" + q.Queue == SelectedKey) ? SelectedKey
                     : QueueDistributionView.Queues(summary, 24).FirstOrDefault()?.Key ?? "";
                 var detail = top.Length == 0 ? new DistributionReply()
@@ -166,7 +196,7 @@
                 detail.StartedAtMs = summary.StartedAtMs; detail.NowMs = summary.NowMs;
                 Reply = detail; SelectedKey = top;
             }
-            LoadedContext = requested;
+            LoadedContext = requested; LoadedKey = FilterKey;
             Error = null;
             Rebuild();
         }
@@ -234,5 +264,5 @@
         "answered" => "Took the call", "no-answer" => "Rang, not answered", "unavailable" => "Unavailable",
         "other-answered" => "Someone else answered", "caller-hangup" => "Caller hung up", "cancelled" => "Call left the queue", _ => "Ringing"
     };
-    public async ValueTask DisposeAsync() { Disposed = true; Lifetime.Cancel(); if (Loop is not null) await Loop; Lifetime.Dispose(); }
+    public async ValueTask DisposeAsync() { Disposed = true; Navigation.LocationChanged -= LocationChanged; Lifetime.Cancel(); if (Loop is not null) await Loop; Lifetime.Dispose(); }
 }

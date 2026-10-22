@@ -11,11 +11,11 @@ public sealed class QueueDistributionAccess(PanelAccess access, SharedTelemetry 
 {
     public bool Enabled => telemetry.Enabled;
 
-    public async Task<DistributionReply> Read(Guid? context, string node, string queue, bool summary, CancellationToken ct)
+    public async Task<DistributionReply> Read(Guid? context, string node, string queue, bool summary, CancellationToken ct, string search = "")
     {
         var permissions = await access.PermissionsAsync(ct);
         context = permissions.SelectContext(context);
-        var request = new DistributionRequest { Node = node, Queue = queue, Summary = summary };
+        var request = new DistributionRequest { Node = node, Queue = queue, Summary = summary, Search = search.Length > 128 ? search[..128] : search };
         if (context is { } selected) request.Accounts.Add(selected.ToString("N"));
         else if (!permissions.Manager && !permissions.GlobalPanel)
         {

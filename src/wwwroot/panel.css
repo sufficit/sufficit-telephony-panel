@@ -396,3 +396,8 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
 /* Panel supervision icons are stroke drawings (like SUIIcons); never fill them. */
 .call-actions svg { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .board-supervision .supervision-block-reason { display:block; margin-top:4px; font-size:12px; overflow-wrap:anywhere; }
+/* Medium widths (tablet/half screen): header actions wrap instead of pushing the page sideways. */
+@media(max-width:1200px) {
+ .panel-header { flex-wrap:wrap; row-gap:8px; }
+ .panel-shell:not(.board-only) .header-actions { flex-wrap:wrap; justify-content:flex-end; margin-left:auto; min-width:0; }
+}

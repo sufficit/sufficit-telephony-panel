@@ -639,5 +639,8 @@
   "Abandoned call": "Abandonada",
   "Took the call": "Atendeu",
   "not observed yet": "ainda não observado (aparece no próximo registro)",
-  "not reported in PBX events": "não informado nos eventos do PABX"
+  "not reported in PBX events": "não informado nos eventos do PABX",
+  "{0} calls": "{0} chamadas",
+  "Following the page filters above.": "Seguindo os filtros da página acima.",
+  "No queue with calls matches the filters (search \"{0}\"). Search by queue number, extension or member name.": "Nenhuma fila com chamadas corresponde aos filtros (busca \"{0}\"). Busque pelo número da fila, ramal ou nome do membro."
 }
