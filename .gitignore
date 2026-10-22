@@ -21,3 +21,4 @@ published/
 *.secrets.json
 # Python bytecode cache
 **/__pycache__/
+tests/.impeccable/
