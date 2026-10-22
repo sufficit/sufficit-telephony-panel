@@ -6,8 +6,9 @@ namespace Sufficit.Telephony.Panel.Operations;
 /// <summary>Bounded single-flight private snapshots. Authorization belongs to QueueBoardAccess.</summary>
 public sealed class QueueBoardReader : IDisposable
 {
-    private sealed class Slot(QueueBoardSource source, Guid context)
+    private sealed class Slot(QueueBoardSource source, Guid context, bool dynamic = false)
     {
+        public readonly bool Dynamic = dynamic;
         public readonly QueueBoardSource Source = source;
         public readonly Guid Context = context;
         public readonly SemaphoreSlim Gate = new(1);
@@ -71,7 +72,7 @@ public sealed class QueueBoardReader : IDisposable
                 var oldest = dynamic.Where(p => p.Value.Gate.CurrentCount == 1).OrderBy(p => p.Value.Attempted).FirstOrDefault();
                 if (oldest.Value is not null) dynamic.Remove(oldest.Key);
             }
-            return dynamic[(source.NodeId, context)] = new Slot(source, context);
+            return dynamic[(source.NodeId, context)] = new Slot(source, context, dynamic: true);
         }
     }
     private async Task<QueueBoardSample> Read(Slot slot, CancellationToken budget, CancellationToken caller)
@@ -94,6 +95,11 @@ public sealed class QueueBoardReader : IDisposable
                 $"/api/queue/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot");
             request.Headers.Authorization = new("Bearer", key);
             using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
+            // On-demand (AnyContext) reads: the controller answers 404 for a company without queues. That is
+            // "no queues here", not a source failure.
+            if (slot.Dynamic && response.StatusCode == HttpStatusCode.NotFound)
+                return slot.Value = new(slot.Source.Node, slot.Context, new QueueBoardSnapshot(slot.Context.ToString("N"),
+                    slot.Source.NodeId.ToString("N"), clock.GetUtcNow(), true, false, [], [], []), true, slot.Source.NodeId);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(budget);
             if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("QUEUE snapshot exceeds its bound.");

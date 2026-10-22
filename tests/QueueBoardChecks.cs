@@ -95,6 +95,17 @@ internal static class QueueBoardChecks
                 check(mixed.Single(s => s.Node == "google-voip").Available && !mixed.Single(s => s.Node == "eveo-voip").Available,
                     "One invalid node snapshot does not suppress another node");
             }
+            // AnyContext: a selected, unconfigured context is read on demand; 404 there means "no queues", not a failure.
+            using (var open = new QueueBoardReader([source with { ContextIds = [], AnyContext = true }], http, clock))
+            {
+                check(QueueBoardReader.ValidSource(source with { ContextIds = [], AnyContext = true }) && !QueueBoardReader.ValidSource(source with { ContextIds = [] }), "Empty context list only with AnyContext");
+                check((await open.Read(null, default)).Length == 0, "AnyContext source is not read in the unscoped overview");
+                clock.Now = now.AddSeconds(18); http.Status = HttpStatusCode.NotFound;
+                var none = (await open.Read(other, default)).Single();
+                check(none.Available && none.Snapshot is { Queues.Length: 0 } && none.Diagnostic is null, "On-demand 404 is an empty company, not a source failure");
+                check(open.DiagnosticSource(other, node) is not null, "Diagnostics resolve the AnyContext source");
+                http.Status = HttpStatusCode.OK;
+            }
             using var sessions = new PanelSessions(http, clock);
             var access = new QueueBoardAccess(new PanelAccess(new Anonymous(), sessions), reader);
             var requests = http.Requests;
