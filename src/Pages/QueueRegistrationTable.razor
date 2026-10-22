@@ -1,8 +1,9 @@
 @using Sufficit.Telephony.Panel.Operations
-<section class="queue-diagnostics" aria-label="@Text["Extension diagnostics"]">
-    <h3>@Text["Extension presence and registrations"]</h3>
-    <p class="muted">@Text["Registration and queue membership are independent. History contains observed changes, not exact SIP message times."]</p>
-    <p class="muted">@Text["Extensions not watched by presence receive queue calls without a presence check."]</p>
+<section class="queue-diagnostics monitor-card" aria-label="@Text["Extension diagnostics"]">
+    <div class="monitor-card-head">
+        <h2>@Text["Extension presence and registrations"] <span class="count">@Agents.Length</span></h2>
+        <span class="info-dot" title="@(Text["Registration and queue membership are independent. History contains observed changes, not exact SIP message times."] + " " + Text["Extensions not watched by presence receive queue calls without a presence check."] + " " + Text["Declared mobile applications do not prove battery state or wake-up support. Offline registration is an observation, not a saved expected-offline preference."])">i</span>
+    </div>
     <SUITable T="QueueAgentOverview" Items="Agents.Skip(Page*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="8">
         <HeaderContent><SUITh>@Text["Extension"]</SUITh><SUITh>@Text["Observed state"]</SUITh><SUITh>@Text["Contact IP"]</SUITh><SUITh>@Text["Declared device"]</SUITh><SUITh>@Text["Registration"]</SUITh><SUITh>@Text["Reachability"]</SUITh><SUITh>@Text["Usage"]</SUITh><SUITh>@Text["Diagnostics"]</SUITh></HeaderContent>
         <RowTemplate Context="agent">
@@ -40,9 +41,8 @@
                 </details>
             </SUITd>
         </RowTemplate>
-        <NoRecordsContent>@Text["No extension observations match the filters."]</NoRecordsContent>
+        <NoRecordsContent><span class="monitor-empty">@Text["No extension observations match the filters."]</span></NoRecordsContent>
     </SUITable>
-    <p class="muted">@Text["Declared mobile applications do not prove battery state or wake-up support. Offline registration is an observation, not a saved expected-offline preference."]</p>
     <Pager Total="Agents.Length" Page="Page" PageChanged="value => Page = value" />
 </section>
 @code {

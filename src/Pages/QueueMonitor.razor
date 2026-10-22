@@ -36,19 +36,33 @@
             @if (ActiveFilters.Length > 0) { <SUIButton OnClick="ClearFilters" VariantValue="SUIVariant.Text">@Text["Clear filters"]</SUIButton> }
         </div>
     </div>
-    <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
-    @if (!Busy && Error is null && !FilteredSamples.Any())
-    { <p class="operation-empty">@Text["No monitoring source matches these filters. Clear filters or check source configuration."]</p> }
+    @if (!FilteredSamples.Any())
+    {
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
+        @if (!Busy && Error is null) { <p class="monitor-empty">@Text["No live queue controller source for these filters. Native PBX queues appear only in the distribution above."]</p> }
+    }
     @if (FilteredSamples.Any())
     {
         var overview = QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
-        @if (FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true))
-        { <SUIAlert ToneValue="SUITone.Warning">@Text["Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical."]</SUIAlert> }
-        <section class="queue-queues" aria-labelledby="queue-queues-title">
-            <h2 id="queue-queues-title">@Text["Queues"] <span class="muted">(@overview.Queues.Length)</span></h2>
-            <p class="muted">@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]</p>
+        var stale = FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true);
+        var now = DateTimeOffset.UtcNow;
+        long Live(Func<QueueBoardQueue, int> value) => overview.Queues.SelectMany(q => q.Observations.Where(o => o.Fresh)).Sum(o => (long)Math.Max(0, value(o.Queue)));
+        var oldest = overview.Queues.Select(q => q.OldestEnteredAt).Where(a => a.HasValue).Min();
+        <div class="live-strip" aria-label="@Text["Now"]">
+            <div class="live-kpi"><span class="live-value">@Live(q => Math.Max(0, q.Waiting - q.Offering))</span><span class="live-label">@Text["Waiting now"]</span></div>
+            <div class="live-kpi"><span class="live-value">@Live(q => q.Offering)</span><span class="live-label">@Text["Ringing agents"]</span></div>
+            <div class="live-kpi good"><span class="live-value">@Live(q => q.Connected)</span><span class="live-label">@Text["In conversation"]</span></div>
+            <div class="live-kpi @(oldest is { } o && now - o > TimeSpan.FromMinutes(1) ? "warn" : "")"><span class="live-value">@(oldest is { } at ? Math.Max(0, (int)(now - at).TotalSeconds) + " s" : "—")</span><span class="live-label">@Text["Longest wait"]</span></div>
+            <div class="live-kpi"><span class="live-value">@overview.Agents.Count(a => a.State(now) == "Available")/@overview.Agents.Length</span><span class="live-label">@Text["Extensions available"]</span></div>
+        </div>
+        <section class="queue-queues monitor-card" aria-labelledby="queue-queues-title">
+            <div class="monitor-card-head">
+                <h2 id="queue-queues-title">@Text["Queues"] <span class="count">@overview.Queues.Length</span></h2>
+                <span class="info-dot" title="@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]">i</span>
+                @if (stale) { <span class="status-chip warn" title="@Text["Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical."]">@Text["Partial data"]</span> }
+            </div>
                 <SUITable T="QueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
                     <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
                     <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
@@ -64,7 +78,7 @@
                         <SUITd DataLabel="@Text["In conversation"]">@context.Count(q => q.Connected)</SUITd>
                         <SUITd DataLabel="@Text["Capacity"]">@context.CapacityText(value => Text[value])</SUITd>
                         <SUITd DataLabel="@Text["Longest wait"]">@(context.OldestEnteredAt is { } at ? $"{(context.Partial ? "≥ " : "")}{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
-                    <NoRecordsContent>@Text["No queues in this reading match the search."]</NoRecordsContent>
+                    <NoRecordsContent><span class="monitor-empty">@Text["No queues in this reading match the search."]</span></NoRecordsContent>
                 </SUITable>
                 <details class="queue-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
@@ -76,8 +90,9 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
         <QueueRegistrationTable Agents="overview.Agents" />
-        <details class="queue-history" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
+        <details class="queue-history monitor-card" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
 </section>

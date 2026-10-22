@@ -644,5 +644,11 @@
   "Following the page filters above.": "Seguindo os filtros da página (Filtros e ações).",
   "No queue with calls matches the filters (search \"{0}\"). Search by queue number, extension or member name.": "Nenhuma fila com chamadas corresponde aos filtros (busca \"{0}\"). Busque pelo número da fila, ramal ou nome do membro.",
   "Filters and actions": "Filtros e ações",
-  "Queue and period": "Fila e período"
+  "Queue and period": "Fila e período",
+  "Now": "Agora",
+  "Waiting now": "Aguardando agora",
+  "Ringing agents": "Chamando atendentes",
+  "Extensions available": "Ramais disponíveis",
+  "Partial data": "Dados parciais",
+  "No live queue controller source for these filters. Native PBX queues appear only in the distribution above.": "Sem fonte do controlador de filas ao vivo para estes filtros. Filas nativas do PABX aparecem só na distribuição acima."
 }

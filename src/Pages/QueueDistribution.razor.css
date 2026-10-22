@@ -1,6 +1,5 @@
-.distribution { margin-top: var(--sui-space-4); padding-top: var(--sui-space-4); border-top: 1px solid var(--sui-border); display: grid; gap: var(--sui-space-5); }
+.distribution { gap: var(--sui-space-5); }
 .distribution-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sui-space-2) var(--sui-space-3); }
-.distribution-head h2 { margin: 0; font-size: 18px; }
 .distribution-summary { font-size: .875rem; opacity: .8; }
 .distribution-head ::deep .distribution-options-trigger { margin-left: auto; }
 .distribution-toolbar { display: grid; gap: var(--sui-space-3); margin-top: var(--sui-space-3); justify-items: start; }

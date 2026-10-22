@@ -15,12 +15,18 @@ public sealed class QueueBoardReader : IDisposable
         public DateTimeOffset Attempted;
     }
     private readonly Slot[] slots;
-    public QueueBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source;
+    private readonly QueueBoardSource[] open;
+    // On-demand slots for AnyContext sources; bounded, oldest evicted. Authorization stays in QueueBoardAccess.
+    private const int DynamicLimit = 128;
+    private readonly Dictionary<(Guid Node, Guid Context), Slot> dynamic = [];
+    private readonly object dynamicGate = new();
+    public QueueBoardSource? DiagnosticSource(Guid context, Guid node) => slots.FirstOrDefault(s => s.Context == context && s.Source.NodeId == node)?.Source
+        ?? (open.FirstOrDefault(s => s.NodeId == node) is { } source ? source : null);
     private readonly IHttpClientFactory clients;
     private readonly TimeProvider clock;
     private readonly PanelDiagnostics? diagnostics;
     private readonly SemaphoreSlim requests = new(4);
-    public bool Configured => slots.Length > 0;
+    public bool Configured => slots.Length > 0 || open.Length > 0;
     public QueueBoardReader(IEnumerable<QueueBoardSource> sources, IHttpClientFactory clients, TimeProvider clock, PanelDiagnostics? diagnostics = null)
     {
         this.clients = clients; this.clock = clock; this.diagnostics = diagnostics;
@@ -30,11 +36,13 @@ public sealed class QueueBoardReader : IDisposable
             definitions.SelectMany(s => s.ContextIds.Select(c => (s.Node, c))).Distinct().Count() != definitions.Sum(s => s.ContextIds.Length))
             throw new InvalidOperationException("Invalid private QUEUE board sources.");
         slots = definitions.SelectMany(s => s.ContextIds.Select(c => new Slot(s, c))).ToArray();
+        open = definitions.Where(s => s.AnyContext).ToArray();
     }
     public static bool ValidSource(QueueBoardSource source)
     {
         if (source is null || source.NodeId == Guid.Empty || string.IsNullOrWhiteSpace(source.Node) || source.Node.Length > 64 ||
-            !source.Node.All(c => char.IsAsciiLetterOrDigit(c) || c == '-') || source.ContextIds is not { Length: > 0 and <= 64 } ||
+            !source.Node.All(c => char.IsAsciiLetterOrDigit(c) || c == '-') || source.ContextIds is not { Length: <= 64 } ||
+            source.ContextIds.Length == 0 && !source.AnyContext ||
             source.ContextIds.Any(c => c == Guid.Empty) || string.IsNullOrWhiteSpace(source.KeyFile) || !Path.IsPathFullyQualified(source.KeyFile) ||
             !Uri.TryCreate(source.BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") ||
             uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 || uri.AbsolutePath != "/" ||
@@ -46,7 +54,25 @@ public sealed class QueueBoardReader : IDisposable
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(5));
-        return await Task.WhenAll(slots.Where(s => context is null || s.Context == context).Select(s => Read(s, budget.Token, ct)));
+        var selected = slots.Where(s => context is null || s.Context == context).ToList();
+        if (context is { } requested && requested != Guid.Empty)
+            foreach (var source in open.Where(o => !selected.Any(s => s.Source.NodeId == o.NodeId)))
+                selected.Add(DynamicSlot(source, requested));
+        return await Task.WhenAll(selected.Select(s => Read(s, budget.Token, ct)));
+    }
+    private Slot DynamicSlot(QueueBoardSource source, Guid context)
+    {
+        lock (dynamicGate)
+        {
+            if (dynamic.TryGetValue((source.NodeId, context), out var slot)) return slot;
+            if (dynamic.Count >= DynamicLimit)
+            {
+                // Evict the least recently attempted slot that is not busy; its gate is simply dropped.
+                var oldest = dynamic.Where(p => p.Value.Gate.CurrentCount == 1).OrderBy(p => p.Value.Attempted).FirstOrDefault();
+                if (oldest.Value is not null) dynamic.Remove(oldest.Key);
+            }
+            return dynamic[(source.NodeId, context)] = new Slot(source, context);
+        }
     }
     private async Task<QueueBoardSample> Read(Slot slot, CancellationToken budget, CancellationToken caller)
     {

@@ -1,4 +1,4 @@
-.queue-diagnostics { margin-block-start: var(--sui-space-6); min-width: 0; }
+.queue-diagnostics { min-width: 0; }
 .queue-diagnostics ::deep .sui-table td { overflow-wrap: anywhere; vertical-align: top; }
 .queue-diagnostics summary { cursor: pointer; padding-block: var(--sui-space-2); }
 .queue-diagnostics summary:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: 2px; }

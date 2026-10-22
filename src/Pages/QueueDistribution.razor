@@ -5,9 +5,10 @@
 @inject IWebHostEnvironment Environment
 @inject NavigationManager Navigation
 
-<section class="distribution" aria-labelledby="distribution-title">
-    <div class="distribution-head">
+<section class="distribution monitor-card" aria-labelledby="distribution-title">
+    <div class="distribution-head monitor-card-head">
         <h2 id="distribution-title">@Text["Queue distribution"]</h2>
+        <span class="info-dot" title="@(Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."] + (Reply is null ? "" : " " + Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)))">i</span>
         <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == SelectedKey) is { } current ? QueueLabel(current) + " · " : "")@WindowLabel(Window)</span>
         <SUIButton Class="distribution-options-trigger" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="distribution-options">@Text["Queue and period"]</SUIButton>
     </div>
@@ -36,9 +37,9 @@
     else if (Detail is null)
     {
         @if (Search.Length > 0 || NodeFilter.Length > 0)
-        { <p class="operation-empty">@Text.Format("No queue with calls matches the filters (search \"{0}\"). Search by queue number, extension or member name.", Search)</p> }
+        { <p class="monitor-empty">@Text.Format("No queue with calls matches the filters (search \"{0}\"). Search by queue number, extension or member name.", Search)</p> }
         else
-        { <p class="operation-empty">@Text["No queue calls observed in this period. Counting starts when the collector receives the PBX queue events."]</p> }
+        { <p class="monitor-empty">@Text["No queue calls observed in this period. Counting starts when the collector receives the PBX queue events."]</p> }
     }
     else
     {
@@ -125,7 +126,6 @@
             @if (Detail.Calls.Length > CallLimit)
             { <SUIButton VariantValue="SUIVariant.Text" OnClick="() => CallLimit += 30">@Text["Show more"]</SUIButton> }
         </details>
-        <p class="muted footnote">@Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)</p>
     }
 </section>
 

@@ -401,3 +401,25 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
  .panel-header { flex-wrap:wrap; row-gap:8px; }
  .panel-shell:not(.board-only) .header-actions { flex-wrap:wrap; justify-content:flex-end; margin-left:auto; min-width:0; }
 }
+/* Monitoring cards: one bordered card per subject, title row with count, info tooltip and status chip. */
+.monitor-card { border:1px solid var(--sui-border); border-radius:12px; background:var(--sui-surface); padding:16px 20px; display:grid; gap:14px; min-width:0; }
+details.monitor-card { gap:0; }
+details.monitor-card > summary { font-weight:600; font-size:16px; }
+details.monitor-card[open] > summary { margin-bottom:12px; }
+.monitor-card-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0; }
+.monitor-card-head h2 { font-size:17px; margin:0; display:flex; align-items:baseline; gap:8px; }
+.monitor-card-head .count { font-size:13px; font-weight:600; padding:1px 8px; border-radius:999px; background:var(--sui-surface-2); color:var(--sui-text-secondary); }
+.monitor-card-head .push { margin-left:auto; }
+.info-dot { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--sui-border-strong); font-size:11px; font-weight:700; font-style:italic; color:var(--sui-text-secondary); cursor:help; }
+.status-chip { font-size:12px; padding:2px 10px; border-radius:999px; border:1px solid currentColor; cursor:help; }
+.status-chip.warn { color:var(--sui-color-warning); }
+.status-chip.good { color:var(--sui-color-success); }
+.monitor-empty { display:flex; align-items:center; gap:8px; margin:0; padding:10px 0; color:var(--sui-text-secondary); font-size:14px; }
+.monitor-empty::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--sui-border-strong); flex:none; }
+.live-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+.live-kpi { border:1px solid var(--sui-border); border-radius:12px; padding:12px 16px; display:grid; gap:2px; background:var(--sui-surface); }
+.live-value { font-size:28px; font-weight:650; font-variant-numeric:tabular-nums; line-height:1.1; }
+.live-label { font-size:13px; color:var(--sui-text-secondary); }
+.live-kpi.good .live-value { color:var(--sui-color-success); }
+.live-kpi.warn .live-value { color:var(--sui-color-warning); }
+@media(max-width:600px) { .monitor-card { padding:12px 14px; } .live-value { font-size:22px; } }
