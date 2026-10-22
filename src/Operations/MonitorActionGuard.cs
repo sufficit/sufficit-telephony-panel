@@ -17,8 +17,9 @@ public static class MonitorActionGuard
             return "The channel has no verified company association. Supervision is blocked.";
         if (account != context) return "The channel belongs to another company.";
         if (now < row.Updated) return "The event time is in the future. Check server clocks.";
-        if (now - row.Updated > TimeSpan.FromSeconds(30))
-            return "The last channel event is older than 30 seconds. Wait for a current event or reconnect.";
+        // No age limit: an answered call emits no further events, so a "recent event" rule blocked every
+        // conversation after 30 s. Liveness comes from the projection itself: HangupEvent removes the
+        // channel, rows idle for 2 h expire, and a disconnected stream blocks above.
         if (string.IsNullOrWhiteSpace(row.Node)) return "The channel server is not identified.";
         return null;
     }

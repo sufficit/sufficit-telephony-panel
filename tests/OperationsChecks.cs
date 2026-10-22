@@ -20,7 +20,8 @@ public static class OperationsChecks
         check(MonitorActionGuard.Allows(row, tenant, true, now), "Recent observed channel in same tenant may be monitored");
         check(!MonitorActionGuard.Allows(row, Guid.NewGuid(), true, now), "Cross-tenant monitoring rejected");
         check(!MonitorActionGuard.Allows(row, tenant, false, now), "Disconnected stream cannot authorize an action");
-        check(!MonitorActionGuard.Allows(row, tenant, true, now.AddSeconds(31)), "Stale channel cannot authorize an action");
+        check(MonitorActionGuard.Allows(row, tenant, true, now.AddMinutes(30)), "An answered call without new events stays supervisable while observed");
+        check(!MonitorActionGuard.Allows(row, tenant, false, now.AddMinutes(30)), "A disconnected stream never authorizes an action");
         check(!MonitorActionGuard.Allows(row with { Key = "PJSIP/6007\r\nAction: Hangup" }, tenant, true, now), "Protocol injection rejected");
         projection.Apply("eveo", "HangupEvent", Event(row.Key), now);
         check(projection.Snapshot(now).Single().Node == "google", "Hangup removes only its node");

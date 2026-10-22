@@ -88,6 +88,3 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .board-card { position: relative; min-width: 0; }
 .board-card > .board-tile { width: 100%; height: 100%; padding-inline-end: 34px; }
 .board-fill .board-grid { max-height:var(--board-available-height, 60vh); min-height:200px; }
-/* Quick Listen/Whisper on cards with a live call, left of the actions menu. */
-.board-card.has-quick > .board-tile { padding-inline-end:88px; }
-.card-quick { position:absolute; inset-block-start:3px; inset-inline-end:33px; display:flex; gap:2px; }

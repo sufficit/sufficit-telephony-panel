@@ -12,7 +12,7 @@ static class PanelDiagnosticChecks
         var cases = new[] {
             row with { Key = "Local/6007@demo-000000ab;1" },
             row with { Account = null }, row with { Account = Guid.Empty.ToString() },
-            row with { Account = Guid.NewGuid().ToString() }, row with { Updated = now.AddSeconds(-31) },
+            row with { Account = Guid.NewGuid().ToString() },
             row with { Updated = now.AddSeconds(1) }, row with { Node = "" }, row with { Kind = "peer" },
             row with { Key = "SIP/6007\r\nAction: Originate" }
         };
@@ -21,7 +21,7 @@ static class PanelDiagnosticChecks
             check(MonitorActionGuard.BlockReason(item, context, true, now) is not null, "Every refused channel has an explanation");
             check(!MonitorActionGuard.Allows(item, context, true, now), "Explaining a refused channel cannot authorize it");
         }
-        check(MonitorActionGuard.Allows(row with { Updated = now.AddSeconds(-30) }, context, true, now), "Exact 30-second eligibility boundary is preserved");
+        check(MonitorActionGuard.Allows(row with { Updated = now.AddMinutes(-20) }, context, true, now), "An answered call stays eligible without new events");
         check(MonitorActionGuard.BlockReason(row, context, false, now) is not null, "Disconnected stream has an explanation");
         var snapshot = new QueueBoardSnapshot(context.ToString("N"), Guid.NewGuid().ToString("N"), now, true, false, []);
         var sample = new QueueBoardSample("google", context, snapshot, true);

@@ -104,9 +104,7 @@
             : Text.Format("{0} correlated calls · {1} uncorrelated channels", correlated, tile.Flows.Length - correlated);
         return tile.Status.Tone == "ringing" ? Text["Ringing"] + " · " + label : label;
     }
-    // Quick supervision only where it can act: a live call on the card and server-side eligibility.
-    private bool Quick(OperatorTile tile) => Supervise.HasDelegate && tile.DetailChannels.Any(c => c.Kind == "call") && CanSupervise?.Invoke(tile) != false;
-    private RenderFragment TileButton(OperatorTile tile) => @<div class="board-card @(Quick(tile) ? "has-quick" : "")" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
+    private RenderFragment TileButton(OperatorTile tile) => @<div class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
     <button type="button"
         class="board-tile tone-@tile.Status.Tone @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
@@ -118,16 +116,5 @@
     </button>
     <SUIButton Class="card-menu-trigger" SizeValue="SUISize.Small" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Menu"
         aria-haspopup="menu" aria-label="@Text.Format("Actions for {0}", tile.Title)" title="@Text["Card actions"]" OnClick="e => OpenMenu(tile, e)" />
-    @if (Quick(tile))
-    {
-        <div class="card-quick">
-            <SUIButton Class="card-quick-listen" SizeValue="SUISize.Small" VariantValue="SUIVariant.Text" StartIcon="@PanelIcons.Listen"
-                aria-label="@Text.Format("Listen to {0}", tile.Title)" title="@Text["Listen: hear the call without speaking"]"
-                OnClick="() => Supervise.InvokeAsync(new(tile, Sufficit.Telephony.Monitor.TelephonyMonitorActionMode.Listen, false))" />
-            <SUIButton Class="card-quick-whisper" SizeValue="SUISize.Small" VariantValue="SUIVariant.Text" StartIcon="@PanelIcons.Whisper"
-                aria-label="@Text.Format("Whisper to {0}", tile.Title)" title="@Text["Whisper: speak only to the selected channel"]"
-                OnClick="() => Supervise.InvokeAsync(new(tile, Sufficit.Telephony.Monitor.TelephonyMonitorActionMode.Whisper, false))" />
-        </div>
-    }
     </div>;
 }

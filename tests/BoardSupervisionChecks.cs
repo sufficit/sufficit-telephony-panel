@@ -42,7 +42,7 @@ public static class BoardSupervisionChecks
         check(EndpointSupervisionTarget.For(endpointTile with { Kind = EventsPanelCardKind.TRUNK }, context, true, now).Length == 0, "Single trunk channel does not authorize future calls");
         check(EndpointSupervisionTarget.For(endpointTile, Guid.NewGuid(), true, now).Length == 0, "Automatic prefix cannot cross selected context");
         check(EndpointSupervisionTarget.For(endpointTile, context, false, now).Length == 0, "Disconnected endpoint cannot initiate prefix listening");
-        check(EndpointSupervisionTarget.For(endpointTile, context, true, now.AddSeconds(31)).Length == 0, "Stale endpoint cannot initiate prefix listening");
+        check(EndpointSupervisionTarget.For(endpointTile, context, true, now.AddMinutes(30)).Length == 1, "An observed answered call keeps the endpoint target without new events");
         check(EndpointSupervisionTarget.For(endpointTile with { Rows = [row with { Account = null }] }, null, true, now).Length == 0, "Unknown context cannot authorize endpoint prefix");
         check(EndpointSupervisionTarget.For(endpointTile with { Keys = ["PJSIP/600"] }, context, true, now).Length == 0, "Endpoint keys require exact equality");
         var sip = endpointTile with { Keys = ["SIP/0000006001"], Rows = [row with { Key = "SIP/0000006001-00000001" }] };

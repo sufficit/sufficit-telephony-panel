@@ -130,9 +130,12 @@ the confirmation. The existing API calls that preferred PJSIP/wss-UUID endpoint;
 the browser never receives audio or an AMI credential.
 
 Server validates mode, current manager, API tenant authorization, preferred
-endpoint, exact observed node/channel and accountcode, connection state and an
-event no older than 30 seconds. A quiet long-running call may deliberately have
-disabled controls until a new event arrives. Actions are serialized per session,
+endpoint, exact observed node/channel and accountcode and a connected stream.
+There is no event-age limit (removed 2026-10-22): an answered call emits no further
+events, so the former 30-second rule disabled Listen/Whisper on every conversation in
+progress. Liveness comes from the projection: HangupEvent removes the channel, idle rows
+expire after 2 hours, and a disconnected stream blocks actions. When nothing is eligible,
+the board dialog lists the concrete reason per channel. Actions are serialized per session,
 limited to one every 15 seconds, and never retried automatically. API
 `accepted=true` means originate was accepted, not that media is connected.
 On uncertain response, check the supervisor endpoint before retrying.

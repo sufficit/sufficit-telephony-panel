@@ -526,7 +526,8 @@ public partial class LiveOperations
             var seed = Rows.First(r => r.Kind == "call");
             Rows = [seed, seed with { Id = "missing-context", Account = null },
                 seed with { Id = "local-channel", Key = "Local/6007@demo-000000ab;1" },
-                seed with { Id = "stale-channel", Updated = now.AddSeconds(-60) }];
+                // Answered 20 minutes ago with no further events: must stay supervisable.
+                seed with { Id = "answered-channel", Key = "PJSIP/6008-000000ac", Updated = now.AddMinutes(-20) }];
             Error = Text["Could not query the telephony service. Try refreshing; if it persists, check the connection and permissions."];
             Failure = new("demo-error-reference", now, "FileNotFoundException");
             QueueError = Text["Some QUEUE sources are unavailable. Queue activity is shown only with current controller data."];
