@@ -8,10 +8,12 @@ Decisão de 22/10/2026: **por enquanto, sem banco de dados.** A contagem fica em
 
 1. [concluído] Coletor: `QueueDistribution` (sufficit-ami-events/streaming) soma, por fila × ramal × hora, quantas vezes tocou, atendeu, não atendeu (tocou até o tempo esgotar), ficou indisponível (falhou na hora, tempo de toque 0) e os tempos de toque e de conversa. Também guarda as últimas 3.000 chamadas com a sequência de ramais. O RPC `Distribution` responde só pelo socket privado e filtra por empresa.
 2. [concluído] Painel: a página Filas ganhou a seção "Distribuição das filas", com números-chave, chamadas por hora, barras por ramal, últimas chamadas com os ramais tocados e janelas de hora atual, 4 h e 24 h. O filtro de empresa é montado no servidor a partir das permissões; cliente só vê a própria empresa e nunca filas sem empresa.
-3. [pendente] PABX: incluir `AgentCalled`, `AgentRingNoAnswer`, `AgentConnect` e `AgentComplete` no filtro AMI do usuário `suffobserve` (`manager_local_observation.conf`) e dar `manager reload`. `eventwhencalled=yes` já está ligado no google-voip.
-4. [pendente] Deploy do coletor (versão 0.2.0) e do painel (0.19.0); conferir com a fila 0007366500 ("atendimento") do cliente 0e647909-7a4e-43be-8350-6bf25a05ce1b.
+3. [concluído] PABX: incluir `AgentCalled`, `AgentRingNoAnswer`, `AgentConnect` e `AgentComplete` no filtro AMI do usuário `suffobserve` (`manager_local_observation.conf`) e dar `manager reload`. `eventwhencalled=yes` já está ligado no google-voip.
+4. [concluído] Deploy do coletor (versão 0.2.0) e do painel (0.19.0); conferir com a fila 0007366500 ("atendimento") do cliente 0e647909-7a4e-43be-8350-6bf25a05ce1b.
 
 Limites: só conta o que acontecer depois do passo 3; nome amigável da fila (ex.: "atendimento") ainda não aparece, só o número da fila no PABX; "outro atendeu" no ringall inclui quem tocava quando a chamada foi atendida ou abandonada.
+
+Publicado em 22/10/2026: coletor `queue-distribution-20261022-253d869` (anterior `queue-flow-20260911-1503`, troca pelo link `current`), painel `queue-distribution-20261022-26278bd` (anterior `shared-prefix-fix-20261022-5433a24`). Filtro no google-voip com backup `manager_local_observation.conf.bak-20261022-distribution`; o filtro só vale após novo login AMI, por isso o coletor foi reiniciado. Sonda no socket privado minutos depois: 4 filas, 13 ramais, eventos de toque, atendimento e indisponível chegando. apoint-voip e eveo-voip ainda sem os eventos `Agent*`.
 
 ## Fase 2: turnos e horários por fila, configurados pelo cliente
 
