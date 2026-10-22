@@ -1,0 +1,238 @@
+@implements IAsyncDisposable
+@using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.Streaming
+@inject QueueDistributionAccess Access
+@inject IWebHostEnvironment Environment
+
+<section class="distribution" aria-labelledby="distribution-title">
+    <div class="distribution-head">
+        <div>
+            <h2 id="distribution-title">@Text["Queue distribution"]</h2>
+            <p class="muted">@Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."]</p>
+        </div>
+        <div class="distribution-controls">
+            @if (Queues.Length > 1)
+            {
+                <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
+                    @foreach (var queue in Queues)
+                    { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @queue.Entered</SUISelectItem> }
+                </SUISelect>
+            }
+            <div class="windows" role="group" aria-label="@Text["Period"]">
+                @foreach (var hours in QueueDistributionView.Windows)
+                { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
+            </div>
+        </div>
+    </div>
+
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }
+    else if (Reply is null) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading queue distribution"]" /> }
+    else if (Detail is null)
+    {
+        <p class="operation-empty">@Text["No queue calls observed in this period. Counting starts when the collector receives the PBX queue events."]</p>
+    }
+    else
+    {
+        var queue = Detail.Queue;
+        var maxRung = Math.Max(1, Detail.Members.Select(m => m.Offered).DefaultIfEmpty(0).Max());
+        <div class="kpis">
+            <div class="kpi"><span class="kpi-value">@queue.Entered</span><span class="kpi-label">@Text["Calls received"]</span></div>
+            <div class="kpi good"><span class="kpi-value">@queue.Answered</span><span class="kpi-label">@Text["Answered"] @Percent(queue.AnswerRate)</span></div>
+            <div class="kpi bad"><span class="kpi-value">@queue.Abandoned</span><span class="kpi-label">@Text["Abandoned"]</span></div>
+            <div class="kpi"><span class="kpi-value">@Duration(queue.AverageWait)</span><span class="kpi-label">@Text["Average wait"]</span></div>
+            <div class="kpi"><span class="kpi-value">@Detail.Members.Count(m => m.Answered > 0)/@Detail.Members.Length</span><span class="kpi-label">@Text["Extensions that answered"]</span></div>
+        </div>
+
+        <figure class="hours" aria-label="@Text["Calls per hour"]">
+            <figcaption>@Text["Calls per hour"]</figcaption>
+            @{
+                var starts = QueueDistributionView.HourStarts(DateTimeOffset.Now, queue.EnteredByHour.Length);
+                var maxHour = Math.Max(1, queue.EnteredByHour.DefaultIfEmpty(0).Max());
+            }
+            <div class="hour-bars">
+                @for (var i = 0; i < queue.EnteredByHour.Length; i++)
+                {
+                    var entered = queue.EnteredByHour[i]; var answered = queue.AnsweredByHour[i]; var abandoned = queue.AbandonedByHour[i];
+                    var other = Math.Max(0, entered - answered - abandoned);
+                    <div class="hour" title="@($"{starts[i]:HH}h · {entered} {Text["received"]} · {answered} {Text["answered"]} · {abandoned} {Text["abandoned"]}")">
+                        <div class="stack" style="height:@Css(100.0 * entered / maxHour)%">
+                            @if (abandoned > 0) { <span class="seg bad" style="flex-grow:@abandoned"></span> }
+                            @if (other > 0) { <span class="seg neutral" style="flex-grow:@other"></span> }
+                            @if (answered > 0) { <span class="seg good" style="flex-grow:@answered"></span> }
+                        </div>
+                        <span class="hour-label">@(queue.EnteredByHour.Length <= 4 || i % 3 == (queue.EnteredByHour.Length - 1) % 3 ? starts[i].ToString("HH") + "h" : "")</span>
+                    </div>
+                }
+            </div>
+        </figure>
+
+        <section class="members" aria-labelledby="members-title">
+            <h3 id="members-title">@Text["By extension"]</h3>
+            <ul class="legend" aria-label="@Text["Legend"]">
+                <li><span class="dot good"></span>@Text["Took the call"]</li>
+                <li><span class="dot warn"></span>@Text["Rang, not answered"]</li>
+                <li><span class="dot bad"></span>@Text["Unavailable"]</li>
+                <li><span class="dot neutral"></span>@Text["Someone else answered or caller hung up"]</li>
+            </ul>
+            @if (Detail.Members.Length == 0) { <p class="muted">@Text["No extension rang in this period."]</p> }
+            @foreach (var member in Detail.Members)
+            {
+                <div class="member" @key="member.Member">
+                    <div class="member-name"><strong>@member.Label</strong>@if (member.Label != member.Extension) { <small>@member.Extension</small> }</div>
+                    <div class="track" role="img" aria-label="@MemberSummary(member)" title="@MemberSummary(member)">
+                        <div class="fill" style="width:@Css(100.0 * member.Offered / maxRung)%">
+                            @if (member.Answered > 0) { <span class="seg good" style="flex-grow:@member.Answered">@member.Answered</span> }
+                            @if (member.Missed > 0) { <span class="seg warn" style="flex-grow:@member.Missed">@member.Missed</span> }
+                            @if (member.Unavailable > 0) { <span class="seg bad" style="flex-grow:@member.Unavailable">@member.Unavailable</span> }
+                            @if (member.Cancelled > 0) { <span class="seg neutral" style="flex-grow:@member.Cancelled">@member.Cancelled</span> }
+                        </div>
+                    </div>
+                    <div class="member-meta">
+                        <span>@Text.Format("Rang {0}×", member.Offered)</span>
+                        <span>@Text["Answer rate"] <b>@Percent(member.AnswerRate)</b></span>
+                        <span>@Text["Ring"] <b>@Duration(member.AverageRing)</b></span>
+                        <span>@Text["Talk"] <b>@Duration(member.AverageTalk)</b></span>
+                        <span>@Text["Last answer"] <b>@Ago(member.LastAnswered)</b></span>
+                    </div>
+                </div>
+            }
+        </section>
+
+        <details class="calls">
+            <summary>@Text["Latest calls and who rang"] (@Detail.Calls.Length)</summary>
+            @foreach (var call in Detail.Calls.Take(CallLimit))
+            {
+                <div class="call" @key="call.Uniqueid">
+                    <span class="call-time">@call.EnteredAt.ToLocalTime().ToString("HH:mm:ss")</span>
+                    <span class="call-caller">@(call.Caller.Length > 0 ? call.Caller : Text["Unknown number"])</span>
+                    <span class="outcome @OutcomeTone(call.Outcome)">@Text[CallOutcome(call.Outcome)]</span>
+                    <span class="muted">@Text["wait"] @Duration(call.WaitSeconds)</span>
+                    <span class="attempts">
+                        @foreach (var attempt in call.Attempts)
+                        { <span class="attempt @OutcomeTone(attempt.Outcome)" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}{(attempt.RingSeconds > 0 ? " · " + Duration(attempt.RingSeconds) : "")}")">@Short(attempt.Member)</span> }
+                    </span>
+                </div>
+            }
+            @if (Detail.Calls.Length > CallLimit)
+            { <SUIButton VariantValue="SUIVariant.Text" OnClick="() => CallLimit += 30">@Text["Show more"]</SUIButton> }
+        </details>
+        <p class="muted footnote">@Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)</p>
+    }
+</section>
+
+@code {
+    [Parameter] public string Context { get; set; } = "";
+    [Parameter] public bool Preview { get; set; }
+    private bool Demo => Preview && Environment.IsDevelopment();
+    private DistributionReply? Reply;
+    private DistributionQueue[] Queues = [];
+    private DistributionDetail? Detail;
+    private string SelectedKey = "", LoadedContext = "";
+    private int Window = 24, CallLimit = 30;
+    private string? Error;
+    private bool Busy, Disposed;
+    private readonly CancellationTokenSource Lifetime = new();
+    private Task? Loop;
+
+    protected override async Task OnInitializedAsync() { await Refresh(); Loop = Poll(); }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LoadedContext == Context) return;
+        SelectedKey = ""; Detail = null; Reply = null;
+        await Refresh();
+    }
+    private async Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; await Refresh(); }
+    private void SetWindow(int hours) { Window = hours; Rebuild(); }
+
+    private async Task Refresh()
+    {
+        if (Busy || Disposed) return;
+        Busy = true;
+        try
+        {
+            var context = Guid.TryParse(Context, out var id) ? id : (Guid?)null;
+            var requested = Context;
+            if (Demo) Reply = QueueDistributionFixture.Create(DateTimeOffset.UtcNow);
+            else if (!Access.Enabled) { Error = "Queue distribution is not configured on this server."; return; }
+            else
+            {
+                // The summary lists the queues; the detail brings members and calls of the selected one only.
+                var summary = await Access.Read(context, "", "", true, Lifetime.Token);
+                var top = SelectedKey.Length > 0 && summary.Queues.Any(q => q.Node + "|" + q.Queue == SelectedKey) ? SelectedKey
+                    : QueueDistributionView.Queues(summary, 24).FirstOrDefault()?.Key ?? "";
+                var detail = top.Length == 0 ? new DistributionReply()
+                    : await Access.Read(context, top.Split('|')[0], top[(top.IndexOf('|') + 1)..], false, Lifetime.Token);
+                detail.Queues.Clear(); detail.Queues.AddRange(summary.Queues);
+                detail.StartedAtMs = summary.StartedAtMs; detail.NowMs = summary.NowMs;
+                Reply = detail; SelectedKey = top;
+            }
+            LoadedContext = requested;
+            Error = null;
+            Rebuild();
+        }
+        catch (UnauthorizedAccessException) { Error = "Your access expired. Sign in again."; }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+        catch (InvalidOperationException e) { Error = e.Message; }
+        finally { Busy = false; if (!Disposed) StateHasChanged(); }
+    }
+
+    private void Rebuild()
+    {
+        if (Reply is null) return;
+        Queues = QueueDistributionView.Queues(Reply, 24);
+        if (SelectedKey.Length == 0 || Queues.All(q => q.Key != SelectedKey)) SelectedKey = Queues.FirstOrDefault()?.Key ?? "";
+        var parts = SelectedKey.Split('|', 2);
+        Detail = parts.Length == 2 ? QueueDistributionView.Detail(Reply, parts[0], parts[1], Window) : null;
+        CommonPrefix = Detail is null ? 0 : Prefix(Detail.Calls.SelectMany(c => c.Attempts).Select(a => QueueDistributionView.Extension(a.Member))
+            .Concat(Detail.Members.Select(m => m.Extension)).Distinct().ToArray());
+    }
+
+    private async Task Poll()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        try { while (await timer.WaitForNextTickAsync(Lifetime.Token)) await InvokeAsync(Refresh); }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+    }
+
+    /// <summary>Members of one company usually share a long numbering prefix (0007366001…); chips show only what differs.</summary>
+    private string Short(string member)
+    {
+        var extension = QueueDistributionView.Extension(member);
+        // Keep at least four digits so "6004" stays recognisable instead of a lone "4".
+        var cut = Math.Min(CommonPrefix, extension.Length - 4);
+        return cut > 0 ? extension[cut..] : extension;
+    }
+    private int CommonPrefix;
+    private static int Prefix(string[] values)
+    {
+        if (values.Length < 2) return 0;
+        var length = values.Min(v => v.Length) - 1;
+        for (var i = 0; i < length; i++) if (values.Any(v => v[i] != values[0][i])) return i;
+        return Math.Max(0, length);
+    }
+    private string Started => Reply is null ? "" : DateTimeOffset.FromUnixTimeMilliseconds(Reply.StartedAtMs).ToLocalTime().ToString("g", Text.Culture);
+    private string QueueLabel(DistributionQueue queue) => queue.Queue + (Queues.Select(q => q.Node).Distinct().Count() > 1 ? " · " + queue.Node : "");
+    private string WindowLabel(int hours) => hours == 1 ? Text["This hour"] : Text.Format("Last {0} h", hours);
+    private static string Css(double value) => Math.Clamp(value, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Percent(double? value) => value is { } v ? $"{v * 100:0}%" : "—";
+    private static string Duration(long? seconds) => seconds switch { null => "—", < 60 => $"{seconds} s", _ => $"{seconds / 60} min {seconds % 60:00} s" };
+    private string Ago(DateTimeOffset? at)
+    {
+        if (at is not { } time) return Text["never"];
+        var elapsed = DateTimeOffset.UtcNow - time;
+        return elapsed.TotalMinutes < 1 ? Text["just now"] : elapsed.TotalHours < 1 ? Text.Format("{0} min ago", (int)elapsed.TotalMinutes)
+            : time.ToLocalTime().ToString("HH:mm");
+    }
+    private string MemberSummary(DistributionMember m) => Text.Format("{0}: rang {1}, answered {2}, not answered {3}, unavailable {4}, others answered {5}",
+        m.Label, m.Offered, m.Answered, m.Missed, m.Unavailable, m.Cancelled);
+    private static string OutcomeTone(string outcome) => outcome switch
+    { "answered" => "good", "no-answer" => "warn", "abandoned" or "unavailable" => "bad", _ => "neutral" };
+    private static string CallOutcome(string outcome) => outcome switch
+    { "answered" => "Answered call", "abandoned" => "Abandoned call", "left" => "Left the queue", _ => "Still in queue" };
+    private static string AttemptOutcome(string outcome) => outcome switch
+    {
+        "answered" => "Took the call", "no-answer" => "Rang, not answered", "unavailable" => "Unavailable",
+        "other-answered" => "Someone else answered", "caller-hangup" => "Caller hung up", "cancelled" => "Call left the queue", _ => "Ringing"
+    };
+    public async ValueTask DisposeAsync() { Disposed = true; Lifetime.Cancel(); if (Loop is not null) await Loop; Lifetime.Dispose(); }
+}

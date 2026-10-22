@@ -1,0 +1,26 @@
+# Distribuição das filas e turnos
+
+Objetivo: o painel deve mostrar, por fila, em quais ramais as chamadas caem, com que frequência, quem atende e quem deixa tocar, de forma gráfica. Fonte em tempo real; o CDR é lento e fica de fora.
+
+Decisão de 22/10/2026: **por enquanto, sem banco de dados.** A contagem fica em memória no coletor de observação (`sufficit-ami-observation`), em janela de 24 h com baldes por hora. Um reinício do coletor recomeça a contagem. Deploy do painel não afeta.
+
+## Fase 1: distribuição ao vivo (sem banco)
+
+1. [concluído] Coletor: `QueueDistribution` (sufficit-ami-events/streaming) soma, por fila × ramal × hora, quantas vezes tocou, atendeu, não atendeu (tocou até o tempo esgotar), ficou indisponível (falhou na hora, tempo de toque 0) e os tempos de toque e de conversa. Também guarda as últimas 3.000 chamadas com a sequência de ramais. O RPC `Distribution` responde só pelo socket privado e filtra por empresa.
+2. [concluído] Painel: a página Filas ganhou a seção "Distribuição das filas", com números-chave, chamadas por hora, barras por ramal, últimas chamadas com os ramais tocados e janelas de hora atual, 4 h e 24 h. O filtro de empresa é montado no servidor a partir das permissões; cliente só vê a própria empresa e nunca filas sem empresa.
+3. [pendente] PABX: incluir `AgentCalled`, `AgentRingNoAnswer`, `AgentConnect` e `AgentComplete` no filtro AMI do usuário `suffobserve` (`manager_local_observation.conf`) e dar `manager reload`. `eventwhencalled=yes` já está ligado no google-voip.
+4. [pendente] Deploy do coletor (versão 0.2.0) e do painel (0.19.0); conferir com a fila 0007366500 ("atendimento") do cliente 0e647909-7a4e-43be-8350-6bf25a05ce1b.
+
+Limites: só conta o que acontecer depois do passo 3; nome amigável da fila (ex.: "atendimento") ainda não aparece, só o número da fila no PABX; "outro atendeu" no ringall inclui quem tocava quando a chamada foi atendida ou abandonada.
+
+## Fase 2: turnos e horários por fila, configurados pelo cliente
+
+Pedido do usuário em 22/10/2026: configuração na fila para horários e turnos de trabalho, com métricas e estatísticas por turno, definida pelo próprio cliente.
+
+5. [a fazer] Modelo: turnos por fila (nome, dias da semana, início e fim, fuso), com sobreposição proibida e feriados opcionais. Configurado pelo cliente final no painel, com a permissão da própria empresa, e auditado.
+6. [a fazer] Métricas por turno: chamadas recebidas, atendidas, abandonadas, nível de serviço, espera média, distribuição por ramal e cobertura (ramais disponíveis × chamadas) dentro de cada turno. Comparação entre turnos e entre dias.
+7. [a fazer] Fora do turno: destacar chamadas que chegaram fora de qualquer turno e ramais que atenderam fora do próprio turno.
+8. [a fazer] Persistência: turnos exigem histórico além de 24 h, então esta fase precisa de armazenamento. Proposta: agregados por fila × ramal × hora (pequenos) gravados pelo coletor; a tabela fica no dbvoiprt (`telp_`) se o volume ficar pequeno, senão no logdata. Decidir com o usuário antes de criar.
+9. [a fazer] Relatórios: exportar por turno e período (CSV) e resumo diário opcional.
+
+Aceite da fase 2: o cliente cria os turnos da própria fila sem suporte e vê, para cada turno, quantas chamadas entraram, quem atendeu e quanto ficou sem resposta.

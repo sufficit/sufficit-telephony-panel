@@ -14,6 +14,21 @@ public sealed class SharedTelemetry(IConfiguration configuration, ILogger<Shared
     public bool Connected => connected && DateTimeOffset.UtcNow - new DateTimeOffset(Interlocked.Read(ref lastFrame), TimeSpan.Zero) < TimeSpan.FromSeconds(25);
     public DateTimeOffset? ConnectedAt => Connected ? new DateTimeOffset(Interlocked.Read(ref connectedAt), TimeSpan.Zero) : null;
     public LiveProjection Projection => replica.Projection;
+    private readonly Lazy<Telemetry.TelemetryClient> distributionClient = new(() =>
+        new Telemetry.TelemetryClient(UnixTelemetryChannel.Create(configuration["Telemetry:Socket"]!, 4 * 1024 * 1024)));
+
+    /// <summary>Unary read of the collector's in-memory queue distribution; the caller supplies the tenant filter.</summary>
+    public async Task<DistributionReply> Distribution(DistributionRequest request, CancellationToken ct)
+    {
+        if (!Enabled) throw new InvalidOperationException("Queue distribution is not configured.");
+        try { return await distributionClient.Value.DistributionAsync(request, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: ct); }
+        catch (RpcException e) when (e.StatusCode != StatusCode.Cancelled)
+        {
+            logger.LogWarning("Queue distribution unavailable: {Status}", e.StatusCode);
+            throw new InvalidOperationException(e.StatusCode == StatusCode.Unimplemented
+                ? "O coletor ainda não tem a distribuição das filas." : "Distribuição das filas indisponível no momento.");
+        }
+    }
     public async Task WaitReady(CancellationToken ct)
     {
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);

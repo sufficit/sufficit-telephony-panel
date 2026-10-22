@@ -11,6 +11,7 @@ PanelDiagnosticChecks.Run(Check);
 SupportChatChecks.Run(Check);
 CardMatcherChecks.Run(Check);
 SharedPrefixChecks.Run(Check);
+QueueDistributionChecks.Run(Check);
 await SessionStoreChecks.Run(Check);
 RegistrationChecks.Run(Check);
 QueueDiagnosticChecks.Run(Check);
