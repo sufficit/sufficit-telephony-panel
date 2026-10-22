@@ -650,5 +650,7 @@
   "Ringing agents": "Chamando atendentes",
   "Extensions available": "Ramais disponíveis",
   "Partial data": "Dados parciais",
-  "No live queue controller source for these filters. Native PBX queues appear only in the distribution above.": "Sem fonte do controlador de filas ao vivo para estes filtros. Filas nativas do PABX aparecem só na distribuição acima."
+  "No live queue controller source for these filters. Native PBX queues appear only in the distribution above.": "Sem fonte do controlador de filas ao vivo para estes filtros. Filas nativas do PABX aparecem só na distribuição acima.",
+  "Queue applied as a filter. Click it again to show all queues.": "Fila aplicada como filtro. Clique de novo para ver todas.",
+  "No calls right now": "Sem chamadas agora"
 }

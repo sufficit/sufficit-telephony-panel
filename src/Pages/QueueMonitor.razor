@@ -46,6 +46,8 @@
     @if (FilteredSamples.Any())
     {
         var overview = QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
+        // Tiles always list every queue (the selected one is highlighted); the rest of the page follows the selection.
+        var tiles = QueueId.Length == 0 ? overview : QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search);
         var stale = FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true);
         var now = DateTimeOffset.UtcNow;
         long Live(Func<QueueBoardQueue, int> value) => overview.Queues.SelectMany(q => q.Observations.Where(o => o.Fresh)).Sum(o => (long)Math.Max(0, value(o.Queue)));
@@ -59,34 +61,42 @@
         </div>
         <section class="queue-queues monitor-card" aria-labelledby="queue-queues-title">
             <div class="monitor-card-head">
-                <h2 id="queue-queues-title">@Text["Queues"] <span class="count">@overview.Queues.Length</span></h2>
+                <h2 id="queue-queues-title">@Text["Queues"] <span class="count">@tiles.Queues.Length</span></h2>
                 <span class="info-dot" title="@Text["Activity across the selected sources. Cross-server call legs may be counted separately; capacity is not added across servers."]">i</span>
                 @if (stale) { <span class="status-chip warn" title="@Text["Some sources have no current data. Counts marked ≥ include only current readings; retained details are historical."]">@Text["Partial data"]</span> }
             </div>
-                <SUITable T="QueueOverview" Items="overview.Queues.Skip(QueuePage*30).Take(30)" Dense="true" StackOnMobile="true" ColumnCount="7">
-                    <HeaderContent><SUITh>@Text["Queue"]</SUITh><SUITh>@Text["Greeting"]</SUITh><SUITh>@Text["Waiting"]</SUITh><SUITh>@Text["Offering"]</SUITh><SUITh>@Text["In conversation"]</SUITh><SUITh>@Text["Capacity"]</SUITh><SUITh>@Text["Longest wait"]</SUITh></HeaderContent>
-                    <RowTemplate><SUITd DataLabel="@Text["Queue"]">@context.Title
-                        <details class="queue-provenance" @key="(context.ContextId, context.QueueId)"><summary>@Text["Source details"]</summary>
-                            <p>@Text["Context"]: @context.ContextId.ToString("N")</p>
-                            @foreach (var observation in context.Observations)
-                            { <p>@observation.Source.Node · @Text[observation.Fresh ? "Current collection" : "No current data"] · @Time(observation.Source.Snapshot?.ObservedAt)</p> }
-                        </details></SUITd>
-                        <SUITd DataLabel="@Text["Greeting"]">@context.Count(q => q.Greeting)</SUITd>
-                        <SUITd DataLabel="@Text["Waiting"]">@context.Count(q => Math.Max(0, q.Waiting - q.Greeting - q.Offering))
-                            @if (context.Observations.Any(o => o.Fresh && o.Queue.Announcing > 0)) { <small>@Text.Format("{0} hearing an announcement", context.Count(q => q.Announcing))</small> }</SUITd>
-                        <SUITd DataLabel="@Text["Offering"]">@context.Count(q => q.Offering)</SUITd>
-                        <SUITd DataLabel="@Text["In conversation"]">@context.Count(q => q.Connected)</SUITd>
-                        <SUITd DataLabel="@Text["Capacity"]">@context.CapacityText(value => Text[value])</SUITd>
-                        <SUITd DataLabel="@Text["Longest wait"]">@(context.OldestEnteredAt is { } at ? $"{(context.Partial ? "≥ " : "")}{Math.Max(0, (int)(DateTimeOffset.UtcNow - at).TotalSeconds)} s" : "—")</SUITd></RowTemplate>
-                    <NoRecordsContent><span class="monitor-empty">@Text["No queues in this reading match the search."]</span></NoRecordsContent>
-                </SUITable>
+                <div class="queue-tiles" role="list">
+                @foreach (var queue in tiles.Queues.Skip(QueuePage*30).Take(30))
+                {
+                    var selected = QueueId.Length > 0 && QueueId == queue.QueueId;
+                    var fresh = queue.Observations.Where(o => o.Fresh).Select(o => o.Queue).ToArray();
+                    var waiting = fresh.Sum(q => Math.Max(0, q.Waiting - q.Offering)); var ringing = fresh.Sum(q => q.Offering); var talking = fresh.Sum(q => q.Connected);
+                    <button type="button" role="listitem" @key="(queue.ContextId, queue.QueueId)" class="queue-tile @(waiting > 0 ? "busy" : "") @(selected ? "selected" : "") @(fresh.Length == 0 ? "stale" : "")"
+                            aria-pressed="@(selected ? "true" : "false")" title="@Provenance(queue)" @onclick="() => ToggleQueue(queue.QueueId)">
+                        <span class="queue-tile-title">@queue.Title</span>
+                        @if (fresh.Length > 0 && waiting + ringing + talking == 0 && queue.OldestEnteredAt is null)
+                        { <span class="queue-tile-idle">@Text["No calls right now"]</span> }
+                        else {
+                        <span class="queue-tile-metrics">
+                            <span data-metric="waiting" class="@(waiting == 0 ? "zero" : "")"><b>@queue.Count(q => Math.Max(0, q.Waiting - q.Offering))</b> @Text["Waiting"]</span>
+                            <span data-metric="offering" class="@(ringing == 0 ? "zero" : "")"><b>@queue.Count(q => q.Offering)</b> @Text["Offering"]</span>
+                            <span data-metric="connected" class="@(talking == 0 ? "zero" : "")"><b>@queue.Count(q => q.Connected)</b> @Text["In conversation"]</span>
+                            @if (queue.OldestEnteredAt is { } oldestAt) { <span data-metric="oldest" class="warn"><b>@((queue.Partial ? "≥ " : "") + Math.Max(0, (int)(DateTimeOffset.UtcNow - oldestAt).TotalSeconds))s</b> @Text["Longest wait"]</span> }
+                        </span>
+                        }
+                        <span class="queue-tile-capacity">@Text["Capacity"] @queue.CapacityText(value => Text[value])</span>
+                    </button>
+                }
+                </div>
+                @if (tiles.Queues.Length == 0) { <p class="monitor-empty">@Text["No queues in this reading match the search."]</p> }
+                else if (QueueId.Length > 0) { <p class="queue-tiles-hint">@Text["Queue applied as a filter. Click it again to show all queues."]</p> }
                 <details class="queue-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
                     { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
                         <SUIButton VariantValue="SUIVariant.Text" OnClick="() => SelectVisit(observation)">@Text["View timeline"]</SUIButton></p> }
                     <Pager Total="overview.Visits.Length" Page="VisitPage" PageChanged="value => VisitPage = value" />
                 </details>
-                <Pager Total="overview.Queues.Length" Page="QueuePage" PageChanged="value => QueuePage = value" />
+                <Pager Total="tiles.Queues.Length" Page="QueuePage" PageChanged="value => QueuePage = value" />
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
@@ -139,6 +149,9 @@
         QueueId.Length > 0 ? Text["Queue"] + ": " + QueueId[..Math.Min(8, QueueId.Length)] + "…" : null,
     }.OfType<string>().ToArray();
     private void ClearFilters() { Context = Permissions.SingleContext?.ToString("N") ?? ""; Node = "all"; Search = ""; QueueId = ""; QueuePage = VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    private void ToggleQueue(string queueId) { QueueId = QueueId == queueId ? "" : queueId; VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    private string Provenance(QueueOverview queue) => Text["Context"] + ": " + queue.ContextId.ToString("N") + "\n" + string.Join("\n",
+        queue.Observations.Select(o => o.Source.Node + " · " + Text[o.Fresh ? "Current collection" : "No current data"] + " · " + Time(o.Source.Snapshot?.ObservedAt)));
     private void ChangeSearch(string value) { Search = value ?? ""; QueuePage=VisitPage=0; WriteUrl(); }
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
     private static string Phase(string value) => value switch { "greeting" => "Greeting", "waiting" => "Waiting", "announcing" => "Announcement", "offering" => "Offering", "connected" => "In conversation", _ => "Unknown" };
