@@ -144,7 +144,7 @@
         {
             Failed = true;
             Failure = Diagnostics.Report(e, "board-supervision");
-            Message = Text[PanelDiagnostics.UserMessage(e)] + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
+            Message = Text[PanelDiagnostics.SupervisionMessage(e)] + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
             // An ambiguous network response must never result in an automatic second call.
             Submitted = true;
         }

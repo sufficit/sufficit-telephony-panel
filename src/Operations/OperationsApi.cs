@@ -59,7 +59,7 @@ public sealed class OperationsApi(IHttpClientFactory clients)
     {
         var json = await Send(token, "telephony/chromeextension/preferred", ct);
         if (json.ValueKind != JsonValueKind.Object) return null;
-        foreach (var name in new[] { "contextId", "contextID", "ContextId" })
+        foreach (var name in new[] { "contextid", "contextId", "ContextId" }) // EndPoint serializes as "contextid"
             if (json.TryGetProperty(name, out var value) && value.TryGetGuid(out var id) && id != Guid.Empty) return id;
         return null;
     }

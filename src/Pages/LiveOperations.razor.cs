@@ -477,7 +477,7 @@ public partial class LiveOperations
         catch (Exception e)
         {
             ActionFailure = Diagnostics.Report(e, "channel-supervision");
-            ActionMessage = ErrorText(e) + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
+            ActionMessage = Text[PanelDiagnostics.SupervisionMessage(e)] + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
             Toast.Add(ActionMessage, SUITone.Warning, 12000);
         }
         finally { ActionBusy = false; }
