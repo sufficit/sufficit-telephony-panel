@@ -87,6 +87,7 @@ builder.Services.AddSingleton(sp => new QueueBoardReader(builder.Configuration.G
     .Get<QueueBoardSource[]>() ?? [], sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<PanelDiagnostics>()));
 builder.Services.AddSingleton<QueueDiagnosticsReader>();
 builder.Services.AddScoped<QueueBoardAccess>();
+builder.Services.AddSingleton<ControllerQueueDistribution>();
 builder.Services.AddScoped<QueueDistributionAccess>();
 builder.Services.AddSingleton(new SupervisionPrefixPolicy(builder.Configuration
     .GetSection("Panel:SupervisionPrefixes").Get<SupervisionPrefixRule[]>() ?? []));

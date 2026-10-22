@@ -17,8 +17,9 @@ public sealed record DistributionMember(string Member, string Name, long Offered
     public long? AverageTalk => Answered > 0 ? TalkSeconds / Answered : null;
 }
 public sealed record DistributionQueue(Guid? Account, string Node, string Queue, long Entered, long Answered, long Abandoned,
-    long WaitSeconds, long[] EnteredByHour, long[] AnsweredByHour, long[] AbandonedByHour)
+    long WaitSeconds, long[] EnteredByHour, long[] AnsweredByHour, long[] AbandonedByHour, string Title = "")
 {
+    public string Label => Title.Length > 0 ? Title : Queue;
     public string Key => Node + "|" + Queue;
     public long Other => Math.Max(0, Entered - Answered - Abandoned);
     public double? AnswerRate => Entered > 0 ? (double)Answered / Entered : null;
@@ -54,7 +55,7 @@ public static class QueueDistributionView
     {
         var entered = Last(stat.Entered, hours); var answered = Last(stat.Answered, hours); var abandoned = Last(stat.Abandoned, hours);
         return new(Account(stat.Account), stat.Node, stat.Queue, entered.Sum(), answered.Sum(), abandoned.Sum(),
-            Last(stat.WaitSeconds, hours).Sum(), entered, answered, abandoned);
+            Last(stat.WaitSeconds, hours).Sum(), entered, answered, abandoned, stat.Title);
     }
 
     public static DistributionQueue[] Queues(DistributionReply reply, int hours) => reply.Queues
@@ -82,12 +83,19 @@ public static class QueueDistributionView
         return new(Queue(stat, hours), members, calls);
     }
 
-    /// <summary>Same node/search rules as the collector; used only for the preview fixture.</summary>
-    public static DistributionReply Filter(DistributionReply reply, string node, string search)
+    /// <summary>Same node/search rules as the collector; used for the preview fixture and Queue controller queues.</summary>
+    public static void Merge(DistributionReply target, DistributionReply source)
+    {
+        target.Queues.AddRange(source.Queues); target.Members.AddRange(source.Members); target.Calls.AddRange(source.Calls);
+        if (target.StartedAtMs == 0 || source.StartedAtMs != 0 && source.StartedAtMs < target.StartedAtMs) target.StartedAtMs = source.StartedAtMs;
+        target.NowMs = Math.Max(target.NowMs, source.NowMs);
+    }
+
+    public static DistributionReply Filter(DistributionReply reply, string node, string search, string queue = "")
     {
         bool Has(string value) => search.Length == 0 || value.Contains(search, StringComparison.OrdinalIgnoreCase);
-        var keep = reply.Queues.Where(q => (node.Length == 0 || q.Node == node)
-                && (Has(q.Queue) || reply.Members.Any(m => m.Node == q.Node && m.Queue == q.Queue && (Has(m.Interface) || Has(m.Name)))))
+        var keep = reply.Queues.Where(q => (node.Length == 0 || q.Node == node) && (queue.Length == 0 || q.Queue == queue)
+                && (Has(q.Queue) || Has(q.Title) || reply.Members.Any(m => m.Node == q.Node && m.Queue == q.Queue && (Has(m.Interface) || Has(m.Name)))))
             .Select(q => (q.Node, q.Queue)).ToHashSet();
         var result = new DistributionReply { StartedAtMs = reply.StartedAtMs, NowMs = reply.NowMs };
         result.Queues.AddRange(reply.Queues.Where(q => keep.Contains((q.Node, q.Queue))));

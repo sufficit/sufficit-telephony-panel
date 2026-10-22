@@ -241,7 +241,7 @@
         return Math.Max(0, length);
     }
     private string Started => Reply is null ? "" : DateTimeOffset.FromUnixTimeMilliseconds(Reply.StartedAtMs).ToLocalTime().ToString("g", Text.Culture);
-    private string QueueLabel(DistributionQueue queue) => queue.Queue + (Queues.Select(q => q.Node).Distinct().Count() > 1 ? " · " + queue.Node : "");
+    private string QueueLabel(DistributionQueue queue) => queue.Label + (Queues.Select(q => q.Node).Distinct().Count() > 1 ? " · " + queue.Node : "");
     private string WindowLabel(int hours) => hours == 1 ? Text["This hour"] : Text.Format("Last {0} h", hours);
     private static string Css(double value) => Math.Clamp(value, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static string Percent(double? value) => value is { } v ? $"{v * 100:0}%" : "—";

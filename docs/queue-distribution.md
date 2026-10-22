@@ -14,6 +14,8 @@ Seção da página **Filas** (`/queues`) que mostra quem recebe as chamadas de c
 
 Eventos do `app_queue` recebidos em tempo real pelo coletor de observação (`sufficit-ami-observation`): `QueueCallerJoin/Leave/Abandon`, `AgentCalled`, `AgentRingNoAnswer`, `AgentConnect` e `AgentComplete`. O coletor soma em memória (`QueueDistribution`, sufficit-ami-events/streaming), sem banco de dados, por 24 h. Reiniciar o coletor recomeça a contagem.
 
+**Filas novas (controlador Queue do sufficit-ari):** não usam `app_queue`, então o coletor não as vê. O painel lê as chamadas e os eventos por oferta (`offered`, `ringing`, `connected`, `offer_finished`) das últimas 24 h pela API de diagnóstico do controlador, já gravados no dbvoiprt. Chamadas encerradas ficam em cache; a leitura por fonte se repete no máximo a cada 15 s. Essas filas aparecem com o nome amigável (título do controlador) e não zeram com reinício do coletor. `channel_ended` em menos de 2 s após discar conta como indisponível; depois disso, como "tocou e não atendeu".
+
 O painel lê pelo RPC `Distribution` no socket Unix privado do coletor (o mesmo da telemetria). Pedido por TCP é recusado.
 
 ## Permissões
