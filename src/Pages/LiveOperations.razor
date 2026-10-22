@@ -231,6 +231,7 @@ else
                     {
                     <p>@Text.Observed(tile.Peer?.RegistrationLabel ?? Text["Registration not reported"]) · @Text.Observed(tile.Peer?.ReachabilityLabel ?? Text["Reachability not reported"]) · @Text.Observed(tile.Peer?.DeviceLabel ?? Text["Device usage not reported"])</p>
                     <p>@Text.Format("Last observed registration: {0}. Unknown states do not mean the extension is idle.", Timestamp(tile.Peer?.LastRegisteredObservedAt))</p>
+                    <p>@Text["Contact IP"]: @(tile.ContactAddress ?? Text["not observed yet"]) · @Text["Declared device"]: @(tile.UserAgent ?? Text["not reported in PBX events"])</p>
                     }
                     @foreach (var flow in tile.Flows)
                     {

@@ -24,6 +24,7 @@ internal static class QueueDistributionChecks
         check(day.Calls.Length == 18 && day.Calls[0].EnteredAt >= day.Calls[^1].EnteredAt, "Latest calls first");
         check(hour.Calls.All(c => c.EnteredAt >= now.AddHours(-1).AddSeconds(-1)), "Calls follow the window");
         check(QueueDistributionView.Detail(reply, "google-voip", "missing", 24) is null, "Unknown queue has no detail");
+        check(OperatorTile.ContactHost("sip:6001@177.1.2.3:5060;transport=udp") == "177.1.2.3:5060" && OperatorTile.ContactHost("sip:10.0.0.9:5060") == "10.0.0.9:5060", "Contact URI shows host and port");
         var starts = QueueDistributionView.HourStarts(new DateTimeOffset(2026, 10, 22, 14, 37, 0, TimeSpan.FromHours(-3)), 4);
         check(starts[^1].Hour == 14 && starts[0].Hour == 11 && starts[0].Minute == 0, "Hour labels end at the current hour");
     }

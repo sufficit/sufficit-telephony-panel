@@ -13,6 +13,20 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting").ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels).Concat(Channels).DistinctBy(r => r.Id).ToArray();
     public DateTimeOffset? LastSeen { get; init; }
+    private ObservedResource[] PeerRows => Rows.Where(r => r.Kind == "peer").OrderByDescending(r => r.Updated).ToArray();
+    /// <summary>Last contact address reported by the PBX: chan_sip "ip:port" or the PJSIP contact URI host.</summary>
+    public string? ContactAddress => PeerRows.Select(r => r.Details.GetValueOrDefault("address") is { Length: > 0 } address ? address
+        : r.Details.GetValueOrDefault("uri") is { Length: > 0 } uri ? ContactHost(uri) : null).FirstOrDefault(a => a is not null);
+    public string? UserAgent => PeerRows.Select(r => r.Details.GetValueOrDefault("useragent")).FirstOrDefault(a => !string.IsNullOrWhiteSpace(a));
+    /// <summary>"sip:6001@177.1.2.3:5060;transport=udp" → "177.1.2.3:5060".</summary>
+    public static string ContactHost(string uri)
+    {
+        var value = uri.Split(';', 2)[0];
+        var at = value.LastIndexOf('@');
+        if (at >= 0) value = value[(at + 1)..];
+        else if (value.IndexOf(':') is var scheme and > 0 && value[..scheme] is "sip" or "sips") value = value[(scheme + 1)..];
+        return value.TrimEnd('>');
+    }
     public bool Remembered => Rows.Length == 0 && LastSeen.HasValue;
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;

@@ -637,5 +637,7 @@
   "Still in queue": "Na fila",
   "Answered call": "Atendida",
   "Abandoned call": "Abandonada",
-  "Took the call": "Atendeu"
+  "Took the call": "Atendeu",
+  "not observed yet": "ainda não observado (aparece no próximo registro)",
+  "not reported in PBX events": "não informado nos eventos do PABX"
 }
