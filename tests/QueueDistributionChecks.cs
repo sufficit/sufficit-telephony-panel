@@ -21,7 +21,7 @@ internal static class QueueDistributionChecks
         var busy = day.Members.Single(m => m.Extension == "0007366004");
         check(busy.Label == "BRANDÃO SERVI - 6004" && busy.AverageTalk == 185, "Member label and average talk");
         check(busy.Cancelled == busy.Offered - busy.Answered - busy.Missed, "Rang while another answered");
-        check(day.Calls.Length == 18 && day.Calls[0].EnteredAt >= day.Calls[^1].EnteredAt, "Latest calls first");
+        check(day.Calls.Length == 19 && day.Calls.Count(c => c.Outcome == "waiting") == 1 && day.Calls[0].EnteredAt >= day.Calls[^1].EnteredAt, "Latest calls first");
         check(hour.Calls.All(c => c.EnteredAt >= now.AddHours(-1).AddSeconds(-1)), "Calls follow the window");
         check(QueueDistributionView.Detail(reply, "google-voip", "missing", 24) is null, "Unknown queue has no detail");
         check(OperatorTile.ContactHost("sip:6001@177.1.2.3:5060;transport=udp") == "177.1.2.3:5060" && OperatorTile.ContactHost("sip:10.0.0.9:5060") == "10.0.0.9:5060", "Contact URI shows host and port");

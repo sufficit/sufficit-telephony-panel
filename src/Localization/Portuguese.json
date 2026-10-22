@@ -659,5 +659,11 @@
   "Open this queue's distribution": "Abrir a distribuição desta fila",
   "Show all queues": "Mostrar todas as filas",
   "Queue applied as a filter to the whole page.": "Fila aplicada como filtro em toda a página.",
-  "Native PBX queue: live stages and presence come from the queue controller and are not available for it. The distribution below covers it.": "Fila nativa do PABX: etapas ao vivo e presença vêm do controlador de filas e não existem para ela. A distribuição abaixo cobre esta fila."
+  "Native PBX queue: live stages and presence come from the queue controller and are not available for it. The distribution below covers it.": "Fila nativa do PABX: etapas ao vivo e presença vêm do controlador de filas e não existem para ela. A distribuição abaixo cobre esta fila.",
+  "no capacity limit": "sem limite de capacidade",
+  "capacity {0}": "capacidade {0}",
+  "capacity not reported": "capacidade não informada pelo PABX",
+  "No calls waiting in this queue right now.": "Nenhuma chamada aguardando nesta fila agora.",
+  "waiting": "aguardando",
+  "not offered to any extension yet": "ainda não ofertada a nenhum ramal"
 }

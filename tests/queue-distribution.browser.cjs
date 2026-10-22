@@ -15,6 +15,9 @@ const { chromium } = require('playwright');
       await section.locator('.ranking-row').first().click();
       await page.waitForURL(url => url.searchParams.has('dqueue'));
       await section.locator('.member').first().waitFor({ timeout: 30000 });
+      // Calls waiting now, with the extensions ringing highlighted.
+      await section.locator('.now-call').first().waitFor();
+      if (await section.locator('.now-call .attempt.ringing').count() !== 2) throw new Error('two members ringing now');
       // The chosen (native) queue filters the whole page: no other queues' tiles, live strip or presence.
       await page.locator('.focus-note').waitFor();
       if (await page.locator('.queue-tile').count() !== 0 || await page.locator('.live-strip').count() !== 0 || await page.locator('.queue-diagnostics').count() !== 0)

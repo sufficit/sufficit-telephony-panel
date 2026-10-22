@@ -8,7 +8,7 @@ namespace Sufficit.Telephony.Panel.Operations;
 /// already persists per-offer events (offered, ringing, connected, offer_finished). This class reads the
 /// last 24 hours through the existing diagnostics API and shapes them like the collector's reply.
 /// Finished visits never change, so their events are cached; the per-source result is rebuilt at most
-/// every 15 seconds. Callers must authorize the context before calling <see cref="Read"/>.
+/// every 4 seconds. Callers must authorize the context before calling <see cref="Read"/>.
 /// </summary>
 public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, TimeProvider clock)
 {
@@ -23,7 +23,7 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
         try
         {
             var now = clock.GetUtcNow();
-            if (results.TryGetValue((context, node), out var cached) && now - cached.At < TimeSpan.FromSeconds(15)) return cached.Reply;
+            if (results.TryGetValue((context, node), out var cached) && now - cached.At < TimeSpan.FromSeconds(4)) return cached.Reply;
             var until = now; var from = now.AddHours(-QueueDistribution.Hours).AddMinutes(1);
             var calls = new List<QueueDiagnosticCall>();
             string? cursor = null;

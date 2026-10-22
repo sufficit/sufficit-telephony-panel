@@ -60,6 +60,12 @@ public static class QueueDistributionFixture
                     RingSeconds = m.Ext == winner ? trace.WaitSeconds - 1 : 0, TalkSeconds = m.Ext == winner ? 140 + c * 9 : 0 });
             reply.Calls.Add(trace);
         }
+        // One call waiting right now, ringing two members (one offline).
+        var live = new CallTrace { Node = "google-voip", Queue = "0007366500", Account = account, Uniqueid = "demo.live", Caller = "21988887777",
+            EnteredMs = now.AddSeconds(-42).ToUnixTimeMilliseconds(), Outcome = "waiting" };
+        foreach (var (ext, outcome) in new[] { ("6004", "ringing"), ("6008", "ringing"), ("6001", "unavailable") })
+            live.Attempts.Add(new CallAttempt { Interface = $"Local/000736{ext}@from-queue/n", Name = "Ramal " + ext, CalledMs = now.AddSeconds(-30).ToUnixTimeMilliseconds(), Outcome = outcome });
+        reply.Calls.Insert(0, live);
         return reply;
     }
 }

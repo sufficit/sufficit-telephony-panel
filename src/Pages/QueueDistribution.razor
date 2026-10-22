@@ -76,6 +76,30 @@
     {
         var queue = Detail.Queue;
         var maxRung = Math.Max(1, Detail.Members.Select(m => m.Offered).DefaultIfEmpty(0).Max());
+        var active = Detail.Calls.Where(c => c.Outcome == "waiting" && c.EnteredAt > DateTimeOffset.UtcNow.AddHours(-1)).ToArray();
+        var waitingNow = LiveWaiting ?? active.Length;
+        <section class="now" aria-label="@Text["Now"]">
+            <div class="now-gauge">
+                <span class="now-value">@waitingNow</span>
+                <span class="now-label">@Text["Waiting now"] · @(LiveCapacity is { } cap ? cap == 0 ? Text["no capacity limit"] : Text.Format("capacity {0}", cap) : Text["capacity not reported"])</span>
+                @if (LiveCapacity is > 0 and var capacity)
+                { <span class="now-bar" role="meter" aria-valuemin="0" aria-valuemax="@capacity" aria-valuenow="@waitingNow"><span class="@(waitingNow >= capacity ? "full" : waitingNow * 2 >= capacity ? "half" : "")" style="width:@Css(100.0 * waitingNow / capacity)%"></span></span> }
+            </div>
+            <div class="now-calls">
+                @if (active.Length == 0) { <p class="monitor-empty">@Text["No calls waiting in this queue right now."]</p> }
+                @foreach (var call in active.Take(12))
+                {
+                    <div class="now-call" @key="call.Uniqueid">
+                        <span class="now-call-who"><b>@(call.Caller.Length > 0 ? call.Caller : Text["Unknown number"])</b> · @Text["waiting"] @Duration((long)(DateTimeOffset.UtcNow - call.EnteredAt).TotalSeconds)</span>
+                        <span class="attempts">
+                            @foreach (var attempt in call.Attempts)
+                            { <span class="attempt @OutcomeTone(attempt.Outcome) @(attempt.Outcome == "ringing" ? "ringing" : "")" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}")">@Short(attempt.Member)</span> }
+                            @if (call.Attempts.Length == 0) { <span class="muted">@Text["not offered to any extension yet"]</span> }
+                        </span>
+                    </div>
+                }
+            </div>
+        </section>
         <div class="kpis">
             <div class="kpi"><span class="kpi-value">@queue.Entered</span><span class="kpi-label">@Text["Calls received"]</span></div>
             <div class="kpi good"><span class="kpi-value">@queue.Answered</span><span class="kpi-label">@Text["Answered"] @Percent(queue.AnswerRate)</span></div>
@@ -168,6 +192,9 @@
     [Parameter] public string Node { get; set; } = "all";
     /// <summary>Queue controller id from the URL (?queueid=, e.g. the "Monitorar" link of the entry plan).</summary>
     [Parameter] public string QueueId { get; set; } = "";
+    /// <summary>Live waiting count and capacity of the focused queue when the queue controller reports them (null for native queues).</summary>
+    [Parameter] public int? LiveWaiting { get; set; }
+    [Parameter] public int? LiveCapacity { get; set; }
     /// <summary>Extensions that rang in the focused queue, so the page can filter presence to them.</summary>
     [Parameter] public EventCallback<string[]> MembersChanged { get; set; }
     private string ReportedMembers = "\0";
@@ -284,8 +311,10 @@
 
     private async Task Poll()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-        try { while (await timer.WaitForNextTickAsync(Lifetime.Token)) await InvokeAsync(Refresh); }
+        // A focused queue shows calls ringing now: refresh every 3 s; the ranking every 10 s.
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        var tick = 0;
+        try { while (await timer.WaitForNextTickAsync(Lifetime.Token)) if (++tick % (ActiveKey.Length > 0 ? 3 : 10) == 0) await InvokeAsync(Refresh); }
         catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
     }
 

@@ -107,7 +107,10 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
-        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
+        var focusLive = FocusQueue.Length == 0 ? null : overview.Queues.FirstOrDefault(q => q.QueueId == FocusQueue);
+        var focusFresh = focusLive?.Observations.Where(o => o.Fresh).Select(o => o.Queue).ToArray() ?? [];
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers"
+            LiveWaiting="@(focusFresh.Length > 0 ? focusFresh.Sum(q => q.Waiting) : null)" LiveCapacity="@(focusFresh.Length > 0 ? focusFresh.Max(q => q.Capacity) : null)" />
         <QueueRegistrationTable Agents="agents" />
         <details class="queue-history monitor-card" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />

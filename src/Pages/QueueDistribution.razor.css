@@ -73,3 +73,18 @@
 @media (max-width: 640px) {
   .ranking-row { grid-template-columns: 24px 1fr auto; grid-template-areas: "pos name total" "pos bar bar" "pos meta meta"; }
 }
+
+.now { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: var(--sui-space-4); align-items: start; border: 1px solid var(--sui-border); border-radius: 12px; padding: 12px 16px; }
+.now-gauge { display: grid; gap: 4px; }
+.now-value { font-size: 2rem; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+.now-label { font-size: .8rem; color: var(--sui-text-secondary); }
+.now-bar { height: 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 8%, transparent); overflow: hidden; }
+.now-bar > span { display: block; height: 100%; background: var(--sui-color-success); }
+.now-bar > span.half { background: var(--sui-color-warning); }
+.now-bar > span.full { background: var(--sui-color-error); }
+.now-calls { display: grid; gap: 6px; min-width: 0; }
+.now-call { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: .875rem; }
+.attempt.ringing { --tone: var(--sui-color-primary); animation: ring-pulse 1s ease-in-out infinite; font-weight: 600; }
+@keyframes ring-pulse { 50% { background: color-mix(in srgb, var(--sui-color-primary) 45%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .attempt.ringing { animation: none; } }
+@media (max-width: 640px) { .now { grid-template-columns: 1fr; } }
