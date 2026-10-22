@@ -27,7 +27,7 @@
         <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
     </div>
     <p class="muted filter-hint">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
-    <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" Preview="Preview" />
+    <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
     @if (!Busy && Error is null && !FilteredSamples.Any())

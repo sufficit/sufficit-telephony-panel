@@ -23,7 +23,7 @@
             @foreach (var hours in QueueDistributionView.Windows)
             { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
         </div>
-        @if (Search.Length > 0 || NodeFilter.Length > 0)
+        @if (Search.Length > 0 || NodeFilter.Length > 0 || QueueId.Length > 0)
         { <span class="muted filter-note">@Text["Following the page filters above."]</span> }
     </div>
 
@@ -131,9 +131,11 @@
     /// <summary>Page search (queue number, extension or member name) and server filter, shared with the rest of the page.</summary>
     [Parameter] public string Search { get; set; } = "";
     [Parameter] public string Node { get; set; } = "all";
+    /// <summary>Queue controller id from the URL (?queueid=, e.g. the "Monitorar" link of the entry plan).</summary>
+    [Parameter] public string QueueId { get; set; } = "";
     private string NodeFilter => Node is "" or "all" ? "" : Node;
     private string LoadedKey = "";
-    private string FilterKey => Context + "|" + NodeFilter + "|" + Search.Trim();
+    private string FilterKey => Context + "|" + NodeFilter + "|" + Search.Trim() + "|" + QueueId;
     private bool Demo => Preview && Environment.IsDevelopment();
     private DistributionReply? Reply;
     private DistributionQueue[] Queues = [];
@@ -189,7 +191,7 @@
                 // The summary lists the queues; the detail brings members and calls of the selected one only.
                 var summary = await Access.Read(context, NodeFilter, "", true, Lifetime.Token, Search.Trim());
                 var top = SelectedKey.Length > 0 && summary.Queues.Any(q => q.Node + "|" + q.Queue == SelectedKey) ? SelectedKey
-                    : QueueDistributionView.Queues(summary, 24).FirstOrDefault()?.Key ?? "";
+                    : QueueDistributionView.Queues(summary, 24).FirstOrDefault(q => QueueId.Length == 0 || q.Queue == QueueId)?.Key ?? "";
                 var detail = top.Length == 0 ? new DistributionReply()
                     : await Access.Read(context, top.Split('|')[0], top[(top.IndexOf('|') + 1)..], false, Lifetime.Token);
                 detail.Queues.Clear(); detail.Queues.AddRange(summary.Queues);
@@ -210,6 +212,7 @@
     {
         if (Reply is null) return;
         Queues = QueueDistributionView.Queues(Reply, 24);
+        if (QueueId.Length > 0) Queues = Queues.Where(q => q.Queue == QueueId).ToArray();
         if (SelectedKey.Length == 0 || Queues.All(q => q.Key != SelectedKey)) SelectedKey = Queues.FirstOrDefault()?.Key ?? "";
         var parts = SelectedKey.Split('|', 2);
         Detail = parts.Length == 2 ? QueueDistributionView.Detail(Reply, parts[0], parts[1], Window) : null;
