@@ -13,6 +13,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject SupportChat Support
+@inject SupervisionPrefixPolicy PrefixPolicy
 @inject AuthenticationStateProvider Authentication
 @inject Sufficit.Blazor.UI.Services.ISUIToast Toast
 
@@ -192,7 +193,7 @@ else
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
     private RenderFragment BoardContent => @<div class="board-focus" id="board-focus">
             @DedicatedOptions
-            <OperatorBoard Compact="true" HeaderTools="FilterTrigger" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" Page="Page" PageChanged="SetBoardPage" />
+            <OperatorBoard Compact="true" HeaderTools="FilterTrigger" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" CanContinuous="CanSuperviseContinuously" Page="Page" PageChanged="SetBoardPage" />
             @if (BoardAction is { } action)
             {
                 <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" SupervisorFailure="SupervisorFailure" Closed="() => BoardAction = null" Support="@(Support.Enabled ? EventCallback.Factory.Create(this, () => OpenBoardSupport(action.Tile)) : default)" />

@@ -10,9 +10,12 @@
     {
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, false)">@Text["Listen to a channel"]</SUIButton>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, false)">@Text["Whisper to a channel"]</SUIButton>
+    @if (Continuous)
+    {
     <hr />
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, true)">@Text["Listen continuously by prefix"]</SUIButton>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Whisper, true)">@Text["Whisper continuously by prefix"]</SUIButton>
+    }
     }
 </div>
 
@@ -23,6 +26,8 @@
     [Parameter] public EventCallback Closed { get; set; }
     [Parameter] public EventCallback<OperatorTile> Selected { get; set; }
     [Parameter] public EventCallback<BoardSupervisionAction> Action { get; set; }
+    /// <summary>Offer continuous (prefix) supervision only when the card has an exclusive prefix.</summary>
+    [Parameter] public bool Continuous { get; set; } = true;
     private ElementReference Element;
     private IJSObjectReference? module, session;
     private DotNetObjectReference<BoardCardMenu>? reference;

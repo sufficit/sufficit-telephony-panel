@@ -433,6 +433,12 @@ public partial class LiveOperations
     }
     private bool CanSuperviseTile(OperatorTile tile) => (Demo && Permissions.Manager) || tile.Rows.Any(row =>
         Permissions.CanRead(TargetContext(row)) && Permissions.CanMonitor(TargetContext(row)));
+    // Continuous (prefix) supervision follows future calls, so it is offered only where an exclusive
+    // prefix exists: a configured rule or the card's own endpoint. Trunks and queues carry several
+    // companies' calls and never qualify; their current call stays available as a single channel.
+    private bool CanSuperviseContinuously(OperatorTile tile) => Demo && Permissions.Manager
+        || PrefixPolicy.For(tile, Context).Length > 0
+        || EndpointSupervisionTarget.For(tile, Context, Connected, DateTimeOffset.UtcNow).Length > 0;
     private BoardSupervisionAction? BoardAction;
     private bool DemoEndpointResolution => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query)
         .TryGetValue("supervisionpreview", out var scenario) && scenario == "idle";

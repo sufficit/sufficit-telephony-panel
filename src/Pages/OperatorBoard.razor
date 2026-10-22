@@ -44,7 +44,7 @@
 </section>
 @if (MenuTile is { } menu)
 {
-    <BoardCardMenu @key="menu.Id" Tile="menu" X="MenuX" Y="MenuY" Closed="() => MenuTile = null" Selected="Select" Action="@(CanSupervise?.Invoke(menu) == false ? default : Supervise)" />
+    <BoardCardMenu @key="menu.Id" Tile="menu" X="MenuX" Y="MenuY" Closed="() => MenuTile = null" Selected="Select" Action="@(CanSupervise?.Invoke(menu) == false ? default : Supervise)" Continuous="@(CanContinuous?.Invoke(menu) != false)" />
 }
 @code {
     private ElementReference Columns;
@@ -66,6 +66,8 @@
     }
     [Parameter] public EventCallback<BoardSupervisionAction> Supervise { get; set; }
     [Parameter] public Func<OperatorTile, bool>? CanSupervise { get; set; }
+    /// <summary>Whether the card has an exclusive prefix for continuous supervision.</summary>
+    [Parameter] public Func<OperatorTile, bool>? CanContinuous { get; set; }
     protected override void OnParametersSet()
     {
         if (MenuTile is { } previous) MenuTile = Tiles.FirstOrDefault(tile => tile.Id == previous.Id);
