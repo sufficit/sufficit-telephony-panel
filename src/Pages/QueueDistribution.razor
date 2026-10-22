@@ -10,7 +10,7 @@
         <h2 id="distribution-title">@Text["Queue distribution"]</h2>
         <span class="info-dot" title="@(Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."] + (Reply is null ? "" : " " + Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)))">i</span>
         <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == ActiveKey) is { } current ? QueueLabel(current) : Text["Busiest queues"]) · @WindowLabel(Window)</span>
-        @if (Detail is not null && SelectedKey.Length > 0 && QueueId.Length == 0)
+        @if (Detail is not null && (SelectedKey.Length > 0 || QueueId.Length > 0))
         { <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="() => SelectQueue(string.Empty)">← @Text["All queues"]</SUIButton> }
         <SUIButton Class="distribution-options-trigger" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="distribution-options">@Text["Queue and period"]</SUIButton>
     </div>
@@ -168,6 +168,9 @@
     [Parameter] public string Node { get; set; } = "all";
     /// <summary>Queue controller id from the URL (?queueid=, e.g. the "Monitorar" link of the entry plan).</summary>
     [Parameter] public string QueueId { get; set; } = "";
+    /// <summary>Extensions that rang in the focused queue, so the page can filter presence to them.</summary>
+    [Parameter] public EventCallback<string[]> MembersChanged { get; set; }
+    private string ReportedMembers = "\0";
     private string NodeFilter => Node is "" or "all" ? "" : Node;
     private string LoadedKey = "";
     private string FilterKey => Context + "|" + NodeFilter + "|" + Search.Trim() + "|" + QueueId;
@@ -199,18 +202,23 @@
     private void ReadUrl()
     {
         var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
-        if (query.TryGetValue("dqueue", out var queue) && queue.Count == 1 && queue[0] is { Length: > 2 and <= 260 } key && key.Contains('|')) SelectedKey = key;
+        SelectedKey = query.TryGetValue("dqueue", out var queue) && queue.Count == 1 && queue[0] is { Length: > 2 and <= 260 } key && key.Contains('|') ? key : "";
         Window = query.TryGetValue("dperiod", out var period) && int.TryParse(period, out var hours) && QueueDistributionView.Windows.Contains(hours) ? hours : 24;
     }
-    private void WriteUrl() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
-        { ["dqueue"] = SelectedKey.Length == 0 ? null : SelectedKey, ["dperiod"] = Window == 24 ? null : Window }), replace: true);
+    // A queue chosen here becomes the page's queue filter; going back to the ranking clears both forms of it.
+    private void WriteUrl(bool queueChanged = false)
+    {
+        var values = new Dictionary<string, object?> { ["dqueue"] = SelectedKey.Length == 0 ? null : SelectedKey, ["dperiod"] = Window == 24 ? null : Window };
+        if (queueChanged) values["queueid"] = null;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(values), replace: true);
+    }
     private void LocationChanged(object? sender, LocationChangedEventArgs args)
     {
         var (key, window) = (SelectedKey, Window);
         ReadUrl();
         if (key != SelectedKey || window != Window) _ = InvokeAsync(async () => { CallLimit = 30; await Refresh(); });
     }
-    private Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; WriteUrl(); return Refresh(); }
+    private Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; WriteUrl(queueChanged: true); return Refresh(); }
     private void SetWindow(int hours) { Window = hours; Rebuild(); WriteUrl(); }
 
     private bool Pending;
@@ -266,6 +274,10 @@
             : QueueId.Length > 0 ? Queues.FirstOrDefault()?.Key ?? "" : Search.Trim().Length > 0 && Queues.Length == 1 ? Queues[0].Key : "";
         var parts = ActiveKey.Split('|', 2);
         Detail = parts.Length == 2 ? QueueDistributionView.Detail(Reply, parts[0], parts[1], Window) : null;
+        var members = Detail is null ? [] : Detail.Members.Select(m => m.Extension)
+            .Concat(Detail.Calls.SelectMany(c => c.Attempts).Select(a => QueueDistributionView.Extension(a.Member))).Distinct().Order().ToArray();
+        if (string.Join(",", members) is var joined && joined != ReportedMembers && MembersChanged.HasDelegate)
+        { ReportedMembers = joined; _ = InvokeAsync(() => MembersChanged.InvokeAsync(members)); }
         CommonPrefix = Detail is null ? 0 : Prefix(Detail.Calls.SelectMany(c => c.Attempts).Select(a => QueueDistributionView.Extension(a.Member))
             .Concat(Detail.Members.Select(m => m.Extension)).Distinct().ToArray());
     }

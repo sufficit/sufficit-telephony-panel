@@ -40,14 +40,21 @@
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
     @if (!FilteredSamples.Any())
     {
-        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
-        @if (!Busy && Error is null) { <p class="monitor-empty">@Text["No live queue controller source for these filters. Native PBX queues appear only in the distribution above."]</p> }
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
+        @if (!Busy && Error is null && FocusQueue.Length == 0) { <p class="monitor-empty">@Text["No live queue controller source for these filters. Native PBX queues appear only in the distribution above."]</p> }
     }
-    @if (FilteredSamples.Any())
+    @if (FilteredSamples.Any() && NativeFocus)
     {
-        var overview = QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, QueueId);
-        // Tiles always list every queue (the selected one is highlighted); the rest of the page follows the selection.
-        var tiles = QueueId.Length == 0 ? overview : QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search);
+        <p class="focus-note"><span class="filter-chip">@Text["Queue"]: @FocusLabel</span> @Text["Native PBX queue: live stages and presence come from the queue controller and are not available for it. The distribution below covers it."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p>
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
+        <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
+    }
+    else if (FilteredSamples.Any())
+    {
+        // One queue filter for the whole page: the tile/link ?queueid= or a controller queue chosen in the distribution.
+        var overview = QueueMonitorOverview.Build(FilteredSamples, DateTimeOffset.UtcNow, Search, FocusQueue);
+        var tiles = overview;
+        var agents = FocusQueue.Length == 0 ? overview.Agents : overview.Agents.Where(a => FocusMembers.Contains(a.Extension)).ToArray();
         var stale = FilteredSamples.Any(s => !s.Available || s.Snapshot?.Fresh(DateTimeOffset.UtcNow) != true);
         var now = DateTimeOffset.UtcNow;
         long Live(Func<QueueBoardQueue, int> value) => overview.Queues.SelectMany(q => q.Observations.Where(o => o.Fresh)).Sum(o => (long)Math.Max(0, value(o.Queue)));
@@ -57,7 +64,7 @@
             <div class="live-kpi"><span class="live-value">@Live(q => q.Offering)</span><span class="live-label">@Text["Ringing agents"]</span></div>
             <div class="live-kpi good"><span class="live-value">@Live(q => q.Connected)</span><span class="live-label">@Text["In conversation"]</span></div>
             <div class="live-kpi @(oldest is { } o && now - o > TimeSpan.FromMinutes(1) ? "warn" : "")"><span class="live-value">@(oldest is { } at ? Math.Max(0, (int)(now - at).TotalSeconds) + " s" : "—")</span><span class="live-label">@Text["Longest wait"]</span></div>
-            <div class="live-kpi"><span class="live-value">@overview.Agents.Count(a => a.State(now) == "Available")/@overview.Agents.Length</span><span class="live-label">@Text["Extensions available"]</span></div>
+            <div class="live-kpi"><span class="live-value">@agents.Count(a => a.State(now) == "Available")/@agents.Length</span><span class="live-label">@Text["Extensions available"]</span></div>
         </div>
         <section class="queue-queues monitor-card" aria-labelledby="queue-queues-title">
             <div class="monitor-card-head">
@@ -68,7 +75,7 @@
                 <div class="queue-tiles" role="list">
                 @foreach (var queue in tiles.Queues.Skip(QueuePage*30).Take(30))
                 {
-                    var selected = QueueId.Length > 0 && QueueId == queue.QueueId;
+                    var selected = FocusQueue.Length > 0 && FocusQueue == queue.QueueId;
                     var fresh = queue.Observations.Where(o => o.Fresh).Select(o => o.Queue).ToArray();
                     var waiting = fresh.Sum(q => Math.Max(0, q.Waiting - q.Offering)); var ringing = fresh.Sum(q => q.Offering); var talking = fresh.Sum(q => q.Connected);
                     <button type="button" role="listitem" @key="(queue.ContextId, queue.QueueId)" class="queue-tile @(waiting > 0 ? "busy" : "") @(selected ? "selected" : "") @(fresh.Length == 0 ? "stale" : "")"
@@ -89,7 +96,7 @@
                 }
                 </div>
                 @if (tiles.Queues.Length == 0) { <p class="monitor-empty">@Text["No queues in this reading match the search."]</p> }
-                else if (QueueId.Length > 0) { <p class="queue-tiles-hint">@Text["Queue applied as a filter. Click it again to show all queues."]</p> }
+                else if (FocusQueue.Length > 0) { <p class="queue-tiles-hint">@Text["Queue applied as a filter to the whole page."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p> }
                 <details class="queue-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
                     { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
@@ -100,8 +107,8 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
-        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
-        <QueueRegistrationTable Agents="overview.Agents" />
+        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
+        <QueueRegistrationTable Agents="agents" />
         <details class="queue-history monitor-card" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
@@ -134,11 +141,12 @@
         Context = query.ContextId?.ToString("N") ?? ""; Node = query.Node; Search = query.Text;
         var raw = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
         QueueId = raw.TryGetValue("queueid", out var value) && value.Count == 1 && Guid.TryParse(value[0], out var id) ? id.ToString("N") : "";
+        DQueue = raw.TryGetValue("dqueue", out var dqueue) && dqueue.Count == 1 && dqueue[0] is { Length: > 2 and <= 260 } key && key.Contains('|') ? key : "";
         if (Guid.TryParse(Node, out var nodeId)) Node = nodeId.ToString("N");
     }
     private void LocationChanged(object? sender, LocationChangedEventArgs args) { ReadUrl(); _ = InvokeAsync(StateHasChanged); }
     private void WriteUrl() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
-        { ["contextid"] = Context.Length == 0 ? null : Context, ["company"] = null, ["node"] = Node == "all" ? null : Node, ["q"] = Search.Length == 0 ? null : Search, ["queueid"] = QueueId.Length == 0 ? null : QueueId }), replace: true);
+        { ["contextid"] = Context.Length == 0 ? null : Context, ["company"] = null, ["node"] = Node == "all" ? null : Node, ["q"] = Search.Length == 0 ? null : Search, ["queueid"] = QueueId.Length == 0 ? null : QueueId, ["dqueue"] = DQueue.Length == 0 ? null : DQueue }), replace: true);
     private void ChangeContext(string value) { Context = value; QueueId = ""; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
     private void ChangeNode(string value) { Node = value; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
     private string[] ActiveFilters => new[]
@@ -147,9 +155,19 @@
         Node != "all" ? Text["Server"] + ": " + SelectedNode : null,
         Search.Length > 0 ? "“" + Search + "”" : null,
         QueueId.Length > 0 ? Text["Queue"] + ": " + QueueId[..Math.Min(8, QueueId.Length)] + "…" : null,
+        QueueId.Length == 0 && DQueueId.Length > 0 ? Text["Queue"] + ": " + (NativeFocus ? DQueueId : DQueueId[..8] + "…") : null,
     }.OfType<string>().ToArray();
-    private void ClearFilters() { Context = Permissions.SingleContext?.ToString("N") ?? ""; Node = "all"; Search = ""; QueueId = ""; QueuePage = VisitPage = 0; SelectedVisit = null; WriteUrl(); }
-    private void ToggleQueue(string queueId) { QueueId = QueueId == queueId ? "" : queueId; VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    private void ClearFilters() { Context = Permissions.SingleContext?.ToString("N") ?? ""; Node = "all"; Search = ""; QueueId = ""; DQueue = ""; QueuePage = VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    private void ToggleQueue(string queueId) { QueueId = FocusQueue == queueId ? "" : queueId; DQueue = ""; VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    private void ClearQueue() { QueueId = ""; DQueue = ""; VisitPage = 0; SelectedVisit = null; WriteUrl(); }
+    // Distribution choice (?dqueue=node|queue): controller queues use their id, native PBX queues their number.
+    private string DQueue = "";
+    private string DQueueId => DQueue.Split('|', 2) is [_, var id] ? id : "";
+    private bool NativeFocus => QueueId.Length == 0 && DQueueId.Length > 0 && !Guid.TryParseExact(DQueueId, "N", out _);
+    private string FocusQueue => QueueId.Length > 0 ? QueueId : !NativeFocus ? DQueueId : "";
+    private string FocusLabel => DQueueId;
+    private string[] FocusMembers = [];
+    private void SetFocusMembers(string[] members) { FocusMembers = members; StateHasChanged(); }
     private string Provenance(QueueOverview queue) => Text["Context"] + ": " + queue.ContextId.ToString("N") + "\n" + string.Join("\n",
         queue.Observations.Select(o => o.Source.Node + " · " + Text[o.Fresh ? "Current collection" : "No current data"] + " · " + Time(o.Source.Snapshot?.ObservedAt)));
     private void ChangeSearch(string value) { Search = value ?? ""; QueuePage=VisitPage=0; WriteUrl(); }

@@ -656,5 +656,8 @@
   "Busiest queues": "Ranking das filas",
   "All queues": "Todas as filas",
   "calls": "chamadas",
-  "Open this queue's distribution": "Abrir a distribuição desta fila"
+  "Open this queue's distribution": "Abrir a distribuição desta fila",
+  "Show all queues": "Mostrar todas as filas",
+  "Queue applied as a filter to the whole page.": "Fila aplicada como filtro em toda a página.",
+  "Native PBX queue: live stages and presence come from the queue controller and are not available for it. The distribution below covers it.": "Fila nativa do PABX: etapas ao vivo e presença vêm do controlador de filas e não existem para ela. A distribuição abaixo cobre esta fila."
 }

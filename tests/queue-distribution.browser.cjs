@@ -15,6 +15,10 @@ const { chromium } = require('playwright');
       await section.locator('.ranking-row').first().click();
       await page.waitForURL(url => url.searchParams.has('dqueue'));
       await section.locator('.member').first().waitFor({ timeout: 30000 });
+      // The chosen (native) queue filters the whole page: no other queues' tiles, live strip or presence.
+      await page.locator('.focus-note').waitFor();
+      if (await page.locator('.queue-tile').count() !== 0 || await page.locator('.live-strip').count() !== 0 || await page.locator('.queue-diagnostics').count() !== 0)
+        throw new Error('other queues still visible while a queue is chosen');
       if (await section.locator('.member').count() !== 6) throw new Error('six members expected');
       if (await section.locator('.hour').count() !== 24) throw new Error('24 hourly bars by default');
       if (!(await section.locator('.member').last().textContent()).includes('nunca')) throw new Error('offline member shows no last answer');
@@ -29,6 +33,18 @@ const { chromium } = require('playwright');
       if (errors.length) throw new Error(errors.join('; '));
       await page.close();
     }
+    // Back to all queues restores the page.
+    const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+    await page.goto('http://127.0.0.1:5169/queues?preview=true&dqueue=google-voip%7C0007366500');
+    await page.locator('.focus-note').waitFor({ timeout: 30000 });
+    await page.locator('.focus-note').getByRole('button', { name: /Mostrar todas as filas/ }).click();
+    await page.locator('.queue-tile').first().waitFor();
+    await page.locator('.ranking-row').first().waitFor();
+    if (new URL(page.url()).searchParams.has('dqueue')) throw new Error('dqueue must be cleared');
+    // A controller queue tile filters the page and the tile list to itself.
+    await page.locator('.queue-tile').first().click();
+    await page.waitForURL(url => url.searchParams.has('queueid'));
+    if (await page.locator('.queue-tile').count() !== 1) throw new Error('only the chosen queue tile remains');
     console.log('PASS queue distribution');
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exit(1); });
