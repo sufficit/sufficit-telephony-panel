@@ -210,13 +210,16 @@
         ReadUrl();
         if (key != SelectedKey || window != Window) _ = InvokeAsync(async () => { CallLimit = 30; await Refresh(); });
     }
-    private Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; WriteUrl(); return Task.CompletedTask; }
-    private void SetWindow(int hours) { Window = hours; WriteUrl(); }
+    private Task SelectQueue(string key) { SelectedKey = key; CallLimit = 30; WriteUrl(); return Refresh(); }
+    private void SetWindow(int hours) { Window = hours; Rebuild(); WriteUrl(); }
 
+    private bool Pending;
     private async Task Refresh()
     {
-        if (Busy || Disposed) return;
-        Busy = true;
+        if (Disposed) return;
+        // A selection made while a poll is in flight must not be dropped: run again right after it.
+        if (Busy) { Pending = true; return; }
+        Busy = true; Pending = false;
         try
         {
             var context = Guid.TryParse(Context, out var id) ? id : (Guid?)null;
@@ -245,7 +248,12 @@
         catch (UnauthorizedAccessException) { Error = "Your access expired. Sign in again."; }
         catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
         catch (InvalidOperationException e) { Error = e.Message; }
-        finally { Busy = false; if (!Disposed) StateHasChanged(); }
+        finally
+        {
+            Busy = false;
+            if (!Disposed) StateHasChanged();
+            if (Pending && !Disposed) _ = InvokeAsync(Refresh);
+        }
     }
 
     private void Rebuild()
