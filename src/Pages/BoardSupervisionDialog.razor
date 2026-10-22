@@ -42,7 +42,7 @@
             <p>@Text["Only the selected channel is monitored. The session ends when that channel ends; it does not follow other calls."]</p>
             @if (Channels.Length == 0)
             {
-                <SUIAlert ToneValue="SUITone.Warning">@Text["No fresh, authorized SIP/PJSIP channel is available for this card. Wait for current events or reconnect."]
+                <SUIAlert ToneValue="SUITone.Warning">@Text["No authorized SIP/PJSIP call channel is available for this card right now. The reasons per channel are listed below."]
                     @* Say why each observed channel is refused instead of a generic warning. *@
                     @foreach (var reason in BlockReasons) { <small class="supervision-block-reason">@reason.Key: @Text[reason.Reason]</small> }
                 </SUIAlert>

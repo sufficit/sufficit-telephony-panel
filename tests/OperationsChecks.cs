@@ -21,6 +21,19 @@ public static class OperationsChecks
         check(!MonitorActionGuard.Allows(row, Guid.NewGuid(), true, now), "Cross-tenant monitoring rejected");
         check(!MonitorActionGuard.Allows(row, tenant, false, now), "Disconnected stream cannot authorize an action");
         check(MonitorActionGuard.Allows(row, tenant, true, now.AddMinutes(30)), "An answered call without new events stays supervisable while observed");
+        {
+            var company = Guid.NewGuid(); var other = Guid.NewGuid();
+            ObservedResource Leg(string id, string key, string? account, string linked, string node = "google") =>
+                new(id, node, "call", key, "Up", "", "", account, now, now, new Dictionary<string, string> { ["linkedid"] = linked });
+            var legs = AuthorizedObservation.InheritCallAccounts([
+                Leg("trunk", "SIP/IN-DATORA-000000a1", null, "L1"), Leg("ext", "SIP/0000286001-000000a2", company.ToString("N"), "L1"),
+                Leg("mixed", "SIP/IN-DATORA-000000b1", null, "L2"), Leg("a", "SIP/1-000000b2", company.ToString("N"), "L2"), Leg("b", "SIP/2-000000b3", other.ToString("N"), "L2"),
+                Leg("elsewhere", "SIP/IN-DATORA-000000c1", null, "L1", "eveo")]);
+            check(legs.Single(r => r.Id == "trunk").Account == company.ToString("N"), "Trunk leg inherits the company of its call (managers)");
+            check(legs.Single(r => r.Id == "mixed").Account is null, "Ambiguous calls never inherit a company");
+            check(legs.Single(r => r.Id == "elsewhere").Account is null, "Inheritance never crosses servers");
+            check(MonitorActionGuard.Allows(legs.Single(r => r.Id == "trunk"), company, true, now), "Inherited trunk leg becomes supervisable for managers");
+        }
         check(!MonitorActionGuard.Allows(row, tenant, false, now.AddMinutes(30)), "A disconnected stream never authorizes an action");
         check(!MonitorActionGuard.Allows(row with { Key = "PJSIP/6007\r\nAction: Hangup" }, tenant, true, now), "Protocol injection rejected");
         projection.Apply("eveo", "HangupEvent", Event(row.Key), now);

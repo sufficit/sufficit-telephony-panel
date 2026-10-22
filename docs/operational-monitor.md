@@ -135,7 +135,11 @@ There is no event-age limit (removed 2026-10-22): an answered call emits no furt
 events, so the former 30-second rule disabled Listen/Whisper on every conversation in
 progress. Liveness comes from the projection: HangupEvent removes the channel, idle rows
 expire after 2 hours, and a disconnected stream blocks actions. When nothing is eligible,
-the board dialog lists the concrete reason per channel. Actions are serialized per session,
+the board dialog lists the concrete reason per channel.
+For managers, a call leg without AccountCode (usually the trunk leg) inherits the company of the
+other legs of the same call (same node and Linkedid) when they agree on exactly one company, so
+trunk and queue cards can be supervised from the central view. Customer projections never
+inherit (trunks may be shared); the Endpoints API still checks permission and ownership. Actions are serialized per session,
 limited to one every 15 seconds, and never retried automatically. API
 `accepted=true` means originate was accepted, not that media is connected.
 On uncertain response, check the supervisor endpoint before retrying.

@@ -33,6 +33,7 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
         context = permissions.SelectContext(context);
         var connection = await Connection(ct);
         var rows = connection.Connected ? connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
+        if (permissions.Manager) rows = AuthorizedObservation.InheritCallAccounts(rows);
         if (permissions.Manager)
             return context is { } managerContext ? AuthorizedObservation.Create(cards, rows, managerContext)
                 : AuthorizedObservation.ForManager(rows);

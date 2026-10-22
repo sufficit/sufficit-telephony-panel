@@ -40,6 +40,23 @@ public sealed class AuthorizedObservation
         .Select(channel => ExtensionPattern.Match(channel))
         .Where(match => match.Success).Select(match => match.Groups[1].Value)
         .ToHashSet(StringComparer.Ordinal);
+    /// <summary>
+    /// Managers only: a call leg without AccountCode (typically the trunk leg) takes the company of the
+    /// other legs of the same call (same node and Linkedid) when they agree on exactly one company. Lets a
+    /// manager supervise trunk and queue legs; never used for customer projections (trunks may be shared).
+    /// </summary>
+    public static ObservedResource[] InheritCallAccounts(IEnumerable<ObservedResource> source)
+    {
+        var rows = source as ObservedResource[] ?? source.ToArray();
+        static string? Linked(ObservedResource row) => row.Details.GetValueOrDefault("linkedid") is { Length: > 0 } id && LiveProjection.Meaningful(id) ? id : null;
+        static bool Owned(ObservedResource row) => Guid.TryParse(row.Account, out var id) && id != Guid.Empty;
+        var companies = rows.Where(row => Owned(row) && Linked(row) is not null)
+            .GroupBy(row => (row.Node, Linked: Linked(row)!))
+            .ToDictionary(group => group.Key, group => group.Select(row => Guid.Parse(row.Account!)).Distinct().ToArray());
+        return rows.Select(row => row.Kind == "call" && !Owned(row) && Linked(row) is { } linked
+                && companies.TryGetValue((row.Node, linked), out var found) && found is [var company]
+            ? row with { Account = company.ToString("N") } : row).ToArray();
+    }
     /// <summary>Only for the upstream manager ALL stream, after server-side role validation.</summary>
     public static AuthorizedObservation ForManager(IEnumerable<ObservedResource> source)
     {
