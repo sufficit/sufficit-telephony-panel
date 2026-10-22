@@ -388,3 +388,8 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
  .operations .detail { padding:18px; }
  .settings-toolbar .sui-btn { flex:0 0 auto; }
 }
+/* Stacked SUI tables (phones): every extra element of a cell stays in the value column, never under the label. */
+@media(max-width:599.98px) {
+ .sui-table--stack-mobile tbody td > * { grid-column:2; }
+ .queue-monitor .heading > .sui-btn, .queue-monitor .heading > a.sui-btn { min-height:0; height:auto; line-height:1.3; }
+}

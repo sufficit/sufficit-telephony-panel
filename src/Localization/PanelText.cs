@@ -9,7 +9,8 @@ public sealed class PanelText
     private static readonly IReadOnlyDictionary<string, string> Portuguese = Load();
     private static readonly IReadOnlyDictionary<string, string> English = Portuguese
         .GroupBy(p => p.Value, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Key, StringComparer.Ordinal);
-    public string Language { get; private set; } = "en";
+    // Portuguese (Brazil) is the default; English only when the user explicitly chooses it.
+    public string Language { get; private set; } = "pt-BR";
     public CultureInfo Culture => CultureInfo.GetCultureInfo(Language == "pt-BR" ? "pt-BR" : "en-US");
     public event Action? Changed;
     public string this[string english] => Language == "pt-BR" ? Portuguese.GetValueOrDefault(english, english) : english;
@@ -25,7 +26,7 @@ public sealed class PanelText
     }
     public void SetLanguage(string? language)
     {
-        var next = language == "pt-BR" ? "pt-BR" : "en";
+        var next = language == "en" ? "en" : "pt-BR";
         if (next == Language) return;
         Language = next;
         Changed?.Invoke();

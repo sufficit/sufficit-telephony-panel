@@ -6,7 +6,7 @@ const base = 'http://127.0.0.1:5169';
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     const columns = page.locator('[data-board-split="columns"]');

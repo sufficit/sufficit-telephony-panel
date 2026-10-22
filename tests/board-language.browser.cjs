@@ -5,7 +5,7 @@ const fs = require('node:fs');
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-    const page = await context.newPage();
+    const page = await context.newPage();; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const openFilters = async (target = page) => { if (!(await target.locator('#board-options').isVisible())) await target.locator('.board-filter-trigger').click(); };
     await page.goto('http://127.0.0.1:5169/mesa?preview=true&q=6101&text=peers');
@@ -22,7 +22,7 @@ const fs = require('node:fs');
     const language = async name => { await picker.getByRole('combobox').click(); await picker.getByRole('option', { name, exact: true }).click(); };
     await language('Português');
     await page.getByRole('textbox', { name: 'Filtrar recursos', exact: true }).waitFor();
-    assert.equal(await page.evaluate(() => localStorage.getItem('telephony-panel-language')), 'pt-BR');
+    assert.equal(await page.evaluate(() => localStorage.getItem('telephony-panel-language-v2')), 'pt-BR');
     await page.reload();
     await page.locator('.board-tile').first().waitFor(); await openFilters();
     await page.getByRole('textbox', { name: 'Filtrar recursos', exact: true }).waitFor();
@@ -60,11 +60,17 @@ const fs = require('node:fs');
     await mobile.getByRole('button', { name: 'Fechar filtros', exact: true }).click();
     await mobile.screenshot({ path: '.impeccable/review/board-focused-mobile.png', fullPage: true });
     assert(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No mobile overflow');
-    const independent = await browser.newPage();
+    const independent = await browser.newPage();; await independent.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     await independent.goto('http://127.0.0.1:5169/board?preview=true');
     await independent.locator('.board-tile').first().waitFor(); await openFilters(independent);
     await independent.getByRole('textbox', { name: 'Filter resources', exact: true }).waitFor();
     assert.equal(await independent.locator('html').getAttribute('lang'), 'en', 'Language is not shared across sessions');
+    const fresh = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await fresh.goto('http://127.0.0.1:5169/?preview=true');
+    await fresh.locator('.board-tile').first().waitFor();
+    assert.equal(await fresh.locator('html').getAttribute('lang'), 'pt-BR', 'Without a saved choice the panel opens in Portuguese (Brazil)');
+    await fresh.getByRole('link', { name: 'Mesa de operação', exact: true }).waitFor();
+    await fresh.close();
     assert.equal(errors.length, 0, errors.join('\n'));
     console.log('PASS English route, compatibility, language persistence/isolation, focused fullscreen and filters, responsive themes');
   } finally { await browser.close(); }

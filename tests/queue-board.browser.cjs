@@ -5,7 +5,7 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1988, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1988, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const context = '11111111111171118111111111111111';
     const url = phase => `http://127.0.0.1:5169/board?preview=true&acdpreview=${phase}&contextid=${context}`;
@@ -46,7 +46,7 @@ const fs = require('node:fs');
     fs.mkdirSync('.impeccable/review', { recursive: true });
     await open('greeting');
     await page.screenshot({ path: '.impeccable/review/queue-board-desktop.png' });
-    await page.evaluate(() => localStorage.setItem('telephony-panel-language', 'pt-BR'));
+    await page.evaluate(() => localStorage.setItem('telephony-panel-language-v2', 'pt-BR'));
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload(); await queue().waitFor();
     assert.match(await queue().innerText(), /Saudação da fila/);

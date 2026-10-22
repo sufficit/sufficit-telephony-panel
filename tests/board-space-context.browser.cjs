@@ -4,7 +4,7 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1994, height: 800 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1994, height: 800 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const contextId = '11111111111171118111111111111111';
@@ -22,7 +22,7 @@ const fs = require('node:fs');
     await page.locator('.client-results button').first().click();
     await page.waitForURL(u => u.searchParams.get('contextid') === contextId && !u.searchParams.has('company'));
     const shared = page.url();
-    const other = await browser.newPage(); await other.goto(shared);
+    const other = await browser.newPage(); await other.goto(shared);; await other.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     await other.locator('.board-tile').first().waitFor();
     assert.equal(new URL(other.url()).searchParams.get('contextid'), contextId);
     await other.close();

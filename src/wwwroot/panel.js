@@ -84,11 +84,12 @@ window.telephonyPanel = (() => {
                 return true;
             } catch { return false; }
         },
-        language: () => { try { return localStorage.getItem('telephony-panel-language') === 'pt-BR' ? 'pt-BR' : 'en'; } catch { return 'en'; } },
+        // Key v2: the old key held an automatically saved 'en' for every past visitor; pt-BR is the default now.
+        language: () => { try { return localStorage.getItem('telephony-panel-language-v2') === 'en' ? 'en' : 'pt-BR'; } catch { return 'pt-BR'; } },
         setLanguage: value => {
-            const language = value === 'pt-BR' ? 'pt-BR' : 'en';
+            const language = value === 'en' ? 'en' : 'pt-BR';
             document.documentElement.lang = language;
-            try { localStorage.setItem('telephony-panel-language', language); } catch {}
+            try { localStorage.setItem('telephony-panel-language-v2', language); } catch {}
         },
         dark: () => {
             // An explicit choice wins; otherwise follow the operating system on first visit.

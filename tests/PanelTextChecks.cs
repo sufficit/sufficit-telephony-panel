@@ -7,13 +7,14 @@ static class PanelTextChecks
     public static void Run(Action<bool, string> check)
     {
         var first = new PanelText(); var second = new PanelText();
-        check(first.Language == "en" && first["Full screen"] == "Full screen", "English is the default");
-        first.SetLanguage("pt-BR");
-        check(first["Full screen"] == "Tela cheia", "Portuguese is available");
-        check(second.Language == "en", "Language is isolated per circuit");
+        check(first.Language == "pt-BR" && first["Full screen"] == "Tela cheia", "Portuguese (Brazil) is the default");
         check(first.Format("{0} observed channels", 3) == "3 canais observados", "Parameterized Portuguese message");
+        first.SetLanguage("en");
+        check(first["Full screen"] == "Full screen", "English is available on request");
+        check(second.Language == "pt-BR", "Language is isolated per circuit");
         first.SetLanguage("invalid");
-        check(first.Language == "en", "Unknown language falls back to English");
+        check(first.Language == "pt-BR", "Unknown language falls back to Portuguese (Brazil)");
+        first.SetLanguage("en");
         check(first.Observed("Registrado no evento") == "Registered in event", "Legacy status translated without changing evidence");
         check(first.Observed("2 canal(is) observado(s)") == "2 observed channels", "Legacy channel count translated");
         check(first.Observed("PJSIP/6007") == "PJSIP/6007", "Identifiers are not translated");

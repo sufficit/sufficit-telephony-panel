@@ -4,7 +4,7 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const origin = process.env.PANEL_PREVIEW_URL || 'http://127.0.0.1:5168';
     await page.goto(origin + '/queues?preview=true');
@@ -42,7 +42,7 @@ const fs = require('node:fs');
     fs.mkdirSync('.impeccable/review', { recursive: true });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: '.impeccable/review/monitoring-migration-desktop.png', fullPage: true });
-    await page.evaluate(() => { localStorage.setItem('telephony-panel-language', 'pt-BR'); localStorage.setItem('telephony-panel-theme', 'dark'); });
+    await page.evaluate(() => { localStorage.setItem('telephony-panel-language-v2', 'pt-BR'); localStorage.setItem('telephony-panel-theme', 'dark'); });
     await page.setViewportSize({ width: 390, height: 844 }); await page.reload();
     await page.getByRole('heading', { name: 'Filas e registros', exact: true }).waitFor();
     await page.locator('.queue-diagnostics details summary').first().click();

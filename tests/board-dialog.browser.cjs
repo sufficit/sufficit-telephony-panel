@@ -5,7 +5,7 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:5169/board?preview=true');
@@ -59,8 +59,8 @@ const fs = require('node:fs');
     assert(await page.evaluate(() => document.fullscreenElement?.id === 'board-focus'));
     await page.evaluate(() => document.exitFullscreen());
     await page.waitForFunction(() => !document.fullscreenElement);
-    const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
-    await mobile.addInitScript(() => { localStorage.setItem('telephony-panel-language', 'pt-BR'); localStorage.setItem('telephony-panel-theme', 'dark'); });
+    const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });; await mobile.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
+    await mobile.addInitScript(() => { localStorage.setItem('telephony-panel-language-v2', 'pt-BR'); localStorage.setItem('telephony-panel-theme', 'dark'); });
     await mobile.goto('http://127.0.0.1:5169/board?preview=true');
     const mobileTile = mobile.locator('.board-grid .board-tile').filter({ hasText: 'Hugo' }).first();
     await mobileTile.click(); await mobile.getByRole('dialog').waitFor();

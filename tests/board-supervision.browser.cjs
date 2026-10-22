@@ -5,7 +5,7 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     page.setDefaultTimeout(10000);
     const errors = [], actions = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -54,7 +54,7 @@ const fs = require('node:fs');
     await page.keyboard.press('Shift+F10'); await menu.waitFor();
     await page.keyboard.press('Escape'); await menu.waitFor({ state: 'detached' });
     assert(await active.locator('.board-tile').evaluate(el => el === document.activeElement));
-    await page.addInitScript(() => localStorage.setItem('telephony-panel-language', 'pt-BR'));
+    await page.addInitScript(() => localStorage.setItem('telephony-panel-language-v2', 'pt-BR'));
     await page.reload(); await page.locator('.board-tile').first().waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('button', { name: 'Filtros e opções da mesa', exact: true }).click();
@@ -71,7 +71,7 @@ const fs = require('node:fs');
     await page.screenshot({ path: '.impeccable/review/supervision-prefix-mobile.png', fullPage: true });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow');
     assert.equal(actions.length, 0, 'Demo cannot call live monitor API');
-    await page.addInitScript(() => localStorage.setItem('telephony-panel-language', 'en'));
+    await page.addInitScript(() => localStorage.setItem('telephony-panel-language-v2', 'en'));
     await page.goto('http://127.0.0.1:5169/board?preview=true&supervisionpreview=multiple');
     await page.locator('.board-grid .board-card').filter({ hasText: 'Hugo' }).first().locator('.card-menu-trigger').click();
     await menu.getByRole('menuitem', { name: 'Listen to a channel', exact: true }).click();

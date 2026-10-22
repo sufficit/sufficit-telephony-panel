@@ -4,12 +4,12 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const filters = async () => { if (!(await page.locator('#board-options').isVisible())) await page.locator('.board-filter-trigger').click(); };
     const lists = async () => { await page.getByRole('link', { name: 'Telefonia ao vivo', exact: true }).click(); await page.locator('.live-tabs').waitFor(); };
     const board = async () => { await page.getByRole('link', { name: 'Mesa de operação', exact: true }).click(); await page.locator('.board-grid').waitFor(); };
-        await page.addInitScript(() => localStorage.setItem("telephony-panel-language", "pt-BR"));
+        await page.addInitScript(() => localStorage.setItem("telephony-panel-language-v2", "pt-BR"));
     await page.goto('http://127.0.0.1:5169/?preview=true&tab=extensions');
     await page.getByRole('button', { name: /^Configurar mesa/ }).click();
     await page.getByRole('button', { name: 'Nova regra', exact: true }).click();

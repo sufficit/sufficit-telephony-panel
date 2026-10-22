@@ -4,10 +4,10 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     const count = () => page.locator('.board-grid .board-tile').count();
-        await page.addInitScript(() => localStorage.setItem("telephony-panel-language", "pt-BR"));
+        await page.addInitScript(() => localStorage.setItem("telephony-panel-language-v2", "pt-BR"));
     await page.goto('http://127.0.0.1:5169/mesa?preview=true');
     await page.locator('.board-grid .board-tile').first().waitFor();
     assert.equal(await count(), 75);
@@ -34,7 +34,7 @@ const fs = require('node:fs');
     assert.equal(await text.inputValue(), '6101');
     assert.equal(await count(), 1);
     assert(!(await page.getByRole('checkbox', { name: 'Troncos', exact: true }).isChecked()));
-    const other = await browser.newPage(); await other.goto(shared);
+    const other = await browser.newPage(); await other.goto(shared);; await other.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     await other.locator('.board-grid .board-tile').first().waitFor();
     assert.equal(await other.locator('.board-grid .board-tile').count(), 1, 'Shared link restores filters'); await other.close();
     await page.getByRole('checkbox', { name: 'Troncos', exact: true }).locator('xpath=ancestor::label').click();

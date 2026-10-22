@@ -5,11 +5,11 @@ const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     for (const language of ['en', 'pt-BR']) {
       await page.goto('http://127.0.0.1:5169/board?preview=true&contextid=11111111111171118111111111111111');
-      await page.evaluate(value => localStorage.setItem('telephony-panel-language', value), language);
+      await page.evaluate(value => localStorage.setItem('telephony-panel-language-v2', value), language);
       await page.reload(); await page.locator('.board-tile').first().waitFor();
       const hugo = page.locator('.board-grid .board-tile').filter({ hasText: 'Hugo' }).first();
       const queue = page.locator('.board-queues .board-tile').first();

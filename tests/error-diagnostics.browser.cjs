@@ -5,9 +5,9 @@ const fs = require('node:fs');
 (async () => {
     const browser = await chromium.launch({ headless: true });
     try {
-        const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+        const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });; await page.addInitScript(() => { if (!localStorage.getItem('telephony-panel-language-v2')) localStorage.setItem('telephony-panel-language-v2', 'en'); }); // English fixtures; product default is pt-BR
         const errors = []; page.on('pageerror', e => errors.push(e.message));
-        await page.addInitScript(() => localStorage.setItem('telephony-panel-language', 'pt-BR'));
+        await page.addInitScript(() => localStorage.setItem('telephony-panel-language-v2', 'pt-BR'));
         await page.goto('http://127.0.0.1:5169/?preview=true&diagnosticpreview=true&tab=extensions');
         await page.getByText('Detalhes do erro', { exact: true }).waitFor();
         await page.getByText('Detalhes do erro', { exact: true }).focus();
