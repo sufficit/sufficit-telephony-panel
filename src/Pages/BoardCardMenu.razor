@@ -45,6 +45,8 @@
             if (module is not null) await module.DisposeAsync();
         }
         catch (JSDisconnectedException) { }
+        // The menu may be removed while its close call is still in flight (navigation, circuit teardown).
+        catch (TaskCanceledException) { }
         reference?.Dispose();
     }
 }

@@ -25,6 +25,7 @@ const fs = require('node:fs');
         await page.getByRole('heading', { name: 'Confirmar escuta' }).waitFor();
         assert.match(await page.locator('.monitor-confirm').innerText(), /PJSIP\/6007-000000ab/);
         await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+        await page.getByRole('dialog').waitFor({ state: 'detached' }); // confirmation is a modal now
         const filter = page.getByRole('textbox', { name: 'Filtrar recursos' });
         await filter.fill('Local/6007');
         await page.waitForFunction(() => document.querySelectorAll('.call-group').length === 1);

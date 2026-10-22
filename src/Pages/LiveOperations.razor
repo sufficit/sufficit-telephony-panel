@@ -128,7 +128,11 @@ else
         }
         @if (Tab is "calls" or "channels") { <p class="muted section-hint">@(Supervisor is { } supervisor ? Text.Format("Your supervision extension: {0}.", supervisor.Title) : Text[SupervisorFailure is not null ? "Could not load your supervision extension. Reconnect and refresh to try again." : "Set your preferred extension in the portal to enable supervision."]) @Text["Select the correct channel to listen or whisper. Actions require a recent event and verified company association."]</p><ErrorDetails Diagnostic="SupervisorFailure" /> }
         @if (Tab is not ("board" or "settings")) { <div class="live-pagination"><span>@Text.Format("{0} results with current filters", TotalVisible)</span><Pager Total="TotalVisible" Page="Page" PageSize="PageSize" PageChanged="SetBoardPage" /></div> }
-        @ActionConfirmation
+        @if (Pending is { } pendingChannel && SelectedTile is null)
+        {
+            <BoardResourceDialog Title="@Text.Format("Supervision: {0}", pendingChannel.Key)" Closed="CancelAction">@ActionConfirmation</BoardResourceDialog>
+        }
+        @ActionResult
         <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary><ObservationNote Since="Since" LastEvent="LastEvent" /></details>
         <details class="live-help"><summary>@Text["How to read this panel"]</summary><p>@Text["The overview shows the manager-authorized stream; company filtering uses resources authorized by the portal. Reconnecting discards old states. Current observation is limited to 5,000 resources and two hours without updates, not a full inventory. Keep previously seen resources retains the existence of extensions, trunks and queues separately, without automatic expiration or old channels. The saved last observation is approximate. Clearing remembered resources removes that history from the selected view; new events can record them again."]</p><p>@Text["SIP registration, reachability and device usage are independent. An extension may be registered but not respond. A static contact may respond without registering. Qualify does not prove the phone's WebSocket/TCP connection. Registration time here is when the panel received a registration event, not the PBX's historical timestamp. Events before connection are unavailable."]</p><p>@Text["Call queues distribute calls among agents. QUEUE stands for automatic call distribution. This monitor does not create queues or replace their management screen."]</p></details>
     </div>
@@ -146,7 +150,10 @@ else
                 <div class="tools"><SUIButton OnClick="Confirm" Disabled="ActionBusy" VariantValue="SUIVariant.Filled">@(ActionBusy ? Text["Sending…"] : Text["Confirm and call my extension"])</SUIButton><SUIButton OnClick="CancelAction" Disabled="ActionBusy" VariantValue="SUIVariant.Text">@Text["Cancel"]</SUIButton></div>
             </section>
         }
-        @if (ActionMessage is not null) { <SUIAlert ToneValue="SUITone.Info">@Text.Observed(ActionMessage)<ErrorDetails Diagnostic="ActionFailure" /></SUIAlert> }
+    </div>;
+    // Successful requests are confirmed by toast; only failures stay on the page with their reference.
+    private RenderFragment ActionResult => @<div>
+        @if (ActionMessage is not null && ActionFailure is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(ActionMessage)<ErrorDetails Diagnostic="ActionFailure" /></SUIAlert> }
     </div>;
     [Parameter] public bool Dark { get; set; }
     [Parameter] public EventCallback ThemeChanged { get; set; }
@@ -195,6 +202,7 @@ else
                 <BoardResourceDialog Title="@($"{tile.Title} · {tile.Node}")" Closed="CloseTile">
                     @ResourceDetails(tile)
                     @ActionConfirmation
+                    @ActionResult
                 </BoardResourceDialog>
             }
             </div>;

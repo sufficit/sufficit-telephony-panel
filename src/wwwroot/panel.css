@@ -393,3 +393,7 @@ main h1, .board-mode .heading h1 { font-size:24px; margin:0; letter-spacing:-.01
  .sui-table--stack-mobile tbody td > * { grid-column:2; }
  .queue-monitor .heading > .sui-btn, .queue-monitor .heading > a.sui-btn { min-height:0; height:auto; line-height:1.3; }
 }
+.card-quick .sui-btn { min-width:28px; width:28px; height:28px; padding:4px; color:var(--sui-color-primary); }
+.card-quick .sui-btn:hover { background:color-mix(in srgb,var(--sui-color-primary) 12%,transparent); }
+/* Panel supervision icons are stroke drawings (like SUIIcons); never fill them. */
+.card-quick svg, .call-actions svg { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }

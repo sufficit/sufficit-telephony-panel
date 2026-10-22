@@ -462,11 +462,17 @@ public partial class LiveOperations
         var target = Pending; Pending = null;
         try
         {
-            if (Demo) { ActionMessage = Text["Demonstration: confirmation validated. No call was sent."]; return; }
+            if (Demo) { ActionMessage = Text["Demonstration: confirmation validated. No call was sent."]; Toast.Add(ActionMessage, SUITone.Info, 8000); return; }
             await Access.Monitor(TargetContext(target), target.Id, Mode, lifetime.Token);
             ActionMessage = Text["Request accepted by the exchange. Answer your extension. This does not confirm audio is connected yet."];
+            Toast.Add(ActionMessage, SUITone.Success, 10000);
         }
-        catch (Exception e) { ActionFailure = Diagnostics.Report(e, "channel-supervision"); ActionMessage = ErrorText(e) + Text[" No automatic retry. If the response was lost, check your extension before retrying."]; }
+        catch (Exception e)
+        {
+            ActionFailure = Diagnostics.Report(e, "channel-supervision");
+            ActionMessage = ErrorText(e) + Text[" No automatic retry. If the response was lost, check your extension before retrying."];
+            Toast.Add(ActionMessage, SUITone.Warning, 12000);
+        }
         finally { ActionBusy = false; }
     }
     private string ErrorText(Exception e) => Text[PanelDiagnostics.UserMessage(e)];

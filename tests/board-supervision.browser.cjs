@@ -93,6 +93,23 @@ const fs = require('node:fs');
     assert(await dialog.locator('code').filter({ hasText: 'PJSIP/6007-' }).count() === 1);
     await page.screenshot({ path: '.impeccable/review/supervision-idle-mobile.png', fullPage: true });
     assert.equal(actions.length, 0, 'Idle fixture never originates a real call');
+    // Quick actions: cards with a live call expose Listen/Whisper directly, without the menu.
+    await page.goto('http://127.0.0.1:5169/?preview=true');
+    const quick = page.locator('.board-card.has-quick').first();
+    await quick.waitFor();
+    assert.equal(await page.locator('.board-card:not(.has-quick) .card-quick').count(), 0, 'Quick actions only on cards with a live call');
+    await quick.getByRole('button', { name: /^Whisper to / }).click();
+    const quickDialog = page.getByRole('dialog');
+    await quickDialog.waitFor();
+    assert((await quickDialog.innerText()).includes('Whisper'), 'Quick whisper opens the supervision dialog in whisper mode');
+    await page.keyboard.press('Escape'); await quickDialog.waitFor({ state: 'detached' });
+    await page.goto('http://127.0.0.1:5169/?preview=true&tab=channels');
+    await page.getByRole('button', { name: 'Listen', exact: true }).first().click();
+    await page.getByRole('dialog').getByRole('heading', { name: 'Confirm listening' }).waitFor();
+    assert.equal(await page.locator('.monitor-confirm:not(dialog *)').count(), 0, 'List confirmation opens in a popup, never below the page');
+    await page.getByRole('button', { name: 'Confirm and call my extension' }).click();
+    await page.locator('.sui-toast').first().waitFor();
+    assert.equal(await page.getByRole('dialog').count(), 0, 'Confirmation closes and the result is a toast');
     assert.deepEqual(errors, []);
     console.log('PASS board supervision: direct unique-prefix/channel listen, whisper confirmation, keyboard, overlays, duplicate guard, EN/PT, mobile/dark; no live calls');
   } finally { await browser.close(); }
