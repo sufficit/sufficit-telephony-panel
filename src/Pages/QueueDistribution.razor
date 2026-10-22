@@ -6,25 +6,29 @@
 @inject NavigationManager Navigation
 
 <section class="distribution" aria-labelledby="distribution-title">
-    <header class="distribution-head">
+    <div class="distribution-head">
         <h2 id="distribution-title">@Text["Queue distribution"]</h2>
+        <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == SelectedKey) is { } current ? QueueLabel(current) + " · " : "")@WindowLabel(Window)</span>
+        <SUIButton Class="distribution-options-trigger" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="distribution-options">@Text["Queue and period"]</SUIButton>
+    </div>
+    <div id="distribution-options" class="board-options page-options" popover="auto" role="region" aria-label="@Text["Queue and period"]">
+        <div class="board-options-heading"><h2>@Text["Queue and period"]</h2><SUIButton VariantValue="SUIVariant.Text" popovertarget="distribution-options" popovertargetaction="hide">@Text["Close filters"]</SUIButton></div>
         <p class="muted">@Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."]</p>
-    </header>
-    <div class="distribution-toolbar">
-        @if (Queues.Length > 1)
-        {
-            <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
-                @foreach (var queue in Queues)
-                { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @Text.Format("{0} calls", queue.Entered)</SUISelectItem> }
-            </SUISelect>
-        }
-        else if (Queues.Length == 1) { <div class="single-queue"><span class="muted">@Text["Queue"]</span><strong>@QueueLabel(Queues[0])</strong></div> }
-        <div class="windows" role="group" aria-label="@Text["Period"]">
-            @foreach (var hours in QueueDistributionView.Windows)
-            { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
+        <div class="distribution-toolbar">
+            @if (Queues.Length > 1)
+            {
+                <SUISelect TValue="string" Label="@Text["Queue"]" Value="SelectedKey" ValueChanged="SelectQueue">
+                    @foreach (var queue in Queues)
+                    { <SUISelectItem Value="@queue.Key">@QueueLabel(queue) · @Text.Format("{0} calls", queue.Entered)</SUISelectItem> }
+                </SUISelect>
+            }
+            <div class="windows" role="group" aria-label="@Text["Period"]">
+                @foreach (var hours in QueueDistributionView.Windows)
+                { <button type="button" class="@(Window == hours ? "active" : "")" aria-pressed="@(Window == hours ? "true" : "false")" @onclick="() => SetWindow(hours)">@WindowLabel(hours)</button> }
+            </div>
         </div>
         @if (Search.Length > 0 || NodeFilter.Length > 0 || QueueId.Length > 0)
-        { <span class="muted filter-note">@Text["Following the page filters above."]</span> }
+        { <p class="muted">@Text["Following the page filters above."]</p> }
     </div>
 
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }

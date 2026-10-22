@@ -6,27 +6,36 @@
 @inject IWebHostEnvironment Environment
 
 <section class="queue-monitor" aria-labelledby="queue-title">
-    <div class="heading"><div><h1 id="queue-title">@Text["Queues and registration"]</h1>
-        <p class="muted">@Text["Observe queue stages and investigate extension registrations. Configuration stays in the management portal."]</p></div>
-        <SUIButton Href="@ManagementUrl" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage queues"]</SUIButton>
+    <div class="monitor-head">
+        <h1 id="queue-title">@Text["Queues and registration"]</h1>
+        @if (ActiveFilters.Length > 0) { <span class="active-filters" aria-label="@Text["Filters active"]">@foreach (var label in ActiveFilters) { <span class="filter-chip">@label</span> }</span> }
+        <SUIButton Class="@(ActiveFilters.Length > 0 ? "page-options-trigger is-marked" : "page-options-trigger")" VariantValue="SUIVariant.Outlined" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="queue-options">@Text["Filters and actions"]</SUIButton>
     </div>
-    <div class="queue-filters">
-        @if (!Permissions.SingleContext.HasValue) {
-        <SUISelect TValue="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
-            <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
-            @foreach (var context in Samples.Select(s => s.ContextId.ToString("N")).Distinct().Order())
-            { <SUISelectItem Value="@context">@context</SUISelectItem> }
-        </SUISelect>
-        }
-        <SUISelect TValue="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
-            <SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>
-            @foreach (var node in Samples.Select(s => s.Node).Distinct().Order())
-            { <SUISelectItem Value="@node">@node</SUISelectItem> }
-        </SUISelect>
-        <SUITextField TValue="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
-        <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Outlined" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
+    <div id="queue-options" class="board-options page-options" popover="auto" role="region" aria-label="@Text["Filters and actions"]">
+        <div class="board-options-heading"><h2>@Text["Filters and actions"]</h2><SUIButton VariantValue="SUIVariant.Text" popovertarget="queue-options" popovertargetaction="hide">@Text["Close filters"]</SUIButton></div>
+        <p class="muted">@Text["Observe queue stages and investigate extension registrations. Configuration stays in the management portal."]</p>
+        <div class="queue-filters">
+            @if (!Permissions.SingleContext.HasValue) {
+            <SUISelect TValue="string" Label="@Text["Context"]" Value="Context" ValueChanged="ChangeContext">
+                <SUISelectItem Value="@string.Empty">@Text["All authorized contexts"]</SUISelectItem>
+                @foreach (var context in Samples.Select(s => s.ContextId.ToString("N")).Append(Context).Where(c => c.Length > 0).Distinct().Order())
+                { <SUISelectItem Value="@context">@context</SUISelectItem> }
+            </SUISelect>
+            }
+            <SUISelect TValue="string" Label="@Text["Server"]" Value="SelectedNode" ValueChanged="ChangeNode">
+                <SUISelectItem Value="@("all")">@Text["All servers"]</SUISelectItem>
+                @foreach (var node in Samples.Select(s => s.Node).Distinct().Order())
+                { <SUISelectItem Value="@node">@node</SUISelectItem> }
+            </SUISelect>
+            <SUITextField TValue="string" Label="@Text["Search queue, extension, IP or device"]" Value="Search" ValueChanged="ChangeSearch" Immediate="true" />
+        </div>
+        <p class="muted filter-hint">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
+        <div class="board-options-actions">
+            <SUIButton OnClick="Refresh" Disabled="Busy" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Refresh">@Text["Refresh"]</SUIButton>
+            <SUIButton Href="@ManagementUrl" Target="_blank" VariantValue="SUIVariant.Text">@Text["Manage queues"]</SUIButton>
+            @if (ActiveFilters.Length > 0) { <SUIButton OnClick="ClearFilters" VariantValue="SUIVariant.Text">@Text["Clear filters"]</SUIButton> }
+        </div>
     </div>
-    <p class="muted filter-hint">@Text["Filters are saved in the URL. Server selection changes observation, not where queues can run."]</p>
     <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" />
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading diagnostics"]" /> }
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text[Error]</SUIAlert> }
@@ -107,6 +116,14 @@
         { ["contextid"] = Context.Length == 0 ? null : Context, ["company"] = null, ["node"] = Node == "all" ? null : Node, ["q"] = Search.Length == 0 ? null : Search, ["queueid"] = QueueId.Length == 0 ? null : QueueId }), replace: true);
     private void ChangeContext(string value) { Context = value; QueueId = ""; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
     private void ChangeNode(string value) { Node = value; QueuePage=VisitPage=0; SelectedVisit=null; WriteUrl(); }
+    private string[] ActiveFilters => new[]
+    {
+        Context.Length > 0 && !Permissions.SingleContext.HasValue ? Text["Context"] + ": " + Context[..Math.Min(8, Context.Length)] + "…" : null,
+        Node != "all" ? Text["Server"] + ": " + SelectedNode : null,
+        Search.Length > 0 ? "“" + Search + "”" : null,
+        QueueId.Length > 0 ? Text["Queue"] + ": " + QueueId[..Math.Min(8, QueueId.Length)] + "…" : null,
+    }.OfType<string>().ToArray();
+    private void ClearFilters() { Context = Permissions.SingleContext?.ToString("N") ?? ""; Node = "all"; Search = ""; QueueId = ""; QueuePage = VisitPage = 0; SelectedVisit = null; WriteUrl(); }
     private void ChangeSearch(string value) { Search = value ?? ""; QueuePage=VisitPage=0; WriteUrl(); }
     private string Time(DateTimeOffset? at) => at?.ToLocalTime().ToString("G", Text.Culture) ?? Text["Not observed"];
     private static string Phase(string value) => value switch { "greeting" => "Greeting", "waiting" => "Waiting", "announcing" => "Announcement", "offering" => "Offering", "connected" => "In conversation", _ => "Unknown" };
