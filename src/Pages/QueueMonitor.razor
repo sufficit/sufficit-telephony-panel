@@ -78,7 +78,7 @@
             @if (agents.Length > 0)
             {
             <SUIStat Value="@agents.Count(a => a.State(now) == "Available").ToString()" Unit="@("/" + agents.Length)" Label="@Text["Extensions available"]"
-                     Icon="users" ColorValue="SUIColor.Primary" Appearance="SUIStatAppearance.Image" />
+                     Icon="users" ColorValue="@(agents.Any(a => a.State(now) == "Available") ? SUIColor.Success : SUIColor.Error)" Appearance="SUIStatAppearance.Image" />
             }
         </div>
         @if (FocusQueue.Length > 0 && overview.Visits.Length > 0)

@@ -20,6 +20,8 @@
 .good { --tone: var(--sui-color-success); }
 .warn { --tone: var(--sui-color-warning); }
 .bad { --tone: var(--sui-color-error); }
+.busy { --tone: #7c3aed; }
+[data-sui-theme="dark"] .busy { --tone: #a78bfa; }
 .neutral { --tone: color-mix(in srgb, currentColor 28%, transparent); }
 
 .hours { margin: 0; }

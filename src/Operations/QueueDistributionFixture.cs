@@ -41,6 +41,7 @@ public static class QueueDistributionFixture
             stat.Answered.AddRange(Hours(Answered));
             stat.Missed.AddRange(Hours(Missed));
             stat.Unavailable.AddRange(Hours(i => m.Offline ? Load(i) : 0));
+            stat.Busy.AddRange(Hours(i => m.Ext == "6008" ? Load(i) / 3 : 0));
             stat.RingSeconds.AddRange(Hours(i => (Answered(i) + Missed(i)) * (m.Miss > .3 ? 13 : 6)));
             stat.TalkSeconds.AddRange(Hours(i => Answered(i) * 185));
             reply.Members.Add(stat);
@@ -63,7 +64,7 @@ public static class QueueDistributionFixture
         // One call waiting right now, ringing two members (one offline).
         var live = new CallTrace { Node = "google-voip", Queue = "0007366500", Account = account, Uniqueid = "demo.live", Caller = "21988887777",
             EnteredMs = now.AddSeconds(-42).ToUnixTimeMilliseconds(), Outcome = "waiting" };
-        foreach (var (ext, outcome) in new[] { ("6004", "ringing"), ("6008", "ringing"), ("6001", "unavailable") })
+        foreach (var (ext, outcome) in new[] { ("6004", "ringing"), ("6007", "ringing"), ("6008", "busy"), ("6001", "unavailable") })
             live.Attempts.Add(new CallAttempt { Interface = $"Local/000736{ext}@from-queue/n", Name = "Ramal " + ext, CalledMs = now.AddSeconds(-30).ToUnixTimeMilliseconds(), Outcome = outcome });
         reply.Calls.Insert(0, live);
         return reply;

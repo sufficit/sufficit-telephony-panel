@@ -65,6 +65,17 @@ internal static class QueueDistributionChecks
         check(cycleTrace.Attempts.Count == 2 && cycleTrace.Attempts.All(a => a.Cycles == 2), "One entry per extension per call, with cycles");
         check(cycleReply.Members.Single(m => m.Interface == "7001").Offered.Sum() == 1 && cycleReply.Members.Single(m => m.Interface == "7001").Unavailable.Sum() == 1, "Fast failures fold to one unavailable");
         check(cycleReply.Members.Single(m => m.Interface == "7002").Answered.Sum() == 1 && cycleReply.Members.Single(m => m.Interface == "7002").Missed.Sum() == 0, "Answered wins over an earlier missed cycle");
+        // Controller dial results: BUSY is busy, subscriber_absent is offline.
+        var bz = Guid.NewGuid(); var tb = now.AddMinutes(-3);
+        QueueDiagnosticEvent BE(long id, int sec, string kind, string ext, string? reason = null) => new(id, tb.AddSeconds(sec), kind, ext, reason);
+        var busyReply = ControllerQueueDistribution.Build(Guid.NewGuid(), "google-voip",
+            [new QueueDiagnosticCall(bz, Guid.NewGuid(), "c", "completed", tb, tb.AddSeconds(9), tb.AddSeconds(60))],
+            new Dictionary<Guid, QueueDiagnosticEvent[]> { [bz] = [BE(1, 0, "offered", "8001"), BE(2, 0, "ringing", "8001"), BE(3, 0, "offer_finished", "8001", "BUSY"),
+                BE(4, 0, "offered", "8002"), BE(5, 0, "ringing", "8002"), BE(6, 0, "offer_finished", "8002", "subscriber_absent"),
+                BE(7, 0, "offered", "8003"), BE(8, 0, "ringing", "8003"), BE(9, 9, "connected", "8003")] }, new Dictionary<Guid, string>(), now);
+        check(busyReply.Members.Single(m => m.Interface == "8001").Busy.Sum() == 1 && busyReply.Members.Single(m => m.Interface == "8002").Unavailable.Sum() == 1, "Busy and offline are distinct");
+        var busyDetail = QueueDistributionView.Detail(busyReply, "google-voip", busyReply.Queues[0].Queue, 24)!;
+        check(busyDetail.Members.Single(m => m.Extension == "8001").AnswerRate is null && busyDetail.Members.Single(m => m.Extension == "8001").Cancelled == 0, "Busy excluded from answer rate and 'others'");
         check(QueueDistributionView.StrategyLabel("ringall") == "Ring all at once" && QueueDistributionView.StrategyLabel("custom") == "custom", "Strategy labels");
         var configuration = new QueueConfigurationSet(context, Guid.NewGuid(), [new(queueId.ToString("N"), "Suporte", true, 20, 60, "ringall", 3, 15, 1000000, [new(30, 5)],
             [new("6001", "Ana", 0, false, true, true, false, 1)])]);

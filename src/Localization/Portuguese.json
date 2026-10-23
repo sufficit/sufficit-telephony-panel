@@ -692,5 +692,9 @@
   "others answered": "outro atendeu",
   "member answered": "atendeu",
   "Offered {0} calls": "Recebeu {0} chamadas",
-  "rung {0} times": "tocou {0} vezes"
+  "rung {0} times": "tocou {0} vezes",
+  "Busy (another call or rejected)": "Ocupado (em outra ligação ou recusou)",
+  "Unavailable (offline)": "Indisponível (desconectado)",
+  "busy": "ocupado",
+  "{0}: offered {1} calls, answered {2}, not answered {3}, busy {4}, unavailable {5}, others answered {6}": "{0}: recebeu {1} chamadas, atendeu {2}, não atendeu {3}, ocupado {4}, indisponível {5}, outro atendeu {6}"
 }

@@ -5,14 +5,15 @@ namespace Sufficit.Telephony.Panel.Operations;
 public sealed record DistributionAttempt(string Member, string Name, DateTimeOffset CalledAt, string Outcome, long RingSeconds, long TalkSeconds, int Cycles = 1);
 public sealed record DistributionCall(string Uniqueid, string Caller, DateTimeOffset EnteredAt, string Outcome, long WaitSeconds, DistributionAttempt[] Attempts);
 public sealed record DistributionMember(string Member, string Name, long Offered, long Answered, long Missed, long Unavailable,
-    long RingSeconds, long TalkSeconds, DateTimeOffset? LastAnswered, long[] AnsweredByHour, long[] RungByHour)
+    long RingSeconds, long TalkSeconds, DateTimeOffset? LastAnswered, long[] AnsweredByHour, long[] RungByHour, long Busy = 0)
 {
     /// <summary>"Local/0007366001@from-queue/n" → "0007366001"; SIP/PJSIP keep the endpoint name.</summary>
     public string Extension => QueueDistributionView.Extension(Member);
     public string Label => Name.Length > 0 && Name != Member ? Name : Extension;
     /// <summary>Rang with the call still open when it resolved: someone else answered or the caller left.</summary>
-    public long Cancelled => Math.Max(0, Offered - Answered - Missed - Unavailable);
-    public double? AnswerRate => Offered - Unavailable > 0 ? (double)Answered / (Offered - Unavailable) : null;
+    public long Cancelled => Math.Max(0, Offered - Answered - Missed - Unavailable - Busy);
+    /// <summary>Answered over the calls the member could take (busy and offline excluded).</summary>
+    public double? AnswerRate => Offered - Unavailable - Busy > 0 ? (double)Answered / (Offered - Unavailable - Busy) : null;
     public long? AverageRing => Answered + Missed > 0 ? RingSeconds / (Answered + Missed) : null;
     public long? AverageTalk => Answered > 0 ? TalkSeconds / Answered : null;
 }
@@ -72,7 +73,7 @@ public static class QueueDistributionView
             var rung = Last(m.Offered, hours);
             return new DistributionMember(m.Interface, m.Name, rung.Sum(), Last(m.Answered, hours).Sum(), Last(m.Missed, hours).Sum(),
                 Last(m.Unavailable, hours).Sum(), Last(m.RingSeconds, hours).Sum(), Last(m.TalkSeconds, hours).Sum(),
-                Time(m.LastAnsweredMs), Last(m.Answered, hours), rung);
+                Time(m.LastAnsweredMs), Last(m.Answered, hours), rung, Last(m.Busy, hours).Sum());
         }).Where(m => m.Offered > 0 || m.Answered > 0)
           .OrderByDescending(m => m.Answered).ThenByDescending(m => m.Offered).ThenBy(m => m.Extension, StringComparer.Ordinal).ToArray();
         var calls = reply.Calls.Where(c => c.Node == node && c.Queue == queue && c.EnteredMs >= since.ToUnixTimeMilliseconds())

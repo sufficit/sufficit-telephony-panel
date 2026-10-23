@@ -92,7 +92,7 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
         {
             if (memberStats.TryGetValue((queue, extension), out var stat)) return stat;
             stat = new MemberStat { Node = node, Queue = queue.ToString("N"), Account = account, Interface = extension };
-            foreach (var list in new[] { stat.Offered, stat.Answered, stat.Missed, stat.Unavailable, stat.RingSeconds, stat.TalkSeconds }) list.AddRange(new long[QueueDistribution.Hours]);
+            foreach (var list in new[] { stat.Offered, stat.Answered, stat.Missed, stat.Unavailable, stat.Busy, stat.RingSeconds, stat.TalkSeconds }) list.AddRange(new long[QueueDistribution.Hours]);
             return memberStats[(queue, extension)] = stat;
         }
         var reply = new DistributionReply { NowMs = now.ToUnixTimeMilliseconds(), StartedAtMs = now.AddHours(-QueueDistribution.Hours).ToUnixTimeMilliseconds() };
@@ -135,9 +135,16 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
                             if (ring >= 2) attempt.RingSeconds = ring;
                             break;
                         }
-                        attempt.Outcome = item.Reason is "no_answer_or_busy" or "ring_timeout" ? "no-answer"
-                            : attempt.RangAt is null || item.Reason is "agent_media_failed" or "offer_expired_before_dial" ? "unavailable"
-                            : outcome == "answered" ? "other-answered" : "caller-hangup";
+                        // The controller reports the dial result: BUSY (device busy / rejected), NOANSWER and ring
+                        // timeouts (rang), subscriber_absent / congestion / transport (offline or unreachable).
+                        attempt.Outcome = item.Reason switch
+                        {
+                            "BUSY" => "busy",
+                            "NOANSWER" or "no_answer_or_busy" or "ring_timeout" => "no-answer",
+                            "subscriber_absent" or "CHANUNAVAIL" or "CONGESTION" or "transport_failure" or "agent_media_failed" or "offer_expired_before_dial" => "unavailable",
+                            _ when attempt.RangAt is null => "unavailable",
+                            _ => outcome == "answered" ? "other-answered" : "caller-hangup",
+                        };
                         if (attempt.Outcome == "no-answer") attempt.RingSeconds = Seconds(item.OccurredAt, attempt.RangAt);
                         break;
                 }
@@ -148,7 +155,7 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
                 attempt.Outcome = outcome == "answered" ? "other-answered" : "caller-hangup";
             // Ringall retries offer every member again each cycle: fold them into one result per member per call
             // (answered > rang and not answered > only fast failures > someone else answered / caller left).
-            static int Rank(string o) => o switch { "answered" => 4, "no-answer" => 3, "unavailable" => 2, _ => 1 };
+            static int Rank(string o) => o switch { "answered" => 5, "no-answer" => 4, "busy" => 3, "unavailable" => 2, _ => 1 };
             var folded = attempts.GroupBy(a => a.Extension).Select(g =>
             {
                 var best = g.OrderByDescending(a => Rank(a.Outcome)).ThenByDescending(a => a.RingSeconds).First();
@@ -170,6 +177,7 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
                         break;
                     case "no-answer": member.Missed[slot]++; member.RingSeconds[slot] += attempt.RingSeconds; break;
                     case "unavailable": member.Unavailable[slot]++; break;
+                    case "busy": member.Busy[slot]++; break;
                 }
             }
             if (reply.Calls.Count < 500) reply.Calls.Add(trace);

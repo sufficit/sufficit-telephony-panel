@@ -102,7 +102,7 @@
                      Appearance="SUIStatAppearance.Soft" Sparkline="@Spark(queue.AbandonedByHour)" />
             <SUIStat Value="@Duration(queue.AverageWait)" Label="@Text["Average wait"]" Icon="clock" ColorValue="SUIColor.Secondary" />
             <SUIStat Value="@Detail.Members.Count(m => m.Answered > 0).ToString()" Unit="@("/" + Detail.Members.Length)" Label="@Text["Extensions that answered"]"
-                     Icon="users" ColorValue="SUIColor.Primary" Appearance="SUIStatAppearance.Image" />
+                     Icon="users" ColorValue="@(Detail.Members.Length == 0 ? SUIColor.Secondary : Detail.Members.Count(m => m.Answered > 0) * 2 >= Detail.Members.Length ? SUIColor.Success : SUIColor.Warning)" Appearance="SUIStatAppearance.Image" />
         </div>
         @if (active.Length > 0)
         {
@@ -155,7 +155,8 @@
             <ul class="legend" aria-label="@Text["Legend"]">
                 <li><span class="dot good"></span>@Text["Took the call"]</li>
                 <li><span class="dot warn"></span>@Text["Rang, not answered"]</li>
-                <li><span class="dot bad"></span>@Text["Unavailable"]</li>
+                <li><span class="dot busy"></span>@Text["Busy (another call or rejected)"]</li>
+                <li><span class="dot bad"></span>@Text["Unavailable (offline)"]</li>
                 <li><span class="dot neutral"></span>@Text["Someone else answered or caller hung up"]</li>
             </ul>
             @if (Config is { } config)
@@ -174,7 +175,7 @@
                    .Select(a => QueueDistributionView.Extension(a.Member)).ToHashSet(); }
             @foreach (var (member, index) in Detail.Members.Select((m, i) => (m, i)))
             {
-                var tone = member.Offered > 0 && member.Unavailable == member.Offered ? "bad" : member.AnswerRate is null ? "neutral"
+                var tone = member.Offered > 0 && member.Unavailable == member.Offered ? "bad" : member.Offered > 0 && member.Busy + member.Unavailable == member.Offered ? "busy" : member.AnswerRate is null ? "neutral"
                     : member.AnswerRate >= .5 ? "good" : member.AnswerRate >= .2 ? "warn" : "bad";
                 var ringing = ringingNow.Contains(member.Extension);
                 <div class="member @(ringing ? "ringing" : "")" @key="member.Member" style="--i:@index">
@@ -186,6 +187,7 @@
                         <div class="fill" style="width:@Css(100.0 * member.Offered / maxRung)%">
                             @if (member.Answered > 0) { <span class="seg good" style="flex-grow:@member.Answered"></span> }
                             @if (member.Missed > 0) { <span class="seg warn" style="flex-grow:@member.Missed"></span> }
+                            @if (member.Busy > 0) { <span class="seg busy" style="flex-grow:@member.Busy"></span> }
                             @if (member.Unavailable > 0) { <span class="seg bad" style="flex-grow:@member.Unavailable"></span> }
                             @if (member.Cancelled > 0) { <span class="seg neutral" style="flex-grow:@member.Cancelled"></span> }
                         </div>
@@ -193,6 +195,7 @@
                     <div class="member-counts">
                         @if (member.Answered > 0) { <span class="good"><i></i><b>@member.Answered</b> @Text["member answered"]</span> }
                         @if (member.Missed > 0) { <span class="warn"><i></i><b>@member.Missed</b> @Text["not answered"]</span> }
+                        @if (member.Busy > 0) { <span class="busy"><i></i><b>@member.Busy</b> @Text["busy"]</span> }
                         @if (member.Unavailable > 0) { <span class="bad"><i></i><b>@member.Unavailable</b> @Text["unavailable"]</span> }
                         @if (member.Cancelled > 0) { <span class="neutral"><i></i><b>@member.Cancelled</b> @Text["others answered"]</span> }
                     </div>
@@ -421,15 +424,15 @@
         return elapsed.TotalMinutes < 1 ? Text["just now"] : elapsed.TotalHours < 1 ? Text.Format("{0} min ago", (int)elapsed.TotalMinutes)
             : time.ToLocalTime().ToString("HH:mm");
     }
-    private string MemberSummary(DistributionMember m) => Text.Format("{0}: rang {1}, answered {2}, not answered {3}, unavailable {4}, others answered {5}",
-        m.Label, m.Offered, m.Answered, m.Missed, m.Unavailable, m.Cancelled);
+    private string MemberSummary(DistributionMember m) => Text.Format("{0}: offered {1} calls, answered {2}, not answered {3}, busy {4}, unavailable {5}, others answered {6}",
+        m.Label, m.Offered, m.Answered, m.Missed, m.Busy, m.Unavailable, m.Cancelled);
     private static string OutcomeTone(string outcome) => outcome switch
-    { "answered" => "good", "no-answer" => "warn", "abandoned" or "unavailable" => "bad", _ => "neutral" };
+    { "answered" => "good", "no-answer" => "warn", "busy" => "busy", "abandoned" or "unavailable" => "bad", _ => "neutral" };
     private static string CallOutcome(string outcome) => outcome switch
     { "answered" => "Answered call", "abandoned" => "Abandoned call", "left" => "Left the queue", _ => "Still in queue" };
     private static string AttemptOutcome(string outcome) => outcome switch
     {
-        "answered" => "Took the call", "no-answer" => "Rang, not answered", "unavailable" => "Unavailable",
+        "answered" => "Took the call", "no-answer" => "Rang, not answered", "busy" => "Busy (another call or rejected)", "unavailable" => "Unavailable (offline)",
         "other-answered" => "Someone else answered", "caller-hangup" => "Caller hung up", "cancelled" => "Call left the queue", _ => "Ringing"
     };
     public async ValueTask DisposeAsync() { Disposed = true; Navigation.LocationChanged -= LocationChanged; Lifetime.Cancel(); if (Loop is not null) await Loop; Lifetime.Dispose(); }
