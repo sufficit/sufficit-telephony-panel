@@ -132,13 +132,16 @@
                 {
                     var entered = queue.EnteredByHour[i]; var answered = queue.AnsweredByHour[i]; var abandoned = queue.AbandonedByHour[i];
                     var other = Math.Max(0, entered - answered - abandoned);
-                    <div class="hour" title="@($"{starts[i]:HH}h · {entered} {Text["received"]} · {answered} {Text["answered"]} · {abandoned} {Text["abandoned"]}")">
+                    var isNow = i == queue.EnteredByHour.Length - 1;
+                    <div class="hour @(isNow ? "now" : "") @(entered == 0 ? "empty" : "") @(entered == maxHour && entered > 0 ? "peak" : "")" style="--i:@i"
+                         title="@($"{starts[i]:HH}h · {entered} {Text["received"]} · {answered} {Text["answered"]} · {abandoned} {Text["abandoned"]}")">
+                        @if (entered > 0) { <span class="hour-count">@entered</span> }
                         <div class="stack" style="height:@Css(100.0 * entered / maxHour)%">
                             @if (abandoned > 0) { <span class="seg bad" style="flex-grow:@abandoned"></span> }
                             @if (other > 0) { <span class="seg neutral" style="flex-grow:@other"></span> }
                             @if (answered > 0) { <span class="seg good" style="flex-grow:@answered"></span> }
                         </div>
-                        <span class="hour-label">@(queue.EnteredByHour.Length <= 4 || i % 3 == (queue.EnteredByHour.Length - 1) % 3 ? starts[i].ToString("HH") + "h" : "")</span>
+                        <span class="hour-label">@(isNow ? Text["now"] : queue.EnteredByHour.Length <= 4 || i % 3 == (queue.EnteredByHour.Length - 1) % 3 ? starts[i].ToString("HH") + "h" : "")</span>
                     </div>
                 }
             </div>
@@ -164,10 +167,17 @@
                 </p>
             }
             @if (Detail.Members.Length == 0) { <p class="muted">@Text["No extension rang in this period."]</p> }
-            @foreach (var member in Detail.Members)
+            @{ var ringingNow = Detail.Calls.Where(c => c.Outcome == "waiting").SelectMany(c => c.Attempts).Where(a => a.Outcome == "ringing")
+                   .Select(a => QueueDistributionView.Extension(a.Member)).ToHashSet(); }
+            @foreach (var (member, index) in Detail.Members.Select((m, i) => (m, i)))
             {
-                <div class="member" @key="member.Member">
+                var tone = member.Offered > 0 && member.Unavailable == member.Offered ? "bad" : member.AnswerRate is null ? "neutral"
+                    : member.AnswerRate >= .5 ? "good" : member.AnswerRate >= .2 ? "warn" : "bad";
+                var ringing = ringingNow.Contains(member.Extension);
+                <div class="member @(ringing ? "ringing" : "")" @key="member.Member" style="--i:@index">
+                    <span class="member-avatar @tone @(index < 3 && member.Answered > 0 ? "medal medal-" + (index + 1) : "")" aria-hidden="true">@Initials(member.Label)</span>
                     <div class="member-name"><strong>@member.Label</strong>@if (member.Label != member.Extension) { <small>@member.Extension</small> }
+                        @if (ringing) { <span class="ringing-chip">@Text["ringing now"]</span> }
                         @if (ConfigMember(member.Extension) is { } configured) { <span class="member-flags">@MemberFlags(configured)</span> }</div>
                     <div class="track" role="img" aria-label="@MemberSummary(member)" title="@MemberSummary(member)">
                         <div class="fill" style="width:@Css(100.0 * member.Offered / maxRung)%">
@@ -385,6 +395,13 @@
     private string WindowLabel(int hours) => hours == 1 ? Text["This hour"] : Text.Format("Last {0} h", hours);
     /// <summary>Hourly series for a stat sparkline; hidden for one-bucket windows.</summary>
     private static IReadOnlyList<double>? Spark(long[] hours) => hours.Length >= 2 && hours.Any(h => h > 0) ? hours.Select(h => (double)h).ToArray() : null;
+    /// <summary>Two letters for the member avatar: first letters of the first two words, digits otherwise.</summary>
+    private static string Initials(string label)
+    {
+        var words = label.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries).Where(w => char.IsLetter(w[0])).ToArray();
+        return words.Length >= 2 ? $"{char.ToUpperInvariant(words[0][0])}{char.ToUpperInvariant(words[1][0])}"
+            : words.Length == 1 ? words[0][..Math.Min(2, words[0].Length)].ToUpperInvariant() : label[^Math.Min(2, label.Length)..];
+    }
     private static string Css(double value) => Math.Clamp(value, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static string Percent(double? value) => value is { } v ? $"{v * 100:0}%" : "—";
     private static string Duration(long? seconds) => seconds switch { null => "—", < 60 => $"{seconds} s", _ => $"{seconds / 60} min {seconds % 60:00} s" };

@@ -684,5 +684,7 @@
   "disabled": "desativado",
   "logged out": "deslogado",
   "Calls waiting now": "Chamadas aguardando agora",
-  "Native PBX queue: only the distribution below is available.": "Fila nativa do PABX: só a distribuição abaixo está disponível."
+  "Native PBX queue: only the distribution below is available.": "Fila nativa do PABX: só a distribuição abaixo está disponível.",
+  "now": "agora",
+  "ringing now": "tocando agora"
 }
