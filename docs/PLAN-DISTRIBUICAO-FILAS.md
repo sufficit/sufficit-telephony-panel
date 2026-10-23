@@ -19,12 +19,14 @@ Filas novas (controlador Queue) entram desde 22/10 pela API de diagnóstico do c
 
 ## Fase 2: turnos e horários por fila, configurados pelo cliente
 
+Decisão de 23/10/2026: o painel é só de monitoramento (TV na sala de atendimento). O cadastro dos turnos fica no sufficit-blazor; o painel apenas exibe as métricas por turno.
+
 Pedido do usuário em 22/10/2026: configuração na fila para horários e turnos de trabalho, com métricas e estatísticas por turno, definida pelo próprio cliente.
 
-5. [a fazer] Modelo: turnos por fila (nome, dias da semana, início e fim, fuso), com sobreposição proibida e feriados opcionais. Configurado pelo cliente final no painel, com a permissão da própria empresa, e auditado.
+5. [a fazer] Modelo: turnos por fila (nome, dias da semana, início e fim, fuso), com sobreposição proibida e feriados opcionais. Configurado pelo cliente final no **sufficit-blazor** (nunca no painel), com a permissão da própria empresa, e auditado. O painel só lê os turnos.
 6. [a fazer] Métricas por turno: chamadas recebidas, atendidas, abandonadas, nível de serviço, espera média, distribuição por ramal e cobertura (ramais disponíveis × chamadas) dentro de cada turno. Comparação entre turnos e entre dias.
 7. [a fazer] Fora do turno: destacar chamadas que chegaram fora de qualquer turno e ramais que atenderam fora do próprio turno.
 8. [a fazer] Persistência: turnos exigem histórico além de 24 h, então esta fase precisa de armazenamento. Proposta: agregados por fila × ramal × hora (pequenos) gravados pelo coletor; a tabela fica no dbvoiprt (`telp_`) se o volume ficar pequeno, senão no logdata. Decidir com o usuário antes de criar.
 9. [a fazer] Relatórios: exportar por turno e período (CSV) e resumo diário opcional.
 
-Aceite da fase 2: o cliente cria os turnos da própria fila sem suporte e vê, para cada turno, quantas chamadas entraram, quem atendeu e quanto ficou sem resposta.
+Aceite da fase 2: o cliente cria os turnos da própria fila no sufficit-blazor sem suporte e vê no painel, para cada turno, quantas chamadas entraram, quem atendeu e quanto ficou sem resposta.

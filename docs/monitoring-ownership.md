@@ -1,5 +1,36 @@
 # Telephony monitoring ownership
 
+## Purpose: a wall screen, not a management tool
+
+The Panel is **monitoring only**. It is designed for customers to leave running on a
+television in their call-center rooms, so that a manager can tell the health of
+their own scope (queues, extensions, waiting callers, who is answering) **just by
+looking at it**, without clicking, scrolling or reading long text.
+
+Rules that follow from this purpose:
+
+- **Management lives in Sufficit Blazor.** Creating or editing queues, members,
+  penalties, destinations, SIP settings, work shifts (turnos), schedules and any
+  other configuration belongs to Blazor. The Panel may link to the Blazor editor;
+  it never hosts a form that changes configuration.
+- **Glanceable first.** The screen shows state through cards, colors, icons and
+  motion that are readable from across the room. Text is short; numbers carry
+  units; the most important signal is the most prominent.
+- **Controls stay out of the way.** Filters and actions are collapsed in popovers
+  or expansion panels; the default view is the full-screen monitor. Filters are
+  URL-backed so a TV can be bookmarked to one scope.
+- **Unattended and long-running.** The page keeps itself current (polling or
+  streaming), survives reconnects without user action, and never needs a click to
+  recover. Stale or missing data must look different from live zero.
+- **Scoped to the viewer.** A manager sees only the scope they are authorized for;
+  the Panel never widens it.
+- The only actions allowed are supervision (Listen/Whisper) after explicit
+  confirmation, as described in [Board supervision](board-supervision.md).
+
+When a request mixes monitoring and management (for example "configure shifts per
+queue and show metrics per shift"), split it: configuration goes to Blazor, the
+Panel only displays the resulting metrics.
+
 Sufficit Telephony Panel owns user-facing telephony observation. Sufficit Blazor
 owns configuration and management: queues, members, destinations and SIP settings.
 Do not add live telephony widgets, AMI/event subscriptions or diagnostic history

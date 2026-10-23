@@ -10,6 +10,12 @@ Confirmed: internal Sufficit staff with the exact `manager` role from Sufficit
 Identity. Customer access and customer notification delivery are deferred.
 
 ## Product Purpose
+Monitoring only. Built for customers to leave running on a television in their
+call-center rooms so a manager knows the health of their management scope just by
+looking at it. All management and configuration (queues, members, shifts,
+schedules, destinations) belongs to Sufficit Blazor; see
+docs/monitoring-ownership.md.
+
 Observe the Apoint, Eveo and Google PBXs through existing central monitoring APIs,
 independently of the main portal. Distinguish healthy observation, missing data,
 stale collection, workload and actionable infrastructure alerts.

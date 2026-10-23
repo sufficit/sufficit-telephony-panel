@@ -14,8 +14,11 @@ plans are historical evidence, not the current backlog.
 
 ## Scope
 
-[Monitoring ownership and migration routes](docs/monitoring-ownership.md): Panel is
-the telephony observation UI; Blazor retains configuration and management. Queue
+**Monitoring only.** The Panel is made for customers to leave running on a
+television in their call-center rooms, so a manager knows the health of their scope
+just by looking at it. All management and configuration (queues, members, shifts,
+schedules) stays in Sufficit Blazor. See
+[Monitoring ownership and migration routes](docs/monitoring-ownership.md). Queue
 stages and registration diagnostics are available at `/queues`.
 
 - Only users with the current Sufficit Identity `manager` role.

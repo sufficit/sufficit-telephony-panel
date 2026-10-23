@@ -12,12 +12,17 @@ path suffix. It is built with .NET 10, Blazor and Sufficit.Blazor.UI (SUI), with
 English source code and English/Portuguese UI resources. Language and theme
 preferences are stored locally in the browser; English is the default.
 
+The Panel is **monitoring only**: it is designed to run unattended on a television
+in the customer's call-center room so the manager sees the health of their scope at
+a glance. Management never moves into the Panel (see
+[Monitoring ownership](monitoring-ownership.md#purpose-a-wall-screen-not-a-management-tool)).
+
 Responsibility is deliberately split:
 
 | Component | Owns |
 | --- | --- |
 | Telephony Panel | Live PBX observation, dedicated board, queue/runtime state, registration diagnostics and supervised listening |
-| Sufficit Blazor | Queue, member, destination and SIP configuration |
+| Sufficit Blazor | All management: queue, member, penalty, shift/schedule, destination and SIP configuration |
 | Telephony ACD | Shared queue definitions and runtime admission/distribution |
 | AMI Events | Bounded multi-PBX event collection and server-side telemetry stream |
 | Endpoints API | Authorized tenant cards, preferred supervisor endpoint and supervision actions |
