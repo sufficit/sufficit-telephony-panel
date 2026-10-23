@@ -36,7 +36,13 @@
     </div>
 
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text[Error]</SUIAlert> }
-    else if (Reply is null) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Loading queue distribution"]" /> }
+    else if (Reply is null)
+    {
+        <div class="kpis" aria-label="@Text["Loading queue distribution"]">
+            @foreach (var (label, icon) in new[] { ("Calls received", "phone"), ("Answered", "check-circle"), ("Abandoned", "x"), ("Average wait", "clock") })
+            { <SUIStat Label="@Text[label]" Icon="@icon" ColorValue="SUIColor.Secondary" Loading="true" /> }
+        </div>
+    }
     else if (Detail is null && Ranking.Length > 0)
     {
         var maxEntered = Math.Max(1, Ranking[0].Entered);
