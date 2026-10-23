@@ -42,6 +42,6 @@ Gráfico por hora e barras por ramal seguem:
 - [Multi segment progress bar (Siteimprove)](https://fancy.siteimprove.com/lab/components/Data visualization/Multi segment progress bar/): segmentos com cor própria, valores fora da barra, sem excesso de elementos.
 - [Progress (Bootstrap via Symfony UX)](https://ux.symfony.com/toolkit/kits/bootstrap/components/progress.md) e [Progress bar (Singapore Design System)](https://designsystem.tech.gov.sg/components/progress-bar): nome acessível e não depender só de cor.
 
-Decisões: o gráfico mostra sempre 24 h (horas fora do período escolhido ficam esmaecidas, em vez de uma barra única
-ocupando tudo); barras com cor sólida, 62% da coluna e no máximo 30 px, canto só no topo; barras por ramal finas
+Decisões: o gráfico segue o período escolhido (1, 4 ou 24 barras, sempre finas: no máximo 30 px, nunca uma barra única
+ocupando a largura toda); barras com preenchimento translúcido e topo na cor, 62% da coluna e no máximo 30 px, canto só no topo; barras por ramal finas
 (8 px) com fio separando segmentos e os números fora da barra com chave de cor.

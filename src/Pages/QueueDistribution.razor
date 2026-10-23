@@ -124,8 +124,8 @@
         <figure class="hours" aria-label="@Text["Calls per hour"]">
             <figcaption>@Text["Calls per hour"]</figcaption>
             @{
-                // Always the last 24 hours for context; hours outside the chosen period are dimmed.
-                var day = Queues.FirstOrDefault(q => q.Key == ActiveKey) ?? queue;
+                // Same period as the rest of the card; bars stay slim (max 30 px) even with few hours.
+                var day = queue;
                 var starts = QueueDistributionView.HourStarts(DateTimeOffset.Now, day.EnteredByHour.Length);
                 var maxHour = Math.Max(1, day.EnteredByHour.DefaultIfEmpty(0).Max());
             }
@@ -135,7 +135,7 @@
                     var entered = day.EnteredByHour[i]; var answered = day.AnsweredByHour[i]; var abandoned = day.AbandonedByHour[i];
                     var other = Math.Max(0, entered - answered - abandoned);
                     var isNow = i == day.EnteredByHour.Length - 1;
-                    var outside = i < day.EnteredByHour.Length - Window;
+                    var outside = false;
                     <div class="hour @(isNow ? "now" : "") @(outside ? "outside" : "") @(entered == 0 ? "empty" : "") @(entered == maxHour && entered > 0 ? "peak" : "")" style="--i:@i"
                          title="@($"{starts[i]:HH}h · {entered} {Text["received"]} · {answered} {Text["answered"]} · {abandoned} {Text["abandoned"]}")">
                         @if (entered > 0) { <span class="hour-count">@entered</span> }
@@ -144,7 +144,7 @@
                             @if (other > 0) { <span class="seg neutral" style="flex-grow:@other"></span> }
                             @if (answered > 0) { <span class="seg good" style="flex-grow:@answered"></span> }
                         </div>
-                        <span class="hour-label">@(isNow ? Text["now"] : i % 3 == (day.EnteredByHour.Length - 1) % 3 ? starts[i].ToString("HH") + "h" : "")</span>
+                        <span class="hour-label">@(isNow ? Text["now"] : day.EnteredByHour.Length <= 8 || i % 3 == (day.EnteredByHour.Length - 1) % 3 ? starts[i].ToString("HH") + "h" : "")</span>
                     </div>
                 }
             </div>
