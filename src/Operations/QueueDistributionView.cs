@@ -2,7 +2,7 @@ using Sufficit.Telephony.Streaming;
 
 namespace Sufficit.Telephony.Panel.Operations;
 
-public sealed record DistributionAttempt(string Member, string Name, DateTimeOffset CalledAt, string Outcome, long RingSeconds, long TalkSeconds);
+public sealed record DistributionAttempt(string Member, string Name, DateTimeOffset CalledAt, string Outcome, long RingSeconds, long TalkSeconds, int Cycles = 1);
 public sealed record DistributionCall(string Uniqueid, string Caller, DateTimeOffset EnteredAt, string Outcome, long WaitSeconds, DistributionAttempt[] Attempts);
 public sealed record DistributionMember(string Member, string Name, long Offered, long Answered, long Missed, long Unavailable,
     long RingSeconds, long TalkSeconds, DateTimeOffset? LastAnswered, long[] AnsweredByHour, long[] RungByHour)
@@ -79,7 +79,7 @@ public static class QueueDistributionView
             .OrderByDescending(c => c.EnteredMs)
             .Select(c => new DistributionCall(c.Uniqueid, c.Caller, DateTimeOffset.FromUnixTimeMilliseconds(c.EnteredMs), c.Outcome, c.WaitSeconds,
                 c.Attempts.Select(a => new DistributionAttempt(a.Interface, a.Name, DateTimeOffset.FromUnixTimeMilliseconds(a.CalledMs),
-                    a.Outcome, a.RingSeconds, a.TalkSeconds)).ToArray())).ToArray();
+                    a.Outcome, a.RingSeconds, a.TalkSeconds, Math.Max(1, a.Cycles))).ToArray())).ToArray();
         return new(Queue(stat, hours), members, calls);
     }
 

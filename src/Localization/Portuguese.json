@@ -690,5 +690,7 @@
   "not answered": "não atendeu",
   "unavailable": "indisponível",
   "others answered": "outro atendeu",
-  "member answered": "atendeu"
+  "member answered": "atendeu",
+  "Offered {0} calls": "Recebeu {0} chamadas",
+  "rung {0} times": "tocou {0} vezes"
 }

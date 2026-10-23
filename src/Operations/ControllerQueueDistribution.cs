@@ -144,11 +144,21 @@ public sealed class ControllerQueueDistribution(QueueDiagnosticsReader reader, T
             }
             var trace = new CallTrace { Node = node, Queue = queue.Queue, Account = account, Uniqueid = call.VisitId.ToString("N"),
                 EnteredMs = call.EnteredAt.ToUnixTimeMilliseconds(), Outcome = outcome, WaitSeconds = wait };
-            foreach (var attempt in attempts)
+            foreach (var attempt in attempts.Where(a => a.Outcome == "ringing" && outcome != "waiting"))
+                attempt.Outcome = outcome == "answered" ? "other-answered" : "caller-hangup";
+            // Ringall retries offer every member again each cycle: fold them into one result per member per call
+            // (answered > rang and not answered > only fast failures > someone else answered / caller left).
+            static int Rank(string o) => o switch { "answered" => 4, "no-answer" => 3, "unavailable" => 2, _ => 1 };
+            var folded = attempts.GroupBy(a => a.Extension).Select(g =>
             {
-                if (attempt.Outcome == "ringing" && outcome != "waiting") attempt.Outcome = outcome == "answered" ? "other-answered" : "caller-hangup";
+                var best = g.OrderByDescending(a => Rank(a.Outcome)).ThenByDescending(a => a.RingSeconds).First();
+                return (Attempt: new Attempt { Extension = g.Key, OfferedAt = g.Min(a => a.OfferedAt), Outcome = best.Outcome,
+                    RingSeconds = g.Max(a => a.RingSeconds), TalkSeconds = g.Max(a => a.TalkSeconds) }, Cycles: g.Count());
+            }).ToList();
+            foreach (var (attempt, cycles) in folded)
+            {
                 trace.Attempts.Add(new CallAttempt { Interface = attempt.Extension, CalledMs = attempt.OfferedAt.ToUnixTimeMilliseconds(),
-                    Outcome = attempt.Outcome, RingSeconds = attempt.RingSeconds, TalkSeconds = attempt.TalkSeconds });
+                    Outcome = attempt.Outcome, RingSeconds = attempt.RingSeconds, TalkSeconds = attempt.TalkSeconds, Cycles = cycles });
                 if (Slot(attempt.OfferedAt) is not { } slot) continue;
                 var member = MemberFor(call.QueueId, attempt.Extension);
                 member.Offered[slot]++;

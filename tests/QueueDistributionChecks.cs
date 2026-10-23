@@ -51,6 +51,20 @@ internal static class QueueDistributionChecks
         var detailNew = QueueDistributionView.Detail(built, "google-voip", queueId.ToString("N"), 24)!;
         check(QueueDistributionView.Queues(built, 24)[0].Label == "Suporte" && detailNew.Members.Length == 5, "Controller queue in the view");
         check(QueueDistributionView.Filter(built, "", "suporte").Queues.Count == 1 && QueueDistributionView.Filter(built, "", "6002").Queues.Count == 1, "Search by title and extension");
+        // Ringall cycles fold into one entry per extension per call.
+        var cyc = Guid.NewGuid(); var cycQueue = Guid.NewGuid(); var tc = now.AddMinutes(-5);
+        QueueDiagnosticEvent CE(long id, int sec, string kind, string ext, string? reason = null) => new(id, tc.AddSeconds(sec), kind, ext, reason);
+        var cycleEvents = new Dictionary<Guid, QueueDiagnosticEvent[]> { [cyc] = [
+            CE(1, 0, "offered", "7001"), CE(2, 0, "ringing", "7001"), CE(3, 1, "offer_finished", "7001", "channel_ended"),
+            CE(4, 15, "offered", "7001"), CE(5, 15, "ringing", "7001"), CE(6, 16, "offer_finished", "7001", "channel_ended"),
+            CE(7, 0, "offered", "7002"), CE(8, 0, "ringing", "7002"), CE(9, 12, "offer_finished", "7002", "no_answer_or_busy"),
+            CE(10, 15, "offered", "7002"), CE(11, 15, "ringing", "7002"), CE(12, 20, "connected", "7002")] };
+        var cycleReply = ControllerQueueDistribution.Build(Guid.NewGuid(), "google-voip",
+            [new QueueDiagnosticCall(cyc, cycQueue, "c", "completed", tc, tc.AddSeconds(20), tc.AddSeconds(80))], cycleEvents, new Dictionary<Guid, string>(), now);
+        var cycleTrace = cycleReply.Calls.Single();
+        check(cycleTrace.Attempts.Count == 2 && cycleTrace.Attempts.All(a => a.Cycles == 2), "One entry per extension per call, with cycles");
+        check(cycleReply.Members.Single(m => m.Interface == "7001").Offered.Sum() == 1 && cycleReply.Members.Single(m => m.Interface == "7001").Unavailable.Sum() == 1, "Fast failures fold to one unavailable");
+        check(cycleReply.Members.Single(m => m.Interface == "7002").Answered.Sum() == 1 && cycleReply.Members.Single(m => m.Interface == "7002").Missed.Sum() == 0, "Answered wins over an earlier missed cycle");
         check(QueueDistributionView.StrategyLabel("ringall") == "Ring all at once" && QueueDistributionView.StrategyLabel("custom") == "custom", "Strategy labels");
         var configuration = new QueueConfigurationSet(context, Guid.NewGuid(), [new(queueId.ToString("N"), "Suporte", true, 20, 60, "ringall", 3, 15, 1000000, [new(30, 5)],
             [new("6001", "Ana", 0, false, true, true, false, 1)])]);

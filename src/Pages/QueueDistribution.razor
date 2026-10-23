@@ -113,7 +113,7 @@
                         <span class="now-call-who"><b>@(call.Caller.Length > 0 ? call.Caller : Text["Unknown number"])</b> · @Text["waiting"] @Duration((long)(DateTimeOffset.UtcNow - call.EnteredAt).TotalSeconds)</span>
                         <span class="attempts">
                             @foreach (var attempt in call.Attempts)
-                            { <span class="attempt @OutcomeTone(attempt.Outcome) @(attempt.Outcome == "ringing" ? "ringing" : "")" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}")">@Short(attempt.Member)</span> }
+                            { <span class="attempt @OutcomeTone(attempt.Outcome) @(attempt.Outcome == "ringing" ? "ringing" : "")" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}{(attempt.Cycles > 1 ? " · " + Text.Format("rung {0} times", attempt.Cycles) : "")}")">@Short(attempt.Member)</span> }
                             @if (call.Attempts.Length == 0) { <span class="muted">@Text["not offered to any extension yet"]</span> }
                         </span>
                     </div>
@@ -197,7 +197,7 @@
                         @if (member.Cancelled > 0) { <span class="neutral"><i></i><b>@member.Cancelled</b> @Text["others answered"]</span> }
                     </div>
                     <div class="member-meta">
-                        <span>@Text.Format("Rang {0}×", member.Offered)</span>
+                        <span>@Text.Format("Offered {0} calls", member.Offered)</span>
                         <span>@Text["Answer rate"] <b>@Percent(member.AnswerRate)</b></span>
                         <span>@Text["Ring"] <b>@Duration(member.AverageRing)</b></span>
                         <span>@Text["Talk"] <b>@Duration(member.AverageTalk)</b></span>
@@ -225,7 +225,7 @@
                     <span class="muted">@Text["wait"] @Duration(call.WaitSeconds)</span>
                     <span class="attempts">
                         @foreach (var attempt in call.Attempts)
-                        { <span class="attempt @OutcomeTone(attempt.Outcome)" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}{(attempt.RingSeconds > 0 ? " · " + Duration(attempt.RingSeconds) : "")}")">@Short(attempt.Member)</span> }
+                        { <span class="attempt @OutcomeTone(attempt.Outcome)" title="@($"{(attempt.Name.Length > 0 ? attempt.Name : QueueDistributionView.Extension(attempt.Member))} · {Text[AttemptOutcome(attempt.Outcome)]}{(attempt.Cycles > 1 ? " · " + Text.Format("rung {0} times", attempt.Cycles) : "")}{(attempt.RingSeconds > 0 ? " · " + Duration(attempt.RingSeconds) : "")}")">@Short(attempt.Member)</span> }
                     </span>
                 </div>
             }
