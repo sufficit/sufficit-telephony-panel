@@ -45,7 +45,7 @@
     }
     @if (FilteredSamples.Any() && NativeFocus)
     {
-        <p class="focus-note">@Text["Native PBX queue: only the distribution below is available."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p>
+        <p class="focus-note">@Text["Native PBX queue: only the distribution below is available."]</p>
         <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
@@ -123,7 +123,7 @@
                 }
                 </div>
                 @if (tiles.Queues.Length == 0) { <p class="monitor-empty">@Text["No queues in this reading match the search."]</p> }
-                else if (FocusQueue.Length > 0) { <p class="queue-tiles-hint">@Text["Queue applied as a filter to the whole page."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p> }
+                else if (FocusQueue.Length > 0) { <p class="queue-tiles-hint">@Text["Queue applied as a filter to the whole page."]</p> }
                 <details class="queue-visits"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
                     @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
                     { <p>@observation.QueueTitle · @observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node

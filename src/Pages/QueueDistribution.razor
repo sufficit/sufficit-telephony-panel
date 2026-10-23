@@ -10,8 +10,7 @@
         <h2 id="distribution-title">@Text["Queue distribution"]</h2>
         <span class="info-dot" title="@(Text["Which extensions receive each queue's calls: how often they rang, answered, let it ring or were unavailable."] + (Reply is null ? "" : " " + Text.Format("Counted in memory since {0}, without a database. Restarting the collector starts the count again.", Started)))">i</span>
         <span class="distribution-summary">@(Queues.FirstOrDefault(q => q.Key == ActiveKey) is { } current ? QueueLabel(current) : Text["Busiest queues"]) · @WindowLabel(Window)</span>
-        @if (Detail is not null && (SelectedKey.Length > 0 || QueueId.Length > 0))
-        { <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="() => SelectQueue(string.Empty)">← @Text["All queues"]</SUIButton> }
+        @* Going back to all queues is the "× show all queues" chip in the page heading (one control, not three). *@
         <SUIButton Class="distribution-options-trigger" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="distribution-options">@Text["Queue and period"]</SUIButton>
     </div>
     <div id="distribution-options" class="board-options page-options" popover="auto" role="region" aria-label="@Text["Queue and period"]">

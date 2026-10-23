@@ -40,7 +40,7 @@ const { chromium } = require('playwright');
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
     await page.goto('http://127.0.0.1:5169/queues?preview=true&dqueue=google-voip%7C0007366500');
     await page.locator('.focus-note').waitFor({ timeout: 30000 });
-    await page.locator('.focus-note').getByRole('button', { name: /Mostrar todas as filas/ }).click();
+    await page.locator('.filter-clear').click();
     await page.locator('.queue-tile').first().waitFor();
     await page.locator('.ranking-row').first().waitFor();
     if (new URL(page.url()).searchParams.has('dqueue')) throw new Error('dqueue must be cleared');
