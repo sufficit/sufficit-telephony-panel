@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
       await section.getByRole('button', { name: /Fila e período/ }).click();
       await page.locator('#distribution-options').getByRole('button', { name: /^Hora atual$/ }).click();
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => document.querySelectorAll('.distribution .hour').length === 1);
+      await page.waitForFunction(() => document.querySelectorAll('.distribution .hour').length === 24 && document.querySelectorAll('.distribution .hour:not(.outside)').length === 1);
       await section.locator('summary').click();
       if (await section.locator('.attempt').first().textContent() !== '6004') throw new Error('chips keep four digits');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
