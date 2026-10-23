@@ -12,12 +12,12 @@ public sealed record BoardCallFlow(string Id, string Caller, string Destination,
     {
         var groups = authorizedRows.Where(r => r.Kind is "call" or "waiting").GroupBy(Identity)
             .ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.Ordinal);
-        var queueNames = tiles.Where(t => t.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.QUEUE)
+        var queueNames = tiles.Where(t => t.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.QUEUE)
             .SelectMany(t => t.Rows.Where(r => r.Kind == "waiting").Select(r => (r.Id, t.Title)))
             .GroupBy(x => x.Id).ToDictionary(g => g.Key, g => g.First().Title);
         return tiles.Select(tile => tile with
         {
-            Flows = tile.Rows.Where(r => tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.QUEUE
+            Flows = tile.Rows.Where(r => tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.QUEUE
                 ? r.Kind == "waiting" : r.Kind == "call").GroupBy(Identity).Select(anchor =>
             {
                 var related = groups.GetValueOrDefault(anchor.Key, anchor.ToArray());

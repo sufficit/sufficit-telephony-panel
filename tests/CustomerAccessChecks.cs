@@ -37,24 +37,24 @@ internal static class CustomerAccessChecks
         check(EndpointChannelIdentity.Parse("", "SIP/6001-") is null, "Empty exact channel cannot change the validation target");
         var now = DateTimeOffset.UtcNow;
         ObservedResource Row(string id, string account) => new(id, "google", "peer", "PJSIP/6007", "available", "", "", account, now, now, new Dictionary<string, string>());
-        var view = AuthorizedObservation.ForCustomer([new() { Label = "Own extension", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] }], [Row("a", a.ToString()), Row("b", b.ToString()), Row("missing", ""), Row("empty", Guid.Empty.ToString())], single, a);
+        var view = AuthorizedObservation.ForCustomer([new() { Label = "Own extension", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] }], [Row("a", a.ToString()), Row("b", b.ToString()), Row("missing", ""), Row("empty", Guid.Empty.ToString())], single, a);
         check(view.Rows.Length == 1 && view.Rows[0].Id == "a", "Customer projection drops foreign and unknown ownership before rendering");
-        var own = new Sufficit.Telephony.EventsPanel.EventsPanelCardInfo { Label = "Own", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER, Channels = ["^PJSIP/6007"] };
+        var own = new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Own", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER, Channels = ["^PJSIP/6007"] };
         var peers = AuthorizedObservation.ForCustomer([own], [Row("own", ""), Row("zero", Guid.Empty.ToString()), Row("foreign", b.ToString()),
             Row("other", "") with { Key = "PJSIP/6008" }, Row("longer", "") with { Key = "PJSIP/60070" }, Row("call", "") with { Kind = "call", Key = "PJSIP/6007-000000ab" }], single, a);
         check(peers.Rows.Select(r => r.Id).Order().SequenceEqual(["own", "zero"]),
             "Endpoint status without AccountCode is shown only for the context's exact catalogued extension");
         check(peers.ByCard.TryGetValue(own, out var ownRows) && ownRows.Count == 2, "Attributed endpoint status reaches the extension card");
         foreach (var unsafeCard in new[] { "PJSIP/6007", "^PJSIP/60.*", "^PJSIP/6007|^PJSIP/6008", "^Local/6007", "^PJSIP/" })
-            check(AuthorizedObservation.ForCustomer([new Sufficit.Telephony.EventsPanel.EventsPanelCardInfo { Label = "Own", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER, Channels = [unsafeCard] }], [Row("own", "")], single, a).Rows.Length == 0,
+            check(AuthorizedObservation.ForCustomer([new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Own", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER, Channels = [unsafeCard] }], [Row("own", "")], single, a).Rows.Length == 0,
                 "Unanchored, wildcard, alternation or non-endpoint card never attributes unowned status: " + unsafeCard);
-        check(AuthorizedObservation.ForCustomer([new Sufficit.Telephony.EventsPanel.EventsPanelCardInfo { Label = "Trunk", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.TRUNK, Channels = ["^PJSIP/6007"] }], [Row("own", "")], single, a).Rows.Length == 0,
+        check(AuthorizedObservation.ForCustomer([new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Trunk", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.TRUNK, Channels = ["^PJSIP/6007"] }], [Row("own", "")], single, a).Rows.Length == 0,
             "Trunk cards never attribute unowned status (trunks may be shared)");
         check(AuthorizedObservation.ForCustomer([own], [Row("own", "")], multi, null).Rows.Length == 0,
             "Without a selected context, unowned status stays hidden");
         // Parity: for the same context, catalogue and stream, a customer sees the same extension
         // status a manager sees (only status of its own catalogued extensions, never calls of others).
-        var catalogue = new[] { own, new Sufficit.Telephony.EventsPanel.EventsPanelCardInfo { Label = "Second", Kind = Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER, Channels = ["^SIP/0000286651"] } };
+        var catalogue = new[] { own, new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Second", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER, Channels = ["^SIP/0000286651"] } };
         var stream = new[] { Row("p1", ""), Row("p2", "") with { Key = "SIP/0000286651" }, Row("x", "") with { Key = "SIP/0000999999" } };
         var managerTiles = OperatorTile.Create(catalogue, AuthorizedObservation.Create(catalogue, stream, a).ByCard);
         var customerTiles = OperatorTile.Create(catalogue, AuthorizedObservation.ForCustomer(catalogue, stream, single, a).ByCard);

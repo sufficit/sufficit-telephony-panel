@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Panel.Operations;
 
 internal static class QueueCallFlowChecks

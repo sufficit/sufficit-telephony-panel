@@ -1,4 +1,4 @@
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Panel.Operations;
 using Sufficit.Telephony.Panel.Security;
 using Microsoft.AspNetCore.Components.Authorization;

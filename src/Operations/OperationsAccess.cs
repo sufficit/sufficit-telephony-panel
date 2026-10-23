@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components.Authorization;
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Monitor;
 using Sufficit.Telephony.Panel.Security;
 using Sufficit.Identity.Authorization;

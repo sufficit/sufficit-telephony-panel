@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
     <ProjectReference Include="../../sufficit-blazor-ui/src/Sufficit.Blazor.UI.csproj" />
-    <ProjectReference Include="../../sufficit-telephony-eventspanel-core/src/Sufficit.Telephony.EventsPanel.Core.csproj" />
+    <ProjectReference Include="../../sufficit-telephony-panel-core/src/Sufficit.Telephony.Panel.Core.csproj" />
     <Compile Include="../../sufficit-base/src/Telephony/Monitor/TelephonyMonitorActionRequest.cs" Link="Contracts/TelephonyMonitorActionRequest.cs" />
     <Compile Include="../../sufficit-base/src/Telephony/Monitor/TelephonyMonitorActionMode.cs" Link="Contracts/TelephonyMonitorActionMode.cs" />
   </ItemGroup>

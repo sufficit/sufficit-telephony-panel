@@ -1,4 +1,4 @@
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 
 namespace Sufficit.Telephony.Panel.Operations;
 

@@ -25,7 +25,7 @@
             <p>@Text["Continuous supervision follows matching channels on this server, one at a time, including future calls. It does not mix all calls. Press * on your phone to move to the next channel; hang up to stop. Maximum session: 30 minutes."]</p>
             @if (PrefixChoices.Length == 0)
             {
-                <SUIAlert ToneValue="SUITone.Warning">@Text[Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.PEER
+                <SUIAlert ToneValue="SUITone.Warning">@Text[Request.Tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.PEER
                     ? "This extension has no live SIP/PJSIP endpoint associated with a context and server. Check the context filter and monitoring connection. An active call is not required."
                     : "No protected prefix mapping is configured for this card. Display filters are not supervision permissions. Queue names are not channel prefixes; an administrator must map an exclusive routing prefix."]</SUIAlert>
             }
@@ -95,8 +95,8 @@
         .Where(item => item.Reason is not null).Select(item => (item.Key, item.Reason!)).Take(6).ToArray();
     private SupervisionPrefixRule[] Prefixes => Demo && !DemoEndpointResolution
         ? [new() { Id = "demo-prefix", ContextId = Guid.Parse("11111111-1111-7111-8111-111111111111"), Node = Request.Tile.Node,
-            CardKey = Request.Tile.Keys.FirstOrDefault() ?? "demo", Prefix = Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.QUEUE
-                ? "Local/queue-demo@demo-" : Request.Tile.Kind == Sufficit.Telephony.EventsPanel.EventsPanelCardKind.TRUNK ? "PJSIP/trunk-demo-" : "PJSIP/6007-" }]
+            CardKey = Request.Tile.Keys.FirstOrDefault() ?? "demo", Prefix = Request.Tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.QUEUE
+                ? "Local/queue-demo@demo-" : Request.Tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.TRUNK ? "PJSIP/trunk-demo-" : "PJSIP/6007-" }]
         : PrefixPolicy.For(Request.Tile, Context);
     private EndpointSupervisionTarget[] EndpointTargets => Demo && !DemoEndpointResolution ? [] : EndpointSupervisionTarget.For(Request.Tile, Context, Connected, DateTimeOffset.UtcNow);
     private SupervisionPrefixRule[] PrefixChoices => Prefixes.Concat(SharedPrefixes).Concat(EndpointTargets.Select(target => new SupervisionPrefixRule

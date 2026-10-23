@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Authorization;
 using Sufficit.Blazor.UI.Components;
 using Sufficit.Identity.Authorization;
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Monitor;
 using Sufficit.Telephony.Panel.Localization;
 using Sufficit.Telephony.Panel.Monitoring;

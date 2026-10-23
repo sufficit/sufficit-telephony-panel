@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Sufficit.Telephony.Panel.Operations;
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 using Sufficit.Telephony.Monitor;
 
 public static class OperationsChecks

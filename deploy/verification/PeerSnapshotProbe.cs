@@ -1,7 +1,7 @@
 using Grpc.Core;
 using Sufficit.Telephony.Streaming;
 using Sufficit.Telephony.Panel.Operations;
-using Sufficit.Telephony.EventsPanel;
+using Sufficit.Telephony.Panel;
 
 // Read only the user's 00000060xx endpoints. Never log callers, tokens or raw events.
 using var channel = UnixTelemetryChannel.Create("/run/sufficit-ami-observation/telemetry.sock");
