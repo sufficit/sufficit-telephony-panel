@@ -8,7 +8,7 @@
 <section class="queue-monitor" aria-labelledby="queue-title">
     <div class="monitor-head">
         <h1 id="queue-title">@Text["Queues and registration"]</h1>
-        @if (ActiveFilters.Length > 0) { <span class="active-filters" aria-label="@Text["Filters active"]">@foreach (var label in ActiveFilters) { <span class="filter-chip">@label</span> }</span> }
+        @if (ActiveFilters.Length > 0) { <span class="active-filters" aria-label="@Text["Filters active"]">@foreach (var label in ActiveFilters) { <span class="filter-chip">@label</span> }@if (FocusQueue.Length > 0 || DQueueId.Length > 0) { <button type="button" class="filter-clear" @onclick="ClearQueue" aria-label="@Text["Show all queues"]" title="@Text["Show all queues"]">× @Text["Show all queues"]</button> }</span> }
         <SUIButton Class="@(ActiveFilters.Length > 0 ? "page-options-trigger is-marked" : "page-options-trigger")" VariantValue="SUIVariant.Outlined" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="queue-options">@Text["Filters and actions"]</SUIButton>
     </div>
     <div id="queue-options" class="board-options page-options" popover="auto" role="region" aria-label="@Text["Filters and actions"]">
@@ -75,9 +75,24 @@
             <SUIStat Value="@Live(q => q.Connected).ToString()" Label="@Text["In conversation"]" Icon="check-circle" ColorValue="SUIColor.Success" Appearance="SUIStatAppearance.Gradient" />
             <SUIStat Value="@(longest is { } secs ? secs + " s" : "—")" Label="@Text["Longest wait"]" Icon="clock"
                      ColorValue="@(longest > 60 ? SUIColor.Error : SUIColor.Secondary)" Appearance="@(longest > 60 ? SUIStatAppearance.Gradient : SUIStatAppearance.Plain)" />
+            @if (agents.Length > 0)
+            {
             <SUIStat Value="@agents.Count(a => a.State(now) == "Available").ToString()" Unit="@("/" + agents.Length)" Label="@Text["Extensions available"]"
                      Icon="users" ColorValue="SUIColor.Primary" Appearance="SUIStatAppearance.Image" />
+            }
         </div>
+        @if (FocusQueue.Length > 0 && overview.Visits.Length > 0)
+        {
+            <details class="queue-visits monitor-card"><summary>@Text["Observed queue calls"] (@overview.Visits.Length)</summary>
+                @foreach (var observation in overview.Visits.Skip(VisitPage*30).Take(30))
+                { <p>@observation.Visit.Caller · @Text[observation.Fresh ? Phase(observation.Visit.Phase) : "No current data"] · @Time(observation.Visit.EnteredAt)<br /><code>@observation.Visit.ChannelName</code> · @observation.Source.Node
+                    <SUIButton VariantValue="SUIVariant.Text" OnClick="() => SelectVisit(observation)">@Text["View timeline"]</SUIButton></p> }
+                <Pager Total="overview.Visits.Length" Page="VisitPage" PageChanged="value => VisitPage = value" />
+            </details>
+        }
+        @* With a queue chosen, the tile list would repeat the same single queue the chip and the distribution already name. *@
+        @if (FocusQueue.Length == 0)
+        {
         <section class="queue-queues monitor-card" aria-labelledby="queue-queues-title">
             <div class="monitor-card-head">
                 <h2 id="queue-queues-title">@Text["Queues"] <span class="count">@tiles.Queues.Length</span></h2>
@@ -119,6 +134,7 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
+        }
         }
         @* The page's live strip already shows "waiting now" for the chosen controller queue: no second card. *@
         <QueueDistribution ShowWaiting="@(!showLive || focusFresh.Length == 0)" Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers"

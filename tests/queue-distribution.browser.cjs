@@ -44,10 +44,11 @@ const { chromium } = require('playwright');
     await page.locator('.queue-tile').first().waitFor();
     await page.locator('.ranking-row').first().waitFor();
     if (new URL(page.url()).searchParams.has('dqueue')) throw new Error('dqueue must be cleared');
-    // A controller queue tile filters the page and the tile list to itself.
+    // A controller queue tile filters the page; the tile list hides (the chip names the queue).
     await page.locator('.queue-tile').first().click();
     await page.waitForURL(url => url.searchParams.has('queueid'));
-    if (await page.locator('.queue-tile').count() !== 1) throw new Error('only the chosen queue tile remains');
+    await page.waitForFunction(() => document.querySelectorAll('.queue-tile').length === 0);
+    if (!(await page.locator('.filter-chip').first().innerText()).startsWith('Fila')) throw new Error('queue chip expected');
     console.log('PASS queue distribution');
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exit(1); });

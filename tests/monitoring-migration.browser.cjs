@@ -66,11 +66,12 @@ const fs = require('node:fs');
     await page.waitForURL(url => url.searchParams.get('node') === 'google-voip');
     assert.equal(await page.locator('.queue-diagnostics td[data-label="Ramal"]').count(), 1);
     assert.equal((await page.locator('.queue-queues [data-metric="waiting"] b').innerText()).trim(), '2');
-    // Clicking a queue applies it as a filter; clicking again clears it.
+    // Clicking a queue applies it as a filter to the whole page (the tile list hides); the "show all queues" chip clears it.
     await page.locator('#queue-options').getByRole('button', { name: /^Fechar/ }).click();
     await page.locator('.queue-queues .queue-tile').click();
     await page.waitForURL(url => url.searchParams.has('queueid'));
-    await page.locator('.queue-queues .queue-tile').click();
+    assert.equal(await page.locator('.queue-queues').count(), 0);
+    await page.locator('.filter-clear').click();
     await page.waitForURL(url => !url.searchParams.has('queueid'));
     await page.reload();
     await page.getByRole('heading', { name: 'Filas e registros', exact: true }).waitFor();

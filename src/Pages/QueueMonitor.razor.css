@@ -31,3 +31,6 @@ small { display: block; }
 .queue-tile-idle { font-size: .8rem; color: var(--sui-text-secondary); }
 .queue-tile-metrics > span { white-space: nowrap; }
 .focus-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: .875rem; color: var(--sui-text-secondary); }
+.filter-clear { all: unset; cursor: pointer; font-size: .8rem; padding: 2px 10px; border-radius: 999px; color: var(--sui-color-primary); border: 1px solid color-mix(in srgb, var(--sui-color-primary) 35%, transparent); }
+.filter-clear:hover { background: color-mix(in srgb, var(--sui-color-primary) 8%, transparent); }
+.filter-clear:focus-visible { outline: 2px solid var(--sui-color-primary); outline-offset: 2px; }
