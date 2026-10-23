@@ -62,7 +62,7 @@
         var waitingAll = Live(q => Math.Max(0, q.Waiting - q.Offering));
         var longest = oldest is { } since ? Math.Max(0, (int)(now - since).TotalSeconds) : (int?)null;
         <div class="live-strip" aria-label="@Text["Now"]">
-            <SUIStat Value="@waitingAll.ToString()" Label="@Text["Waiting now"]" Icon="bell" ColorValue="SUIColor.Warning"
+            <SUIStat Value="@waitingAll.ToString()" Label="@Text["Waiting now"]" Icon="bell" ColorValue="SUIColor.Warning" Animation="SUIAnimation.Default | SUIAnimation.ValueFlash"
                      Appearance="@(waitingAll > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)" />
             <SUIStat Value="@Live(q => q.Offering).ToString()" Label="@Text["Ringing agents"]" Icon="phone" ColorValue="SUIColor.Info" Appearance="SUIStatAppearance.Soft" />
             <SUIStat Value="@Live(q => q.Connected).ToString()" Label="@Text["In conversation"]" Icon="check-circle" ColorValue="SUIColor.Success" Appearance="SUIStatAppearance.Gradient" />

@@ -85,7 +85,7 @@
         var active = Detail.Calls.Where(c => c.Outcome == "waiting" && c.EnteredAt > DateTimeOffset.UtcNow.AddHours(-1)).ToArray();
         var waitingNow = LiveWaiting ?? active.Length;
         <div class="kpis">
-            <SUIStat Value="@waitingNow.ToString()" Unit="@(LiveCapacity is > 0 ? "/" + LiveCapacity : null)" Label="@Text["Waiting now"]" Icon="bell"
+            <SUIStat Value="@waitingNow.ToString()" Unit="@(LiveCapacity is > 0 ? "/" + LiveCapacity : null)" Label="@Text["Waiting now"]" Icon="bell" Animation="SUIAnimation.Default | SUIAnimation.ValueFlash"
                      ColorValue="SUIColor.Warning" Appearance="@(waitingNow > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)"
                      Caption="@(LiveCapacity == 0 ? Text["no capacity limit"] : null)">
                 @if (LiveCapacity is > 0 and var cap)
