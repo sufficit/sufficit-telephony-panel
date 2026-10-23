@@ -349,7 +349,10 @@
             Rebuild();
         }
         catch (UnauthorizedAccessException) { Error = "Your access expired. Sign in again."; }
-        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (Lifetime.IsCancellationRequested || Disposed) { }
+        // The component can be replaced while a read is in flight (queue filter switches the page layout):
+        // nothing that happens after disposal may reach the circuit.
+        catch (Exception) when (Disposed) { }
         catch (InvalidOperationException e) { Error = e.Message; }
         finally
         {

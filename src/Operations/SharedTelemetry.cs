@@ -22,7 +22,9 @@ public sealed class SharedTelemetry(IConfiguration configuration, ILogger<Shared
     {
         if (!Enabled) throw new InvalidOperationException("Queue distribution is not configured.");
         try { return await distributionClient.Value.DistributionAsync(request, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: ct); }
-        catch (RpcException e) when (e.StatusCode != StatusCode.Cancelled)
+        // A cancelled read (component disposed, navigation) is an OperationCanceledException, never a failure.
+        catch (RpcException e) when (e.StatusCode == StatusCode.Cancelled) { throw new OperationCanceledException(ct); }
+        catch (RpcException e)
         {
             logger.LogWarning("Queue distribution unavailable: {Status}", e.StatusCode);
             throw new InvalidOperationException(e.StatusCode == StatusCode.Unimplemented
