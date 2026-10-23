@@ -85,12 +85,15 @@
         var active = Detail.Calls.Where(c => c.Outcome == "waiting" && c.EnteredAt > DateTimeOffset.UtcNow.AddHours(-1)).ToArray();
         var waitingNow = LiveWaiting ?? active.Length;
         <div class="kpis">
+            @if (ShowWaiting)
+            {
             <SUIStat Value="@waitingNow.ToString()" Unit="@(LiveCapacity is > 0 ? "/" + LiveCapacity : null)" Label="@Text["Waiting now"]" Icon="bell" Animation="SUIAnimation.Default | SUIAnimation.ValueFlash"
                      ColorValue="SUIColor.Warning" Appearance="@(waitingNow > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)"
                      Caption="@(LiveCapacity == 0 ? Text["no capacity limit"] : null)">
                 @if (LiveCapacity is > 0 and var cap)
                 { <span class="now-bar" role="meter" aria-valuemin="0" aria-valuemax="@cap" aria-valuenow="@waitingNow" title="@Text.Format("capacity {0}", cap)"><span class="@(waitingNow >= cap ? "full" : waitingNow * 2 >= cap ? "half" : "")" style="width:@Css(100.0 * waitingNow / cap)%"></span></span> }
             </SUIStat>
+            }
             <SUIStat Value="@queue.Entered.ToString()" Label="@Text["Calls received"]" Icon="phone" ColorValue="SUIColor.Info"
                      Appearance="SUIStatAppearance.Gradient" Sparkline="@Spark(queue.EnteredByHour)" />
             <SUIStat Value="@queue.Answered.ToString()" Label="@Text["Answered"]" Icon="check-circle" ColorValue="SUIColor.Success"
@@ -222,6 +225,8 @@
     /// <summary>Queue controller id from the URL (?queueid=, e.g. the "Monitorar" link of the entry plan).</summary>
     [Parameter] public string QueueId { get; set; } = "";
     /// <summary>Live waiting count and capacity of the focused queue when the queue controller reports them (null for native queues).</summary>
+    /// <summary>False when the page already shows "waiting now" for this queue (avoids a duplicate card).</summary>
+    [Parameter] public bool ShowWaiting { get; set; } = true;
     [Parameter] public int? LiveWaiting { get; set; }
     [Parameter] public int? LiveCapacity { get; set; }
     /// <summary>Extensions that rang in the focused queue, so the page can filter presence to them.</summary>

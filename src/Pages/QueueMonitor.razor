@@ -61,8 +61,15 @@
         var oldest = overview.Queues.Select(q => q.OldestEnteredAt).Where(a => a.HasValue).Min();
         var waitingAll = Live(q => Math.Max(0, q.Waiting - q.Offering));
         var longest = oldest is { } since ? Math.Max(0, (int)(now - since).TotalSeconds) : (int?)null;
+        // Live stages exist only for queue-controller queues: when the filters match none, show only what matches.
+        var showLive = tiles.Queues.Length > 0;
+        var focusLive = FocusQueue.Length == 0 ? null : overview.Queues.FirstOrDefault(q => q.QueueId == FocusQueue);
+        var focusFresh = focusLive?.Observations.Where(o => o.Fresh).Select(o => o.Queue).ToArray() ?? [];
+        var focusCapacity = focusFresh.Length > 0 ? focusFresh.Max(q => q.Capacity) : (int?)null;
+        @if (showLive)
+        {
         <div class="live-strip" aria-label="@Text["Now"]">
-            <SUIStat Value="@waitingAll.ToString()" Label="@Text["Waiting now"]" Icon="bell" ColorValue="SUIColor.Warning" Animation="SUIAnimation.Default | SUIAnimation.ValueFlash"
+            <SUIStat Value="@waitingAll.ToString()" Unit="@(focusCapacity is > 0 ? "/" + focusCapacity : null)" Label="@Text["Waiting now"]" Icon="bell" ColorValue="SUIColor.Warning" Animation="SUIAnimation.Default | SUIAnimation.ValueFlash"
                      Appearance="@(waitingAll > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)" />
             <SUIStat Value="@Live(q => q.Offering).ToString()" Label="@Text["Ringing agents"]" Icon="phone" ColorValue="SUIColor.Info" Appearance="SUIStatAppearance.Soft" />
             <SUIStat Value="@Live(q => q.Connected).ToString()" Label="@Text["In conversation"]" Icon="check-circle" ColorValue="SUIColor.Success" Appearance="SUIStatAppearance.Gradient" />
@@ -112,11 +119,11 @@
                 @if(FilteredSamples.Any(s=>s.Snapshot?.VisitsTruncated==true))
                 { <p class="muted">@Text["Live call details are a bounded sample. Queue totals include all observed visits; use call history to query other calls."]</p> }
         </section>
-        var focusLive = FocusQueue.Length == 0 ? null : overview.Queues.FirstOrDefault(q => q.QueueId == FocusQueue);
-        var focusFresh = focusLive?.Observations.Where(o => o.Fresh).Select(o => o.Queue).ToArray() ?? [];
-        <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers"
+        }
+        @* The page's live strip already shows "waiting now" for the chosen controller queue: no second card. *@
+        <QueueDistribution ShowWaiting="@(!showLive || focusFresh.Length == 0)" Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers"
             LiveWaiting="@(focusFresh.Length > 0 ? focusFresh.Sum(q => q.Waiting) : null)" LiveCapacity="@(focusFresh.Length > 0 ? focusFresh.Max(q => q.Capacity) : null)" />
-        <QueueRegistrationTable Agents="agents" />
+        @if (showLive || agents.Length > 0) { <QueueRegistrationTable Agents="agents" /> }
         <details class="queue-history monitor-card" open="@(SelectedVisit is not null)"><summary>@Text["Call diagnostics"]</summary><QueueCallDiagnostics Preview="Demo" Sources="FilteredSamples.ToArray()" SelectedVisit="SelectedVisit" /></details>
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
