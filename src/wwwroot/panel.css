@@ -423,3 +423,6 @@ details.monitor-card[open] > summary { margin-bottom:12px; }
 .live-kpi.good .live-value { color:var(--sui-color-success); }
 .live-kpi.warn .live-value { color:var(--sui-color-warning); }
 @media(max-width:600px) { .monitor-card { padding:12px 14px; } .live-value { font-size:22px; } }
+/* Header actions never break inside a label ("Sa ir"); the row wraps instead. */
+.header-actions .sui-btn, .header-actions .signout, .header-actions .demo-chip { white-space:nowrap; }
+@media(max-width:1400px) { .panel-header { flex-wrap:wrap; row-gap:8px; } .panel-shell:not(.board-only) .header-actions { margin-left:auto; } }

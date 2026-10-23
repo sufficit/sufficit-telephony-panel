@@ -78,15 +78,23 @@
         var maxRung = Math.Max(1, Detail.Members.Select(m => m.Offered).DefaultIfEmpty(0).Max());
         var active = Detail.Calls.Where(c => c.Outcome == "waiting" && c.EnteredAt > DateTimeOffset.UtcNow.AddHours(-1)).ToArray();
         var waitingNow = LiveWaiting ?? active.Length;
-        <section class="now" aria-label="@Text["Now"]">
-            <div class="now-gauge">
-                <span class="now-value">@waitingNow</span>
-                <span class="now-label">@Text["Waiting now"] · @(LiveCapacity is { } cap ? cap == 0 ? Text["no capacity limit"] : Text.Format("capacity {0}", cap) : Text["capacity not reported"])</span>
-                @if (LiveCapacity is > 0 and var capacity)
-                { <span class="now-bar" role="meter" aria-valuemin="0" aria-valuemax="@capacity" aria-valuenow="@waitingNow"><span class="@(waitingNow >= capacity ? "full" : waitingNow * 2 >= capacity ? "half" : "")" style="width:@Css(100.0 * waitingNow / capacity)%"></span></span> }
+        <div class="kpis">
+            <div class="kpi now-kpi @(waitingNow > 0 ? "live" : "")">
+                <span class="kpi-value">@waitingNow@if (LiveCapacity is > 0 and var capacity) { <small>/@capacity</small> }</span>
+                <span class="kpi-label">@Text["Waiting now"]</span>
+                @if (LiveCapacity is > 0 and var cap)
+                { <span class="now-bar" role="meter" aria-valuemin="0" aria-valuemax="@cap" aria-valuenow="@waitingNow" title="@Text.Format("capacity {0}", cap)"><span class="@(waitingNow >= cap ? "full" : waitingNow * 2 >= cap ? "half" : "")" style="width:@Css(100.0 * waitingNow / cap)%"></span></span> }
+                else if (LiveCapacity == 0) { <span class="kpi-label">@Text["no capacity limit"]</span> }
             </div>
-            <div class="now-calls">
-                @if (active.Length == 0) { <p class="monitor-empty">@Text["No calls waiting in this queue right now."]</p> }
+            <div class="kpi"><span class="kpi-value">@queue.Entered</span><span class="kpi-label">@Text["Calls received"]</span></div>
+            <div class="kpi good"><span class="kpi-value">@queue.Answered</span><span class="kpi-label">@Text["Answered"] @Percent(queue.AnswerRate)</span></div>
+            <div class="kpi bad"><span class="kpi-value">@queue.Abandoned</span><span class="kpi-label">@Text["Abandoned"]</span></div>
+            <div class="kpi"><span class="kpi-value">@Duration(queue.AverageWait)</span><span class="kpi-label">@Text["Average wait"]</span></div>
+            <div class="kpi"><span class="kpi-value">@Detail.Members.Count(m => m.Answered > 0)/@Detail.Members.Length</span><span class="kpi-label">@Text["Extensions that answered"]</span></div>
+        </div>
+        @if (active.Length > 0)
+        {
+            <section class="now-calls" aria-label="@Text["Calls waiting now"]">
                 @foreach (var call in active.Take(12))
                 {
                     <div class="now-call" @key="call.Uniqueid">
@@ -98,15 +106,8 @@
                         </span>
                     </div>
                 }
-            </div>
-        </section>
-        <div class="kpis">
-            <div class="kpi"><span class="kpi-value">@queue.Entered</span><span class="kpi-label">@Text["Calls received"]</span></div>
-            <div class="kpi good"><span class="kpi-value">@queue.Answered</span><span class="kpi-label">@Text["Answered"] @Percent(queue.AnswerRate)</span></div>
-            <div class="kpi bad"><span class="kpi-value">@queue.Abandoned</span><span class="kpi-label">@Text["Abandoned"]</span></div>
-            <div class="kpi"><span class="kpi-value">@Duration(queue.AverageWait)</span><span class="kpi-label">@Text["Average wait"]</span></div>
-            <div class="kpi"><span class="kpi-value">@Detail.Members.Count(m => m.Answered > 0)/@Detail.Members.Length</span><span class="kpi-label">@Text["Extensions that answered"]</span></div>
-        </div>
+            </section>
+        }
 
         <figure class="hours" aria-label="@Text["Calls per hour"]">
             <figcaption>@Text["Calls per hour"]</figcaption>

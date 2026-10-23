@@ -682,5 +682,7 @@
   "Members that did not ring in this period": "Membros que não tocaram no período",
   "penalty {0}": "penalidade {0}",
   "disabled": "desativado",
-  "logged out": "deslogado"
+  "logged out": "deslogado",
+  "Calls waiting now": "Chamadas aguardando agora",
+  "Native PBX queue: only the distribution below is available.": "Fila nativa do PABX: só a distribuição abaixo está disponível."
 }

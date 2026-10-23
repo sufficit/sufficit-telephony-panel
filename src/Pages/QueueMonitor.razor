@@ -45,7 +45,7 @@
     }
     @if (FilteredSamples.Any() && NativeFocus)
     {
-        <p class="focus-note"><span class="filter-chip">@Text["Queue"]: @FocusLabel</span> @Text["Native PBX queue: live stages and presence come from the queue controller and are not available for it. The distribution below covers it."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p>
+        <p class="focus-note">@Text["Native PBX queue: only the distribution below is available."] <SUIButton VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" OnClick="ClearQueue">@Text["Show all queues"]</SUIButton></p>
         <QueueDistribution Context="@Context" Node="@SelectedNode" Search="@Search" QueueId="@QueueId" Preview="Preview" MembersChanged="SetFocusMembers" />
         <QueueSourceDetails Samples="FilteredSamples.ToArray()" />
     }
