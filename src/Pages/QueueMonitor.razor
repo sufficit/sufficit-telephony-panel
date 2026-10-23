@@ -59,12 +59,17 @@
         var now = DateTimeOffset.UtcNow;
         long Live(Func<QueueBoardQueue, int> value) => overview.Queues.SelectMany(q => q.Observations.Where(o => o.Fresh)).Sum(o => (long)Math.Max(0, value(o.Queue)));
         var oldest = overview.Queues.Select(q => q.OldestEnteredAt).Where(a => a.HasValue).Min();
+        var waitingAll = Live(q => Math.Max(0, q.Waiting - q.Offering));
+        var longest = oldest is { } since ? Math.Max(0, (int)(now - since).TotalSeconds) : (int?)null;
         <div class="live-strip" aria-label="@Text["Now"]">
-            <div class="live-kpi"><span class="live-value">@Live(q => Math.Max(0, q.Waiting - q.Offering))</span><span class="live-label">@Text["Waiting now"]</span></div>
-            <div class="live-kpi"><span class="live-value">@Live(q => q.Offering)</span><span class="live-label">@Text["Ringing agents"]</span></div>
-            <div class="live-kpi good"><span class="live-value">@Live(q => q.Connected)</span><span class="live-label">@Text["In conversation"]</span></div>
-            <div class="live-kpi @(oldest is { } o && now - o > TimeSpan.FromMinutes(1) ? "warn" : "")"><span class="live-value">@(oldest is { } at ? Math.Max(0, (int)(now - at).TotalSeconds) + " s" : "—")</span><span class="live-label">@Text["Longest wait"]</span></div>
-            <div class="live-kpi"><span class="live-value">@agents.Count(a => a.State(now) == "Available")/@agents.Length</span><span class="live-label">@Text["Extensions available"]</span></div>
+            <SUIStat Value="@waitingAll.ToString()" Label="@Text["Waiting now"]" Icon="bell" ColorValue="SUIColor.Warning"
+                     Appearance="@(waitingAll > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)" />
+            <SUIStat Value="@Live(q => q.Offering).ToString()" Label="@Text["Ringing agents"]" Icon="phone" ColorValue="SUIColor.Info" Appearance="SUIStatAppearance.Soft" />
+            <SUIStat Value="@Live(q => q.Connected).ToString()" Label="@Text["In conversation"]" Icon="check-circle" ColorValue="SUIColor.Success" Appearance="SUIStatAppearance.Gradient" />
+            <SUIStat Value="@(longest is { } secs ? secs + " s" : "—")" Label="@Text["Longest wait"]" Icon="clock"
+                     ColorValue="@(longest > 60 ? SUIColor.Error : SUIColor.Secondary)" Appearance="@(longest > 60 ? SUIStatAppearance.Gradient : SUIStatAppearance.Plain)" />
+            <SUIStat Value="@agents.Count(a => a.State(now) == "Available").ToString()" Unit="@("/" + agents.Length)" Label="@Text["Extensions available"]"
+                     Icon="users" ColorValue="SUIColor.Primary" Appearance="SUIStatAppearance.Image" />
         </div>
         <section class="queue-queues monitor-card" aria-labelledby="queue-queues-title">
             <div class="monitor-card-head">

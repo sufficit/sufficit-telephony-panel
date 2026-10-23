@@ -79,18 +79,21 @@
         var active = Detail.Calls.Where(c => c.Outcome == "waiting" && c.EnteredAt > DateTimeOffset.UtcNow.AddHours(-1)).ToArray();
         var waitingNow = LiveWaiting ?? active.Length;
         <div class="kpis">
-            <div class="kpi now-kpi @(waitingNow > 0 ? "live" : "")">
-                <span class="kpi-value">@waitingNow@if (LiveCapacity is > 0 and var capacity) { <small>/@capacity</small> }</span>
-                <span class="kpi-label">@Text["Waiting now"]</span>
+            <SUIStat Value="@waitingNow.ToString()" Unit="@(LiveCapacity is > 0 ? "/" + LiveCapacity : null)" Label="@Text["Waiting now"]" Icon="bell"
+                     ColorValue="SUIColor.Warning" Appearance="@(waitingNow > 0 ? SUIStatAppearance.Gradient : SUIStatAppearance.Soft)"
+                     Caption="@(LiveCapacity == 0 ? Text["no capacity limit"] : null)">
                 @if (LiveCapacity is > 0 and var cap)
                 { <span class="now-bar" role="meter" aria-valuemin="0" aria-valuemax="@cap" aria-valuenow="@waitingNow" title="@Text.Format("capacity {0}", cap)"><span class="@(waitingNow >= cap ? "full" : waitingNow * 2 >= cap ? "half" : "")" style="width:@Css(100.0 * waitingNow / cap)%"></span></span> }
-                else if (LiveCapacity == 0) { <span class="kpi-label">@Text["no capacity limit"]</span> }
-            </div>
-            <div class="kpi"><span class="kpi-value">@queue.Entered</span><span class="kpi-label">@Text["Calls received"]</span></div>
-            <div class="kpi good"><span class="kpi-value">@queue.Answered</span><span class="kpi-label">@Text["Answered"] @Percent(queue.AnswerRate)</span></div>
-            <div class="kpi bad"><span class="kpi-value">@queue.Abandoned</span><span class="kpi-label">@Text["Abandoned"]</span></div>
-            <div class="kpi"><span class="kpi-value">@Duration(queue.AverageWait)</span><span class="kpi-label">@Text["Average wait"]</span></div>
-            <div class="kpi"><span class="kpi-value">@Detail.Members.Count(m => m.Answered > 0)/@Detail.Members.Length</span><span class="kpi-label">@Text["Extensions that answered"]</span></div>
+            </SUIStat>
+            <SUIStat Value="@queue.Entered.ToString()" Label="@Text["Calls received"]" Icon="phone" ColorValue="SUIColor.Info"
+                     Appearance="SUIStatAppearance.Gradient" Sparkline="@Spark(queue.EnteredByHour)" />
+            <SUIStat Value="@queue.Answered.ToString()" Label="@Text["Answered"]" Icon="check-circle" ColorValue="SUIColor.Success"
+                     Appearance="SUIStatAppearance.Soft" Caption="@Percent(queue.AnswerRate)" Sparkline="@Spark(queue.AnsweredByHour)" />
+            <SUIStat Value="@queue.Abandoned.ToString()" Label="@Text["Abandoned"]" Icon="x" ColorValue="SUIColor.Error"
+                     Appearance="SUIStatAppearance.Soft" Sparkline="@Spark(queue.AbandonedByHour)" />
+            <SUIStat Value="@Duration(queue.AverageWait)" Label="@Text["Average wait"]" Icon="clock" ColorValue="SUIColor.Secondary" />
+            <SUIStat Value="@Detail.Members.Count(m => m.Answered > 0).ToString()" Unit="@("/" + Detail.Members.Length)" Label="@Text["Extensions that answered"]"
+                     Icon="users" ColorValue="SUIColor.Primary" Appearance="SUIStatAppearance.Image" />
         </div>
         @if (active.Length > 0)
         {
@@ -369,6 +372,8 @@
     private string Started => Reply is null ? "" : DateTimeOffset.FromUnixTimeMilliseconds(Reply.StartedAtMs).ToLocalTime().ToString("g", Text.Culture);
     private string QueueLabel(DistributionQueue queue) => queue.Label + (Queues.Select(q => q.Node).Distinct().Count() > 1 ? " · " + queue.Node : "");
     private string WindowLabel(int hours) => hours == 1 ? Text["This hour"] : Text.Format("Last {0} h", hours);
+    /// <summary>Hourly series for a stat sparkline; hidden for one-bucket windows.</summary>
+    private static IReadOnlyList<double>? Spark(long[] hours) => hours.Length >= 2 && hours.Any(h => h > 0) ? hours.Select(h => (double)h).ToArray() : null;
     private static string Css(double value) => Math.Clamp(value, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static string Percent(double? value) => value is { } v ? $"{v * 100:0}%" : "—";
     private static string Duration(long? seconds) => seconds switch { null => "—", < 60 => $"{seconds} s", _ => $"{seconds / 60} min {seconds % 60:00} s" };
