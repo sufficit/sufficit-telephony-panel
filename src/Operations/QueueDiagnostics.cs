@@ -9,6 +9,10 @@ public sealed record QueueDiagnosticCall(Guid VisitId, Guid QueueId, string Chan
 public sealed record QueueDiagnosticCalls(Guid ContextId, Guid NodeId, QueueDiagnosticCall[] Items, string? NextCursor);
 public sealed record QueueDiagnosticQueueReport(Guid QueueId, long Entered, long Answered, long Abandoned, long TimedOut, decimal? AverageWaitSeconds, long AnsweredWithinSla, int SlaSeconds);
 public sealed record QueueDiagnosticReport(Guid ContextId, Guid NodeId, QueueDiagnosticQueueReport[] Items);
+/// <summary>Work shift report (sufficit-ari /report/shift, 0.20.14+): per local day and queue, plus answered per extension.</summary>
+public sealed record QueueShiftDay(DateOnly Date, Guid QueueId, long Entered, long Answered, long Abandoned, long TimedOut, decimal? AverageWaitSeconds, long AnsweredWithinSla);
+public sealed record QueueShiftExtension(Guid QueueId, string Extension, long Answered);
+public sealed record QueueShiftReport(Guid ContextId, Guid NodeId, int SlaSeconds, QueueShiftDay[] Days, QueueShiftExtension[] Extensions);
 public sealed record QueueConfigurationMember(string Extension, string? Title, int Penalty, bool Paused, bool Enabled, bool LoggedIn, bool Dynamic, int DispatchOrder);
 public sealed record QueuePenaltyStep(int AfterSeconds, int MaxPenalty);
 public sealed record QueueConfigurationItem(string QueueId, string Title, bool Enabled, int MaxWaiting, int MaxWaitSeconds, string Strategy,
@@ -23,7 +27,7 @@ public sealed class QueueDiagnosticsReader(QueueBoardReader sources, IHttpClient
     public async Task<T> Read<T>(Guid context, Guid node, string endpoint, CancellationToken ct) where T : class
     {
         var source = sources.DiagnosticSource(context, node) ?? throw new InvalidOperationException("Diagnostic source is not configured.");
-        if (endpoint.Length > 512 || !System.Text.RegularExpressions.Regex.IsMatch(endpoint, "^(calls(/[a-f0-9]{32}/events)?|report|configuration)(\\?.*)?$")) throw new ArgumentException("Invalid diagnostic route.");
+        if (endpoint.Length > 512 || !System.Text.RegularExpressions.Regex.IsMatch(endpoint, "^(calls(/[a-f0-9]{32}/events)?|report(/shift)?|configuration)(\\?.*)?$")) throw new ArgumentException("Invalid diagnostic route.");
         var key = $"{context:N}:{node:N}:{endpoint}";
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct); budget.CancelAfter(TimeSpan.FromSeconds(5));
         await gate.WaitAsync(budget.Token);
@@ -68,6 +72,10 @@ public sealed class QueueDiagnosticsReader(QueueBoardReader sources, IHttpClient
             (i.Members is null || i.Members.Length <= 500 && i.Members.All(m => m is not null && m.Extension is { Length: > 0 and <= 128 } && (m.Title?.Length ?? 0) <= 256 && m.Penalty >= 0))),
         QueueDiagnosticReport r => r.ContextId == context && r.NodeId == node && r.Items is { Length: <= 2000 } &&
             r.Items.All(i => i is not null && i.QueueId != Guid.Empty && i.Entered >= 0 && i.Answered >= 0 && i.Answered <= i.Entered && i.AnsweredWithinSla>=0 && i.AnsweredWithinSla <= i.Answered && i.Abandoned>=0 && i.Abandoned<=i.Entered && i.TimedOut>=0 && i.TimedOut<=i.Entered && (i.AverageWaitSeconds is null || i.AverageWaitSeconds>=0) && i.SlaSeconds is >=1 and <=300),
+        QueueShiftReport r => r.ContextId == context && r.NodeId == node && r.SlaSeconds is >= 1 and <= 300 && r.Days is { Length: <= 20000 } && r.Extensions is { Length: <= 20000 } &&
+            r.Days.All(d => d is not null && d.QueueId != Guid.Empty && d.Entered >= 0 && d.Answered >= 0 && d.Answered <= d.Entered && d.Abandoned >= 0 && d.Abandoned <= d.Entered &&
+                d.TimedOut >= 0 && d.TimedOut <= d.Entered && d.AnsweredWithinSla >= 0 && d.AnsweredWithinSla <= d.Answered && (d.AverageWaitSeconds is null || d.AverageWaitSeconds >= 0)) &&
+            r.Extensions.All(e => e is not null && e.QueueId != Guid.Empty && e.Extension is { Length: > 0 and <= 128 } && e.Answered >= 0),
         _ => false
     };
     public void Dispose() => gate.Dispose();

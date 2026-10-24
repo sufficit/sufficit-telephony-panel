@@ -9,6 +9,14 @@ static class QueueDiagnosticChecks
         check(!QueueDiagnosticsReader.Valid(eventPage with {ContextId=Guid.NewGuid()},context,node),"Diagnostic history never crosses tenant");
         check(!QueueDiagnosticsReader.Valid(eventPage with {NodeId=Guid.NewGuid()},context,node),"Diagnostic history never crosses node");
         check(!QueueDiagnosticsReader.Valid(eventPage with {Items=Enumerable.Repeat(eventPage.Items[0],101).ToArray()},context,node),"Diagnostic page has at most 100 events");
+        var shift=new QueueShiftReport(context,node,20,[new(new DateOnly(2026,10,23),Guid.NewGuid(),10,8,1,1,12.5m,7)],[new(Guid.NewGuid(),"6004",5)]);
+        check(QueueDiagnosticsReader.Valid(shift,context,node),"Shift report accepted for exact tenant/node");
+        check(!QueueDiagnosticsReader.Valid(shift with {ContextId=Guid.NewGuid()},context,node),"Shift report never crosses tenant");
+        check(!QueueDiagnosticsReader.Valid(shift with {Days=[shift.Days[0] with {Answered=11}]},context,node),"Shift report rejects answered above entered");
+        var shiftJson=System.Text.Json.JsonSerializer.Serialize(new{contextId=context,nodeId=node,window=new{start="08:00:00",weekdays=new[]{1,2}},slaSeconds=20,
+            days=new[]{new{date="2026-10-23",queueId=Guid.NewGuid(),entered=3,answered=2,abandoned=1,timedOut=0,averageWaitSeconds=(decimal?)9.5m,answeredWithinSla=2}},extensions=Array.Empty<object>()});
+        var parsed=System.Text.Json.JsonSerializer.Deserialize<QueueShiftReport>(shiftJson,new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        check(parsed is {Days.Length:1} && parsed.Days[0].Date==new DateOnly(2026,10,23) && QueueDiagnosticsReader.Valid(parsed,context,node),"Controller shift JSON parses (extra window field ignored)");
         var queues=Enumerable.Range(0,1000).Select(_=>new QueueBoardQueue(Guid.NewGuid().ToString("N"),"Synthetic",0,100,null)).ToArray();
         var visits=Enumerable.Range(0,5000).Select(i=>new QueueBoardVisit(Guid.NewGuid().ToString("N"),queues[i%queues.Length].QueueId,"waiting",DateTimeOffset.UtcNow)).ToArray();
         var snapshot=new QueueBoardSnapshot(context.ToString("N"),node.ToString("N"),DateTimeOffset.UtcNow,true,false,queues,visits);
