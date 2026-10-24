@@ -120,6 +120,36 @@
             </section>
         }
 
+        @if (ShiftViews.Length > 0)
+        {
+            <section class="shifts" aria-label="@Text["Work shifts"]">
+                @foreach (var view in ShiftViews)
+                {
+                    var maxDay = Math.Max(1, view.Days.Select(d => d.Entered).DefaultIfEmpty(0).Max());
+                    <article class="shift @(view.Current ? "current" : "")" title="@($"{view.Shift.Name} · {view.Shift.Start}–{view.Shift.End} · {string.Join(' ', view.Shift.Weekdays.Select(d => Text[DayNames[d]]))}")">
+                        <header>
+                            @if (view.Current) { <span class="live-dot" aria-hidden="true"></span> }
+                            <b>@view.Shift.Name</b>
+                            <span class="muted">@view.Shift.Start–@view.Shift.End</span>
+                            @if (view.Current) { <span class="shift-now">@Text["now"]</span> }
+                            else if (!view.IsToday) { <span class="shift-when muted">@(view.ShownDate is { } shown ? Text[DayNames[(int)shown.DayOfWeek]] + " " + shown.ToString("dd/MM") : Text["not today"])</span> }
+                        </header>
+                        <div class="shift-figures">
+                            <span><b>@view.Entered</b> <small>@Text["received"]</small></span>
+                            <span class="@(view.AnswerRate is < 0.8 ? "warn" : "")"><b>@Percent(view.AnswerRate)</b> <small>@Text["answered"]</small></span>
+                            <span class="@(view.SlaRate is < 0.8 ? "warn" : "")"><b>@Percent(view.SlaRate)</b> <small>@Text["in SLA"]</small></span>
+                        </div>
+                        <div class="shift-days" aria-label="@Text["Calls received per day in this shift"]">
+                            @foreach (var d in view.Days.TakeLast(7))
+                            { <span class="@(view.ShownDate == d.Date ? "today" : "")" style="height:@Css(100.0 * d.Entered / maxDay)%" title="@($"{d.Date:dd/MM} · {d.Entered} {Text["received"]} · {d.Answered} {Text["answered"]}")"></span> }
+                        </div>
+                        @if (view.TopExtensions.Length > 0)
+                        { <footer class="muted">@Text["Most answered (7 days)"]: @string.Join(" · ", view.TopExtensions.Select(e => $"{QueueDistributionView.Extension(e.Extension)} ({e.Answered})"))</footer> }
+                    </article>
+                }
+            </section>
+        }
+
         <figure class="hours" aria-label="@Text["Calls per hour"]">
             <figcaption>@Text["Calls per hour"]</figcaption>
             @{
@@ -134,7 +164,8 @@
                     var entered = day.EnteredByHour[i]; var answered = day.AnsweredByHour[i]; var abandoned = day.AbandonedByHour[i];
                     var other = Math.Max(0, entered - answered - abandoned);
                     var isNow = i == day.EnteredByHour.Length - 1;
-                    var outside = false;
+                    // Hours outside every configured shift are dimmed (calls there are out of shift).
+                    var outside = ShiftViews.Length > 0 && !ShiftViews.Any(v => v.Shift.Contains(starts[i].AddMinutes(30), out _));
                     <div class="hour @(isNow ? "now" : "") @(outside ? "outside" : "") @(entered == 0 ? "empty" : "") @(entered == maxHour && entered > 0 ? "peak" : "")" style="--i:@i"
                          title="@($"{starts[i]:HH}h · {entered} {Text["received"]} · {answered} {Text["answered"]} · {abandoned} {Text["abandoned"]}")">
                         @if (entered > 0) { <span class="hour-count">@entered</span> }
@@ -262,6 +293,8 @@
     private DistributionDetail? Detail;
     private string SelectedKey = "", LoadedContext = "", ActiveKey = "";
     private QueueConfigurationItem? Config;
+    private QueueShiftView[] ShiftViews = [];
+    private static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     private QueueConfigurationMember? ConfigMember(string extension) => Config?.Members?.FirstOrDefault(m => m.Extension == extension);
     private string MemberFlags(QueueConfigurationMember m) => string.Join(" · ", new[]
     {
@@ -321,7 +354,7 @@
         {
             var context = Guid.TryParse(Context, out var id) ? id : (Guid?)null;
             var requested = Context;
-            if (Demo) Reply = QueueDistributionView.Filter(QueueDistributionFixture.Create(DateTimeOffset.UtcNow), NodeFilter, Search.Trim());
+            if (Demo) { Reply = QueueDistributionView.Filter(QueueDistributionFixture.Create(DateTimeOffset.UtcNow), NodeFilter, Search.Trim()); ShiftViews = QueueDistributionFixture.Shifts(DateTimeOffset.UtcNow); }
             else if (!Access.Enabled) { Error = "Queue distribution is not configured on this server."; return; }
             else
             {
@@ -342,6 +375,9 @@
                 if (top.Split('|', 2) is [var node, var queue] && Guid.TryParseExact(queue, "N", out _)
                     && summary.Queues.FirstOrDefault(q => q.Node == node && q.Queue == queue) is { } stat && Guid.TryParse(stat.Account, out var owner))
                     Config = await Access.Configuration(owner, node, queue, Lifetime.Token);
+                ShiftViews = Config?.Shifts is { Length: > 0 } shifts && top.Split('|', 2) is [var shiftNode, var shiftQueue]
+                    && summary.Queues.FirstOrDefault(q => q.Node == shiftNode && q.Queue == shiftQueue) is { } owned && Guid.TryParse(owned.Account, out var shiftOwner)
+                    ? await Access.Shifts(shiftOwner, shiftNode, shiftQueue, shifts, Lifetime.Token) : [];
             }
             LoadedContext = requested; LoadedKey = FilterKey;
             Error = null;

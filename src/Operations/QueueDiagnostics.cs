@@ -16,7 +16,7 @@ public sealed record QueueShiftReport(Guid ContextId, Guid NodeId, int SlaSecond
 public sealed record QueueConfigurationMember(string Extension, string? Title, int Penalty, bool Paused, bool Enabled, bool LoggedIn, bool Dynamic, int DispatchOrder);
 public sealed record QueuePenaltyStep(int AfterSeconds, int MaxPenalty);
 public sealed record QueueConfigurationItem(string QueueId, string Title, bool Enabled, int MaxWaiting, int MaxWaitSeconds, string Strategy,
-    int GroupSize, int AgentTimeoutSeconds, int MaxPenalty, QueuePenaltyStep[]? PenaltySteps, QueueConfigurationMember[]? Members);
+    int GroupSize, int AgentTimeoutSeconds, int MaxPenalty, QueuePenaltyStep[]? PenaltySteps, QueueConfigurationMember[]? Members, QueueConfigShift[]? Shifts = null);
 public sealed record QueueConfigurationSet(Guid ContextId, Guid NodeId, QueueConfigurationItem[] Items);
 
 /// <summary>Server-only bounded, shared single-flight history cache. No polling per call or row.</summary>
@@ -69,7 +69,8 @@ public sealed class QueueDiagnosticsReader(QueueBoardReader sources, IHttpClient
         QueueConfigurationSet c => c.ContextId == context && c.NodeId == node && c.Items is { Length: <= 500 } && c.Items.All(i => i is not null &&
             Guid.TryParseExact(i.QueueId, "N", out _) && i.Title is { Length: <= 256 } && i.Strategy is { Length: > 0 and <= 32 } &&
             i.MaxWaiting >= 0 && i.GroupSize >= 0 && i.AgentTimeoutSeconds >= 0 && i.MaxPenalty >= 0 && (i.PenaltySteps?.Length ?? 0) <= 50 &&
-            (i.Members is null || i.Members.Length <= 500 && i.Members.All(m => m is not null && m.Extension is { Length: > 0 and <= 128 } && (m.Title?.Length ?? 0) <= 256 && m.Penalty >= 0))),
+            (i.Members is null || i.Members.Length <= 500 && i.Members.All(m => m is not null && m.Extension is { Length: > 0 and <= 128 } && (m.Title?.Length ?? 0) <= 256 && m.Penalty >= 0)) &&
+            (i.Shifts is null || i.Shifts.Length <= 12 && i.Shifts.All(x => x is not null && x.IsValid()))),
         QueueDiagnosticReport r => r.ContextId == context && r.NodeId == node && r.Items is { Length: <= 2000 } &&
             r.Items.All(i => i is not null && i.QueueId != Guid.Empty && i.Entered >= 0 && i.Answered >= 0 && i.Answered <= i.Entered && i.AnsweredWithinSla>=0 && i.AnsweredWithinSla <= i.Answered && i.Abandoned>=0 && i.Abandoned<=i.Entered && i.TimedOut>=0 && i.TimedOut<=i.Entered && (i.AverageWaitSeconds is null || i.AverageWaitSeconds>=0) && i.SlaSeconds is >=1 and <=300),
         QueueShiftReport r => r.ContextId == context && r.NodeId == node && r.SlaSeconds is >= 1 and <= 300 && r.Days is { Length: <= 20000 } && r.Extensions is { Length: <= 20000 } &&

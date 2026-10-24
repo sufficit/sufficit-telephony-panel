@@ -696,5 +696,17 @@
   "Busy (another call or rejected)": "Ocupado (em outra ligação ou recusou)",
   "Unavailable (offline)": "Indisponível (desconectado)",
   "busy": "ocupado",
-  "{0}: offered {1} calls, answered {2}, not answered {3}, busy {4}, unavailable {5}, others answered {6}": "{0}: recebeu {1} chamadas, atendeu {2}, não atendeu {3}, ocupado {4}, indisponível {5}, outro atendeu {6}"
+  "{0}: offered {1} calls, answered {2}, not answered {3}, busy {4}, unavailable {5}, others answered {6}": "{0}: recebeu {1} chamadas, atendeu {2}, não atendeu {3}, ocupado {4}, indisponível {5}, outro atendeu {6}",
+  "Work shifts": "Turnos de trabalho",
+  "in SLA": "no SLA",
+  "Calls received per day in this shift": "Chamadas recebidas por dia neste turno",
+  "Most answered (7 days)": "Mais atenderam (7 dias)",
+  "Sun": "Dom",
+  "Mon": "Seg",
+  "Tue": "Ter",
+  "Wed": "Qua",
+  "Thu": "Qui",
+  "Fri": "Sex",
+  "Sat": "Sáb",
+  "not today": "não roda hoje"
 }

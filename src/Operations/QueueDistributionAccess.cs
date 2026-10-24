@@ -85,4 +85,27 @@ public sealed class QueueDistributionAccess(PanelAccess access, SharedTelemetry 
         // Older controllers (before 0.20.9) refuse the route: the panel simply shows no configuration.
         catch (Exception e) when (e is InvalidOperationException or HttpRequestException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException) { return null; }
     }
+
+    /// <summary>Per-shift metrics of a Queue controller queue (sufficit-ari /report/shift, last seven days); empty when unavailable.</summary>
+    public async Task<QueueShiftView[]> Shifts(Guid context, string node, string queueId, IReadOnlyList<QueueConfigShift> shifts, CancellationToken ct)
+    {
+        if (queueBoard is null || shifts.Count == 0 || !Guid.TryParseExact(queueId, "N", out var queue)) return [];
+        var now = DateTimeOffset.UtcNow;
+        try
+        {
+            var source = (await queueBoard.Read(context, ct)).FirstOrDefault(s => s.Node == node && s.NodeId != Guid.Empty);
+            if (source is null) return [];
+            var views = new List<QueueShiftView>(shifts.Count);
+            foreach (var shift in shifts.Take(12))
+            {
+                QueueShiftReport? report = null;
+                // Before sufficit-ari 0.20.14 the route is refused: the shift still shows, without numbers.
+                try { report = await queueBoard.Diagnostic<QueueShiftReport>(context, source.NodeId, shift.ReportQuery(), ct); }
+                catch (Exception e) when (e is InvalidOperationException or HttpRequestException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException) { }
+                views.Add(QueueShiftView.Build(shift, report, queue, now));
+            }
+            return [.. views];
+        }
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or UnauthorizedAccessException) { return []; }
+    }
 }

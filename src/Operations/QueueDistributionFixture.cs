@@ -68,5 +68,21 @@ public static class QueueDistributionFixture
             live.Attempts.Add(new CallAttempt { Interface = $"Local/000736{ext}@from-queue/n", Name = "Ramal " + ext, CalledMs = now.AddSeconds(-30).ToUnixTimeMilliseconds(), Outcome = outcome });
         reply.Calls.Insert(0, live);
         return reply;
+        }
+
+    /// <summary>Synthetic work shifts (preview only): morning and afternoon on weekdays, Saturday morning.</summary>
+    public static QueueShiftView[] Shifts(DateTimeOffset now)
+    {
+        var queue = Guid.Parse("7f2c1d4e-0b6a-4f4e-9c51-2a9b8e1d3c07");
+        QueueConfigShift[] shifts = [new("Manhã", "08:00", "14:00", [1, 2, 3, 4, 5]), new("Tarde", "14:00", "20:00", [1, 2, 3, 4, 5]), new("Sábado", "08:00", "12:00", [6])];
+        return shifts.Select((shift, n) =>
+        {
+            var days = Enumerable.Range(0, 7).Select(i => DateOnly.FromDateTime(now.ToOffset(TimeSpan.FromMinutes(-180)).DateTime).AddDays(i - 6))
+                .Where(d => shift.Weekdays.Contains((int)d.DayOfWeek))
+                .Select((d, i) => { long entered = 18 + (i * 7 + n * 5) % 14 - n * 4; var answered = entered - 1 - (i + n) % 3;
+                    return new QueueShiftDay(d, queue, entered, answered, entered - answered, 0, 14 + (i * 3) % 11, answered - (i + n) % 4); }).ToArray();
+            var report = new QueueShiftReport(Context, Guid.Empty, 20, days, [new(queue, "6004", 41 - n * 9), new(queue, "6008", 33 - n * 7), new(queue, "6007", 21 - n * 5)]);
+            return QueueShiftView.Build(shift, report, queue, now);
+        }).ToArray();
     }
 }
