@@ -9,7 +9,7 @@
     "resources": [
       "SufficitEndpointsIntrospection",
       "https://endpoints.sufficit.com.br/mcp",
-      "sufficit_cloud_mobile_api"
+      "sufficit-cloud-mobile-api"
     ]
   }],
   "clients": [{
