@@ -29,6 +29,11 @@ static class QueueDiagnosticChecks
         check(QueueShiftView.Build(morning,null,shiftQueue,friday).Entered==0,"Shift without report still renders with zero");
         var saturday=QueueShiftView.Build(morning,shiftReport,shiftQueue,new DateTimeOffset(2026,10,24,15,0,0,TimeSpan.Zero));
         check(!saturday.IsToday&&saturday.ShownDate==new DateOnly(2026,10,23)&&saturday.Entered==20,"Shift that does not run today shows its last run with the date");
+        var callAt=new DateTimeOffset(2026,10,23,11,30,0,TimeSpan.Zero); // Fri 08:30 local
+        DistributionCall Call(DateTimeOffset at,string outcome)=>new("x","1",at,outcome,1,[]);
+        var outsideCalls=OutOfShiftCalls.Count([Call(callAt,"answered"),Call(callAt.AddHours(10),"abandoned"),Call(callAt.AddHours(11),"answered")],[morning]);
+        check(outsideCalls==new OutOfShiftCalls(2,1,1),"Out-of-shift calls counted with outcome split");
+        check(OutOfShiftCalls.Count([Call(callAt,"answered")],[]).Calls==0,"No shifts configured means no out-of-shift count");
         check(morning.ReportQuery()=="report/shift?start=08:00&end=14:00&days=1,2,3,4,5&offset=-180","Shift report query matches controller parameters");
         var queues=Enumerable.Range(0,1000).Select(_=>new QueueBoardQueue(Guid.NewGuid().ToString("N"),"Synthetic",0,100,null)).ToArray();
         var visits=Enumerable.Range(0,5000).Select(i=>new QueueBoardVisit(Guid.NewGuid().ToString("N"),queues[i%queues.Length].QueueId,"waiting",DateTimeOffset.UtcNow)).ToArray();

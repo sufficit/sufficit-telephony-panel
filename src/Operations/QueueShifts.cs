@@ -53,3 +53,14 @@ public sealed record QueueShiftView(QueueConfigShift Shift, bool Current, QueueS
             runsToday ? today : shown?.Date, runsToday);
     }
 }
+
+/// <summary>Calls of the selected period that entered when no shift was running (uncovered hours on the wall screen).</summary>
+public sealed record OutOfShiftCalls(long Calls, long Answered, long Abandoned)
+{
+    public static OutOfShiftCalls Count(IEnumerable<DistributionCall> calls, IReadOnlyList<QueueConfigShift> shifts)
+    {
+        if (shifts.Count == 0) return new(0, 0, 0);
+        var outside = calls.Where(c => !shifts.Any(s => s.Contains(c.EnteredAt, out _))).ToArray();
+        return new(outside.Length, outside.LongCount(c => c.Outcome == "answered"), outside.LongCount(c => c.Outcome == "abandoned"));
+    }
+}

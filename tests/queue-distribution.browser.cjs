@@ -24,7 +24,8 @@ const { chromium } = require('playwright');
         throw new Error('other queues still visible while a queue is chosen');
       if (await section.locator('.member').count() !== 6) throw new Error('six members expected');
       // Work shifts (configured in Blazor): one tile per shift, at most one current, out-of-shift hours dimmed.
-      if (await section.locator('.shift').count() !== 3) throw new Error('three shift tiles expected');
+      if (await section.locator('.shift:not(.outside)').count() !== 3) throw new Error('three shift tiles expected');
+      if (await section.locator('.shift.outside').count() !== 1) throw new Error('one out-of-shift tile expected');
       if (await section.locator('.shift.current').count() > 1) throw new Error('at most one current shift');
       if (w === 1400) await page.screenshot({ path: '/tmp/panel-shifts.png', fullPage: true });
       if (await section.locator('.hour').count() !== 24) throw new Error('24 hourly bars by default');

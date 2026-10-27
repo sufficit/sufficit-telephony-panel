@@ -147,6 +147,15 @@
                         { <footer class="muted">@Text["Most answered (7 days)"]: @string.Join(" · ", view.TopExtensions.Select(e => $"{QueueDistributionView.Extension(e.Extension)} ({e.Answered})"))</footer> }
                     </article>
                 }
+                @{ var outside = OutOfShiftCalls.Count(Detail.Calls, ShiftViews.Select(v => v.Shift).ToArray()); }
+                <article class="shift outside @(outside.Calls > 0 ? "has-calls" : "")" title="@Text["Calls of the selected period that arrived when no shift was running."]">
+                    <header><b>@Text["Out of shift"]</b><span class="muted">@WindowLabel(Window)</span></header>
+                    <div class="shift-figures">
+                        <span class="@(outside.Calls > 0 ? "warn" : "")"><b>@outside.Calls</b> <small>@Text["received"]</small></span>
+                        <span><b>@outside.Answered</b> <small>@Text["answered"]</small></span>
+                        <span class="@(outside.Abandoned > 0 ? "warn" : "")"><b>@outside.Abandoned</b> <small>@Text["abandoned"]</small></span>
+                    </div>
+                </article>
             </section>
         }
 

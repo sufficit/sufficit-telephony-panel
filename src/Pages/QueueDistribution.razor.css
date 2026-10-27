@@ -135,7 +135,7 @@
 /* Work shifts (configured in Blazor): one compact tile per shift, the current one marked like a live call.
    Seven-day mini bars reuse the hour-bar language (slim, translucent, today solid). No hover lift. */
 .shifts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .6rem; margin: .4rem 0 .8rem; }
-.shift { display: grid; gap: .35rem; padding: .6rem .75rem; border-radius: .6rem; border: 1px solid color-mix(in srgb, var(--sui-color-text-primary, #1f2937) 10%, transparent);
+.shift { display: grid; align-content: start; gap: .35rem; padding: .6rem .75rem; border-radius: .6rem; border: 1px solid color-mix(in srgb, var(--sui-color-text-primary, #1f2937) 10%, transparent);
     background: color-mix(in srgb, var(--sui-color-surface, #ffffff) 92%, var(--sui-color-info, #0ea5e9) 8%); animation: row-in .3s ease-out both; }
 .shift.current { border-color: color-mix(in srgb, var(--sui-color-primary, #2563eb) 55%, transparent); box-shadow: inset 3px 0 0 var(--sui-color-primary, #2563eb); }
 .shift header { display: flex; align-items: baseline; gap: .4rem; flex-wrap: wrap; }
@@ -149,6 +149,8 @@
 .shift-days { display: flex; align-items: flex-end; gap: 3px; height: 1.6rem; }
 .shift-days span { flex: 1 1 0; max-width: 14px; min-height: 2px; border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--sui-color-info, #0ea5e9) 35%, transparent); transform-origin: bottom; animation: bar-grow .4s ease-out both; }
 .shift-days span.today { background: var(--sui-color-info, #0ea5e9); }
+.shift.outside { background: color-mix(in srgb, var(--sui-color-surface, #ffffff) 94%, var(--sui-color-warning, #d97706) 6%); }
+.shift.outside.has-calls { border-color: color-mix(in srgb, var(--sui-color-warning, #d97706) 45%, transparent); }
 .shift footer { font-size: .72rem; border: 0; padding: 0; margin: 0; }
 .shift-when { margin-left: auto; font-size: .72rem; }
 @media (prefers-reduced-motion: reduce) { .shift, .shift-days span, .shift .live-dot { animation: none; } }

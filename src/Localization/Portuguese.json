@@ -708,5 +708,7 @@
   "Thu": "Qui",
   "Fri": "Sex",
   "Sat": "Sáb",
-  "not today": "não roda hoje"
+  "not today": "não roda hoje",
+  "Out of shift": "Fora de turno",
+  "Calls of the selected period that arrived when no shift was running.": "Chamadas do período escolhido que chegaram quando nenhum turno estava em andamento."
 }
