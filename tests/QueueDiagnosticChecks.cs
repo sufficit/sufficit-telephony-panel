@@ -13,6 +13,7 @@ static class QueueDiagnosticChecks
         check(QueueDiagnosticsReader.Valid(shift,context,node),"Shift report accepted for exact tenant/node");
         check(!QueueDiagnosticsReader.Valid(shift with {ContextId=Guid.NewGuid()},context,node),"Shift report never crosses tenant");
         check(!QueueDiagnosticsReader.Valid(shift with {Days=[shift.Days[0] with {Answered=11}]},context,node),"Shift report rejects answered above entered");
+        check(QueueDiagnosticsReader.Valid(shift with {Days=[shift.Days[0] with {OfferedExtensions=4}]},context,node) && !QueueDiagnosticsReader.Valid(shift with {Days=[shift.Days[0] with {OfferedExtensions=-1}]},context,node),"Shift coverage accepted when present and non-negative");
         var shiftJson=System.Text.Json.JsonSerializer.Serialize(new{contextId=context,nodeId=node,window=new{start="08:00:00",weekdays=new[]{1,2}},slaSeconds=20,
             days=new[]{new{date="2026-10-23",queueId=Guid.NewGuid(),entered=3,answered=2,abandoned=1,timedOut=0,averageWaitSeconds=(decimal?)9.5m,answeredWithinSla=2}},extensions=Array.Empty<object>()});
         var parsed=System.Text.Json.JsonSerializer.Deserialize<QueueShiftReport>(shiftJson,new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));

@@ -138,6 +138,9 @@
                             <span><b>@view.Entered</b> <small>@Text["received"]</small></span>
                             <span class="@(view.AnswerRate is < 0.8 ? "warn" : "")"><b>@Percent(view.AnswerRate)</b> <small>@Text["answered"]</small></span>
                             <span class="@(view.SlaRate is < 0.8 ? "warn" : "")"><b>@Percent(view.SlaRate)</b> <small>@Text["in SLA"]</small></span>
+                            @* Coverage proxy (sufficit-ari 0.20.20+): distinct extensions offered calls in this shift day. *@
+                            @if (view.Today?.OfferedExtensions is { } offeredExtensions)
+                            { <span title="@Text["Extensions that were offered calls in this shift (presence history is not stored)."]"><b>@offeredExtensions</b>@(Config?.Members is { Length: > 0 } members ? "/" + members.Length : "") <small>@Text["extensions engaged"]</small></span> }
                         </div>
                         <div class="shift-days" aria-label="@Text["Calls received per day in this shift"]">
                             @foreach (var d in view.Days.TakeLast(7))

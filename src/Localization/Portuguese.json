@@ -710,5 +710,7 @@
   "Sat": "Sáb",
   "not today": "não roda hoje",
   "Out of shift": "Fora de turno",
-  "Calls of the selected period that arrived when no shift was running.": "Chamadas do período escolhido que chegaram quando nenhum turno estava em andamento."
+  "Calls of the selected period that arrived when no shift was running.": "Chamadas do período escolhido que chegaram quando nenhum turno estava em andamento.",
+  "extensions engaged": "ramais acionados",
+  "Extensions that were offered calls in this shift (presence history is not stored).": "Ramais que receberam oferta de chamada neste turno (o histórico de presença não é guardado)."
 }
