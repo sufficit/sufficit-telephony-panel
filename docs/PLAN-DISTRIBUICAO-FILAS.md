@@ -35,6 +35,8 @@ Pedido do usuário em 22/10/2026: configuração na fila para horários e turnos
 9. [a fazer, no sufficit-blazor: relatório é gestão, não monitoramento] Relatórios: exportar por turno e período (CSV) e resumo diário opcional.
 10. [a fazer, decisão do dono 29/10/2026] Feriados em três camadas: **nacional** + **regional** (estado e município) + **por cliente**, somadas. Regras calculadas por ano, não gravadas ano a ano: data fixa (dia/mês), móvel pela Páscoa (Carnaval −48/−47, Paixão −2, Corpus Christi +60) e data única (fechamento do cliente, ponto facultativo). O cliente escolhe a região da empresa (com troca por fila, se precisar), pode desligar um feriado herdado e cadastrar os seus no **sufficit-blazor**. Voz não depende de banco: catálogo nacional e regional versionado em código, e os feriados do cliente chegam ao controlador junto com as opções da fila, com cópia local. Uso: turno não vale em feriado (ou vale um turno especial), o painel marca o dia e o tira das comparações, e depois as condições de horário. Substitui o catálogo legado `dbvoiprt.suff_intervalo` (6 entradas "nacionais" em 29/10: falta a maioria; "São Sebastião do Rio de Janeiro" é municipal; "Paixão de Cristo" está fixa em 30/03, mas é móvel).
 
+Fora do escopo do painel (dono, 29/10/2026): escolher quais ramais atendem em cada turno é opção da **fila** (sufficit-ari `QueueOptions` + editor no sufficit-blazor), não da condição de horário nem do painel. O painel só mede a cobertura (ramais acionados no turno).
+
 Aceite da fase 2: o cliente cria os turnos da própria fila no sufficit-blazor sem suporte e vê no painel, para cada turno, quantas chamadas entraram, quem atendeu e quanto ficou sem resposta.
 
 ## Validação real (26/10/2026)
