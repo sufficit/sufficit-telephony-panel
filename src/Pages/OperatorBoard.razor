@@ -11,7 +11,7 @@
     }
     <div class="board-columns" @ref="Columns">
         <section id="board-extension-region" class="board-section" aria-labelledby="board-extensions">
-            <header class="board-section-heading"><h3 id="board-extensions">@(Central ? Text["Extensions and endpoints"] : Text["Extensions"])</h3><div class="board-heading-tools"><span>@Peers.Length</span>@HeaderTools</div></header>
+            <header class="board-section-heading"><h3 id="board-extensions">@(Central ? Text["Extensions and endpoints"] : Text["Extensions"])</h3><div class="board-heading-tools"><span class="board-totals" title="@Text["Active calls / reachable extensions / cards"]">@BoardTotals.ActiveCalls(Peers) / @BoardTotals.Reachable(Peers) / @Peers.Length</span>@HeaderTools</div></header>
             <div class="board-grid">
                 @foreach (var tile in Peers.Skip(page * Size).Take(Size)) { @TileButton(tile) }
             </div>
@@ -24,7 +24,7 @@
              title="@Text["Drag or use arrow keys to resize. Double-click or press Enter to reset."]"></div>
         <aside class="board-sidebar">
             <section id="board-trunk-region" class="board-section" aria-labelledby="board-trunks">
-                <header class="board-section-heading"><h3 id="board-trunks">@Text["Trunks"]</h3><span>@Trunks.Length</span></header>
+                <header class="board-section-heading"><h3 id="board-trunks">@Text["Trunks"]</h3><span class="board-totals" title="@Text["Active calls / trunks"]">@BoardTotals.ActiveCalls(Trunks) / @Trunks.Length</span></header>
                 <div class="board-trunks">@foreach (var tile in Trunks.Take(40)) { @TileButton(tile) }</div>
                 @if (Trunks.Length == 0) { <p class="board-empty">@Text["No trunk matches the filters. Use Configure board to classify and group trunk identifiers."]</p> }
                 @if (Trunks.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} trunks. Refine the filters.", Trunks.Length)</p> }
@@ -34,7 +34,7 @@
                  aria-valuemin="15" aria-valuemax="85" aria-valuenow="35" data-board-split="rows"
                  title="@Text["Drag or use arrow keys to resize. Double-click or press Enter to reset."]"></div>
             <section id="board-queue-region" class="board-section" aria-labelledby="board-queues">
-                <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span>@Queues.Length</span></header>
+                <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span class="board-totals" title="@Text["Calls waiting / queues"]">@BoardTotals.Waiting(Queues) / @Queues.Length</span></header>
                 <div class="board-queues">@foreach (var tile in Queues.Take(40)) { @TileButton(tile) }</div>
                 @if (Queues.Length == 0) { <p class="board-empty">@Text["No queues observed or remembered with these filters."]</p> }
                 @if (Queues.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} queues. Refine the filters.", Queues.Length)</p> }
