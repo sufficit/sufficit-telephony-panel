@@ -29,7 +29,7 @@ O filtro de empresa é montado no servidor do painel a partir das permissões at
 
 - Conta só a partir do momento em que o PABX envia os eventos `Agent*` ao usuário AMI `suffobserve`.
 - Mostra o número da fila no PABX (ex.: `0007366500`), ainda sem o nome amigável do portal.
-- Turnos e histórico longo: ver `PLAN-DISTRIBUICAO-FILAS.md` (fase 2).
+- Turnos e histórico longo: ver `activities/202611011200-plano-distribuicao-filas.md` (fase 2); histórico longo no Grafana, dashboard "Filas — histórico".
 
 ## Referências visuais (22/10/2026)
 
