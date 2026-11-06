@@ -15,4 +15,11 @@ https://lovable.dev/templates/apps/dashboards e
 https://dribbble.com/search/telecom-dashboard, sem transportar layouts analíticos
 para a mesa operacional. Não há alteração de tokens nem dependências visuais.
 A apresentação foi validada com fixtures locais; fluxo autenticado real pendente.
-Publicação pendente neste checkpoint.
+Publicado em eveo-apps na release inbound-catalogue-20261106-22bec4e,
+com troca atômica e rollback disponível para representative-queues-20261106-c76307e.
+Serviço ativo e health público https://panel.sufficit.com.br/health HTTP 200.
+SHA-256 instalado conferido: a1d06e11b61fa6becca5054f6882904a4104b085c653a56df486b3ecba572c3e.
+Implementação commit 22bec4e enviada à main. API e356766 publicada nos três apps.
+Plano concluído: investigação, implementação, testes, commit/push e publicação.
+A verificação autenticada com dados reais do cliente não foi executada nesta entrega;
+a validação visual usa fixtures e não comprova correlação de chamadas por DID/WhatsApp.
