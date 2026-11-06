@@ -13,5 +13,5 @@
     private bool Changed => NormalCaller != Caller || NormalDestination != Destination;
     private string Source => LiveProjection.Meaningful(Caller) ? NormalCaller! : Text["Source not reported"];
     private string Target => LiveProjection.Meaningful(Destination) ? NormalDestination! : Text["Destination not reported"];
-    private string Diagnostic => Text.Format("Number normalized (550800 → 55800). Original source: {0}; original destination: {1}.", LiveFormat.Display(Caller), LiveFormat.Display(Destination));
+    private string Diagnostic => Text.Format("Normalized display. Original source: {0}; original destination: {1}.", LiveFormat.Display(Caller), LiveFormat.Display(Destination));
 }

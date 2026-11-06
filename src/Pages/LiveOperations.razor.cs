@@ -507,7 +507,7 @@ public partial class LiveOperations
         var demoQuery = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
         if (demoQuery.ContainsKey("numberpreview"))
             Rows = Rows.Select(row => row.Kind is "call" or "waiting"
-                ? row with { Caller = "5508000000697", Destination = "+5508000000697" } : row).ToArray();
+                ? row with { Caller = demoQuery["numberpreview"] == "e164" ? "552140627711" : "5508000000697", Destination = demoQuery["numberpreview"] == "e164" ? "5511999999999" : "+5508000000697" } : row).ToArray();
         if (demoQuery.TryGetValue("supervisionpreview", out var supervisionScenario) && supervisionScenario == "multiple")
             Rows = Rows.Append(Rows[0] with { Id = "demo-second-call", Key = "PJSIP/6007-000000ef" }).ToArray();
         if (DemoEndpointResolution) Rows = Rows.Where(row => row.Kind is not ("call" or "waiting")).ToArray();

@@ -41,15 +41,15 @@ uma chamada real ou do acesso autenticado de um operador em produção.
 ## Normalização de 0800 e diagnóstico
 
 A mesa e os detalhes de canais apresentam `550800` seguido de exatamente sete
-algarismos ASCII como `55800` seguido dos mesmos sete algarismos. Um `+` inicial
-é preservado. Exemplo: `5508000000697` → `558000000697`. Ramais, valores incompletos,
-nomes de filas e números já corretos permanecem intactos.
+algarismos ASCII como `+55800` seguido dos mesmos sete algarismos. Um `+` inicial
+é preservado. Exemplo: `5508000000697` → `+558000000697`. Ramais, valores incompletos
+e nomes de filas permanecem intactos.
 
 A normalização é exclusivamente de apresentação: `ObservedResource.Caller`,
 `ObservedResource.Destination` e os fluxos mantêm os valores recebidos. Não altera
 correlação, autorização, roteamento, alvos de supervisão ou eventos de origem.
 O asterisco ao lado do número na mesa indica normalização; o texto acessível e o
-hover informam o diagnóstico. Ao abrir o recurso, o aviso **Número normalizado**
+hover informam o diagnóstico. Ao abrir o recurso, o aviso **Apresentação normalizada**
 mostra origem e destino originais. A tabela de canais associa esses valores ao
 servidor, canal, Linkedid e horário da última atualização observada.
 
@@ -65,3 +65,22 @@ Validação sintética: `tests/phone-number-normalization.browser.cjs`, com
 `http://127.0.0.1:5177`). O parâmetro `numberpreview` só é usado pela fixture
 Development, junto com `preview=true`. Testes C# cobrem formato estrito, `+`,
 valores ausentes, preservação dos originais e números que não devem mudar.
+
+## Prefixo + na apresentação internacional
+
+Telefones com país `55` explícito passam a mostrar `+` quando reconhecidos como:
+DDD brasileiro + fixo de oito dígitos iniciado em 2–5, DDD brasileiro + móvel de
+nove dígitos iniciado em 9, ou `800` + sete dígitos. Exemplos:
+`552140627711` → `+552140627711`, `5511999999999` → `+5511999999999`.
+
+A lista de DDD segue os [códigos nacionais da Anatel](https://www.gov.br/anatel/pt-br/regulado/numeracao/codigos-nacionais).
+O reconhecimento é sintático: não verifica se a linha está atribuída/ativa nem
+prova que a chamada veio de uma operadora. O sinal `+` ajuda a reconhecer o
+formato internacional, mas não participa da classificação interno/externo.
+
+Não se deduz país ou DDD de números locais. Identificadores de outros países sem
+`+`, códigos especiais não reconhecidos e valores ambíguos ficam como recebidos;
+valores já com `+` permanecem intactos, salvo a correção estrita de `+550800`.
+A inclusão de `+` não é classificada como falha da operadora. O aviso genérico de
+apresentação mantém os originais disponíveis para comparação e diagnóstico.
+A fixture `numberpreview=e164` cobre essa apresentação com fixo e móvel.

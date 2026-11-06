@@ -717,5 +717,5 @@
   "extensions engaged": "ramais acionados",
   "Extensions that were offered calls in this shift (presence history is not stored).": "Ramais que receberam oferta de chamada neste turno (o histórico de presença não é guardado).",
   "Number normalized; original in call details": "Número normalizado; original nos detalhes da chamada",
-  "Number normalized (550800 → 55800). Original source: {0}; original destination: {1}.": "Número normalizado (550800 → 55800). Origem original: {0}; destino original: {1}."
+  "Normalized display. Original source: {0}; original destination: {1}.": "Apresentação normalizada. Origem original: {0}; destino original: {1}."
 }
