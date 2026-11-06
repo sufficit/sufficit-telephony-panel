@@ -717,5 +717,8 @@
   "extensions engaged": "ramais acionados",
   "Extensions that were offered calls in this shift (presence history is not stored).": "Ramais que receberam oferta de chamada neste turno (o histórico de presença não é guardado).",
   "Number normalized; original in call details": "Número normalizado; original nos detalhes da chamada",
-  "Normalized display. Original source: {0}; original destination: {1}.": "Apresentação normalizada. Origem original: {0}; destino original: {1}."
+  "Normalized display. Original source: {0}; original destination: {1}.": "Apresentação normalizada. Origem original: {0}; destino original: {1}.",
+  "Account menu for {0}": "Menu da conta de {0}",
+  "Back to my account": "Voltar para minha conta",
+  "Act as a customer person…": "Entrar como pessoa do cliente…"
 }

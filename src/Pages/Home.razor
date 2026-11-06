@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider Authentication
 @inject Sufficit.Blazor.UI.Services.ISUIToast Toast
 @inject SupportChat Support
+@inject IConfiguration Configuration
 
 <PageTitle>@Text["Telephony · Sufficit Panel"]</PageTitle>
 <CascadingValue Name="PanelLanguage" Value="Text.Language">
@@ -38,8 +39,29 @@
             <SUIButton OnClick="ToggleTheme" VariantValue="SUIVariant.Text">@(Dark ? Text["Light theme"] : Text["Dark theme"])</SUIButton>
             @if (Allowed)
             {
-                @if (UserName is { Length: > 0 }) { <span class="signed-user" title="@Text.Format("Signed in as {0}", UserName)">@UserName</span> }
-                <form method="post" action="logout"><AntiforgeryToken /><button class="signout" type="submit">@Text["Sign out"]</button></form>
+                @if (UserName is { Length: > 0 } && (Manager || Impersonating))
+                {
+                    @* Account menu: managers reach "Entrar como"; an impersonated session goes back to the manager. *@
+                    <SUIMenu Label="@Text.Format("Account menu for {0}", UserName)" Class="user-menu" VariantValue="SUIVariant.Text">
+                        <Trigger><span class="signed-user" title="@Text.Format("Signed in as {0}", UserName)">@UserName ▾</span></Trigger>
+                        <ChildContent>
+                            @if (Impersonating)
+                            {
+                                <form method="post" action="impersonate/exit"><AntiforgeryToken /><button class="user-menu-item" type="submit">@Text["Back to my account"]</button></form>
+                            }
+                            else
+                            {
+                                <SUIButton VariantValue="SUIVariant.Text" Href="@ImpersonateHref" Target="_blank" Rel="noopener">@Text["Act as a customer person…"]</SUIButton>
+                            }
+                            <form method="post" action="logout"><AntiforgeryToken /><button class="user-menu-item" type="submit">@Text["Sign out"]</button></form>
+                        </ChildContent>
+                    </SUIMenu>
+                }
+                else
+                {
+                    @if (UserName is { Length: > 0 }) { <span class="signed-user" title="@Text.Format("Signed in as {0}", UserName)">@UserName</span> }
+                    <form method="post" action="logout"><AntiforgeryToken /><button class="signout" type="submit">@Text["Sign out"]</button></form>
+                }
             }
         </div>
     </header>
@@ -164,6 +186,19 @@
     private FleetSnapshot? Snapshot;
     private bool Manager;
     private string UserName = "";
+    private bool Impersonating;
+    /// <summary>"Entrar como" lives on the Blazor panel access screen of the selected customer (it lists the people).</summary>
+    private string ImpersonateHref
+    {
+        get
+        {
+            var root = (Configuration["Panel:BlazorBaseAddress"] is { Length: > 0 } b ? b : "https://blazor.sufficit.com.br").TrimEnd('/');
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+            return query.TryGetValue("contextid", out var value) && Guid.TryParse(value.ToString(), out var context) && context != Guid.Empty
+                ? $"{root}/pages/telephony/panel-access?contextid={context:D}"
+                : $"{root}/pages/telephony/customers";
+        }
+    }
     private IReadOnlyList<HistoryPoint> Points = [];
     private string? HistoryError;
     private readonly CancellationTokenSource lifetime = new();
@@ -208,6 +243,7 @@
         Preview = Environment.IsDevelopment() && Navigation.Uri.Contains("preview=true", StringComparison.Ordinal);
         Navigation.LocationChanged += AreaChanged;
         var user = (await Authentication.GetAuthenticationStateAsync()).User;
+        Impersonating = PanelImpersonation.IsImpersonating(user);
         UserName = user.FindFirst("name")?.Value ?? user.FindFirst("preferred_username")?.Value ?? user.FindFirst("email")?.Value ?? "";
         await Refresh();
         if (Allowed && Navigation.Uri.Contains("login=", StringComparison.Ordinal))

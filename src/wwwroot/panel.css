@@ -433,3 +433,9 @@ details.monitor-card[open] > summary { margin-bottom:12px; }
 .impersonation-banner form { margin: 0; }
 .impersonation-banner button { border: 1px solid rgba(255,255,255,.8); background: transparent; color: #fff; border-radius: 6px; padding: 4px 12px; font: inherit; cursor: pointer; }
 .impersonation-banner button:hover { background: rgba(255,255,255,.15); }
+
+/* Account menu (name in the header): "Entrar como", back to my account, sign out. */
+.user-menu .signed-user { cursor: pointer; }
+.user-menu-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: inherit;
+  font: inherit; padding: 8px 16px; cursor: pointer; }
+.user-menu-item:hover { background: var(--sui-surface-hover, rgba(127,127,127,.12)); }
