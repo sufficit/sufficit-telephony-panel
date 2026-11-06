@@ -15,3 +15,11 @@ A API correspondente está no commit 0f45a29 de sufficit-endpoints, com 209 test
 candidato e fechamento/carregamento de DLLs verificados.
 
 Observação autenticada do representante em produção ainda pendente.
+
+Publicado em eveo-apps: release representatives-20261106-8a97463; serviço ativo,
+health público HTTP 200 e hash instalado conferido:
+ac22ebe7ee098b225d2975aff8349f5b1fadf110510ea413f148ce2a4a7a6f77.
+API publicada antes do painel nos três apps, com a rota anônima retornando 401.
+Commit de implementação 8a97463 enviado à main. Plano encerrado após publicação.
+A conferência visual autenticada com o representante permanece a cargo do usuário;
+os testes locais verificaram a sessão e a projeção, sem usar suas credenciais.
