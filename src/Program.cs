@@ -33,7 +33,7 @@ builder.Services.AddSingleton(sp => new PanelSessions(sp.GetRequiredService<IHtt
         ? new SessionFileStore(builder.Configuration["Panel:SessionDirectory"] is { Length: > 0 } sessions ? sessions
             : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(keyDirectory).TrimEnd('/'))!, "sessions"),
             sp.GetRequiredService<IDataProtectionProvider>(), sp.GetRequiredService<TimeProvider>())
-        : null));
+        : null, sp.GetRequiredService<ILogger<PanelSessions>>()));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient("identity", client =>
 {
@@ -217,7 +217,23 @@ app.UseAuthentication();
 app.Use(async (ctx, next) =>
 {
     if (AutoSignIn.Applies(ctx.Request, ctx.User.Identity?.IsAuthenticated == true))
-    { ctx.Response.Redirect(AutoSignIn.LoginPath(ctx.Request, pathBase)); return; }
+    {
+        // A sign-in that just finished and still lands here unauthenticated would loop until Identity rate-limits
+        // (2026-11-06). Stop at the landing page instead and keep the evidence in the log.
+        if (ctx.Request.Cookies.ContainsKey(AutoSignIn.AttemptCookie))
+        {
+            ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login")
+                .LogWarning("Automatic sign-in stopped: the previous attempt did not produce a usable session");
+            ctx.Response.Redirect(pathBase + "/?login=failed");
+            return;
+        }
+        ctx.Response.Cookies.Append(AutoSignIn.AttemptCookie, "1", new CookieOptions
+        { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromSeconds(30), Path = pathBase.Length > 0 ? pathBase : "/" });
+        ctx.Response.Redirect(AutoSignIn.LoginPath(ctx.Request, pathBase)); return;
+    }
+    // A request that is authenticated clears the attempt marker, so the next expiry can sign in again.
+    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Request.Cookies.ContainsKey(AutoSignIn.AttemptCookie))
+        ctx.Response.Cookies.Delete(AutoSignIn.AttemptCookie, new CookieOptions { Path = pathBase.Length > 0 ? pathBase : "/", Secure = true });
     await next();
 });
 app.UseAuthorization();

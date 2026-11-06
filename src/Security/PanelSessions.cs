@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
@@ -8,7 +9,7 @@ using Sufficit.Identity.Authorization;
 namespace Sufficit.Telephony.Panel.Security;
 
 /// <summary>Bounded server-only ticket/token cache; browser cookies contain only a random handle.</summary>
-public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock, SessionFileStore? files = null) : ITicketStore, IDisposable
+public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock, SessionFileStore? files = null, ILogger<PanelSessions>? log = null) : ITicketStore, IDisposable
 {
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 200 });
     private readonly SemaphoreSlim gate = new(1, 1);
@@ -67,24 +68,37 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         try
         {
             var entry = Entry(key);
-            if (entry is null) return CurrentAuthorization.None;
+            if (entry is null) { log?.LogWarning("Panel session {Key} not found for subject {Subject}", Short(key), principal.FindFirstValue("sub")); return CurrentAuthorization.None; }
             var token = entry.Ticket.Properties.GetTokenValue("access_token");
             if (string.IsNullOrEmpty(token) || !DateTimeOffset.TryParse(entry.Ticket.Properties.GetTokenValue("expires_at"), out var expires)
                 || expires <= clock.GetUtcNow())
             {
                 // display sessions hold a refresh token (system user enrollment); person sessions end with their access token.
                 token = await RefreshAsync(key, entry.Ticket, ct);
-                if (token is null) { Forget(key); return CurrentAuthorization.None; }
+                if (token is null)
+                {
+                    log?.LogWarning("Panel session {Key} of {Subject} ended: access token expired at {ExpiresAt} and no renewal", Short(key),
+                        principal.FindFirstValue("sub"), entry.Ticket.Properties.GetTokenValue("expires_at"));
+                    Forget(key); return CurrentAuthorization.None;
+                }
             }
             try
             {
                 var permissions = await authorization.ReadAsync(principal.FindFirstValue("sub")!, token, ct);
-                if (!permissions.PanelAllowed) Forget(key);
+                if (!permissions.PanelAllowed)
+                {
+                    log?.LogWarning("Panel session {Key} of {Subject} ended: Identity reports no panel access", Short(key), principal.FindFirstValue("sub"));
+                    Forget(key);
+                }
                 // "Entrar como": the person's view, never listen/whisper in their name.
                 return PanelImpersonation.IsImpersonating(principal) ? permissions with { Manager = false, MonitorContexts = [] } : permissions;
             }
             catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
-            { return CurrentAuthorization.None; }
+            {
+                log?.LogWarning("Panel session {Key} of {Subject}: permission read failed ({ErrorType}: {Message})", Short(key),
+                    principal.FindFirstValue("sub"), error.GetType().Name, error.Message);
+                return CurrentAuthorization.None;
+            }
         }
         finally { gate.Release(); }
     }
@@ -102,6 +116,8 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         await RenewAsync(key, ticket);
         return renewed.Access;
     }
+
+    private static string Short(string key) => key.Length > 8 ? key[..8] : key;
 
     public void Dispose() { authorization.Dispose(); cache.Dispose(); gate.Dispose(); }
 }

@@ -10,6 +10,9 @@ namespace Sufficit.Telephony.Panel.Security;
 /// </summary>
 public static class AutoSignIn
 {
+    /// <summary>Short-lived marker of an automatic sign-in in progress; a second unauthenticated landing stops the loop.</summary>
+    public const string AttemptCookie = "__Secure-Sufficit.Telephony.Panel.SignIn";
+
     private static readonly string[] Pages = ["/", "/board", "/queues", "/infrastructure", "/mesa"];
 
     public static bool Applies(HttpRequest request, bool authenticated)
