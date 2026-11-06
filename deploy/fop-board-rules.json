@@ -28,7 +28,8 @@
         "SIP/in-dtr-162",
         "SIP/in-dtr-163",
         "SIP/in-dtr-188",
-        "SIP/in-dtr-189"
+        "SIP/in-dtr-189",
+        "PJSIP/xep-d64e8b18e42ef111aa58f26e44c3a574"
       ]
     },
     {
