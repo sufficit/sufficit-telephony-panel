@@ -7,6 +7,7 @@ using Sufficit.Telephony.Panel.Monitoring;
 var count = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); count++; }
 PhoneNumberPresentationChecks.Run(Check);
+InboundCatalogueChecks.Run(Check);
 PanelTextChecks.Run(Check);
 PanelDiagnosticChecks.Run(Check);
 SupportChatChecks.Run(Check);

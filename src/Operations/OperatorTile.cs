@@ -31,7 +31,9 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);
-    public (string Tone, string Label) Status => Remembered ? ("unknown", "Já visto · sem estado atual")
+    public (string Tone, string Label) Status => InboundCatalogueEntry.State(Keys) is { } entry
+        ? ("unknown", InboundCatalogueEntry.Label(entry))
+        : Remembered ? ("unknown", "Já visto · sem estado atual")
         : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
             : queue.Details.GetValueOrDefault("pending") != "0" || queue.Details.GetValueOrDefault("connected") != "0"
                 ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
@@ -57,7 +59,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         .Where(c => c.Kind is EventsPanelCardKind.PEER or EventsPanelCardKind.TRUNK or EventsPanelCardKind.QUEUE)
         .SelectMany(c => (byCard.TryGetValue(c, out var rows) && rows.Count > 0
             ? rows.GroupBy(r => r.Node).Select(g => (Node: g.Key, Rows: g.ToArray()))
-            : [(Node: "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
+            : [(Node: InboundCatalogueEntry.State(c.Channels) is not null ? "Entrada do cliente" : "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
             .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node
                 + (isolateContexts ? "|" + (cardContexts is not null && cardContexts.TryGetValue(c, out var context) ? context.ToString("N") : g.Rows.FirstOrDefault()?.Account) : ""),
                 c.Label, g.Node, c.Kind, g.Rows) { Keys = c.Channels.ToArray() }))

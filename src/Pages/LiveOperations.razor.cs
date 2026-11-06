@@ -512,6 +512,11 @@ public partial class LiveOperations
         if (demoQuery.TryGetValue("supervisionpreview", out var supervisionScenario) && supervisionScenario == "multiple")
             Rows = Rows.Append(Rows[0] with { Id = "demo-second-call", Key = "PJSIP/6007-000000ef" }).ToArray();
         if (DemoEndpointResolution) Rows = Rows.Where(row => row.Kind is not ("call" or "waiting")).ToArray();
+        Cards = Cards.Concat(new EventsPanelCardInfo[] {
+            new() { Label = "DID · 551140001234 · Recepção", Kind = EventsPanelCardKind.TRUNK, Channels = [$"entry:did:{tenant:N}:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:configured"] },
+            new() { Label = "DID · 551140005678 · Linha antiga", Kind = EventsPanelCardKind.TRUNK, Channels = [$"entry:did:{tenant:N}:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:expired"] },
+            new() { Label = "WhatsApp · +5511999991234 · Comercial", Kind = EventsPanelCardKind.TRUNK, Channels = [$"entry:whatsapp:{tenant:N}:{new string('c', 64)}:disabled"] }
+        }).ToArray();
         var demoObservation = AuthorizedObservation.Create(Cards, Rows, tenant);
         demoTiles = OperatorTile.Create(Cards, demoObservation.ByCard);
         // Dense operator-board fixture only: never mixed into production observations

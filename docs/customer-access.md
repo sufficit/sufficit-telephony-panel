@@ -133,3 +133,14 @@ Portfolio queue reads explicitly enumerate the authorized company set, including
 `AnyContext` sources, before projecting the aggregate. They share one five-second
 budget and the reader's four-request concurrency limit. Unrelated fixed sources
 are not queried. `RepresentativeQueueChecks` covers this through session access.
+
+## Customer ingress inventory (2026-11-06)
+
+The scoped cards API includes owned DIDs and non-deleted WhatsApp ingress routes
+as TRUNK cards, including expired DIDs and disabled routes with explicit state.
+Their `entry:<kind>:<context>:<opaque-id>:<state>` identifiers are inventory keys,
+never patterns for shared carrier channels. WhatsApp session IDs are hashed;
+provider tokens and routing internals are not exposed. These cards do not claim
+registration, reachability or live call activity: no safe per-ingress correlation
+is currently available in the panel's AMI projection. Existing SIP trunk live
+state remains unchanged. Ownership is rechecked by the API and portfolio projection.
