@@ -20,9 +20,17 @@ internal static class PhoneNumberPresentationChecks
             check(PhoneNumberPresentation.Normalize(number) == "+55" + number, "Brazilian national source gets country code: " + number);
             check(PhoneNumberPresentation.Normalize(PhoneNumberPresentation.Normalize(number)) == "+55" + number, "National normalization is idempotent: " + number);
         }
-        foreach (var value in new[] { "8001234567", "988242905", "000066014", "005626200", "061992053002", "23960185389", "21660185389", "2196018538", "+21960185389", "2196018538٩", "21960185389\n" })
+        foreach (var value in new[] { "8001234567", "988242905", "000066014", "005626200", "23960185389", "21660185389", "2196018538", "+21960185389", "2196018538٩", "21960185389\n" })
             check(PhoneNumberPresentation.Normalize(value) == value, "Local, explicit international or invalid source preserved: " + value);
         check(PhoneNumberPresentation.Normalize("552126551085") == "+552126551085", "Screenshot destination remains normalized");
+        foreach (var number in new[] { "021964032745", "061992053002", "02126551085", "055999999999" })
+        {
+            var expected = "+55" + number[1..];
+            check(PhoneNumberPresentation.Normalize(number) == expected, "National trunk prefix normalized: " + number);
+            check(PhoneNumberPresentation.Normalize(expected) == expected, "Trunk normalization is idempotent: " + number);
+        }
+        foreach (var value in new[] { "0003396015", "0000016004", "0021964032745", "02121964032745", "023964032745", "021664032745", "0988242905", "02196403274", "+021964032745", "021964032745\n", "02196403274٥" })
+            check(PhoneNumberPresentation.Normalize(value) == value, "Non-national or invalid trunk identifier preserved: " + value);
         check(PhoneNumberPresentation.Normalize(null) is null, "Missing identifiers remain missing");
         var now = DateTimeOffset.UtcNow;
         var row = new ObservedResource("test", "google-voip", "call", "SIP/TIP-test", "Up", "5508000000697", "+5508000000697", null, now, now, new Dictionary<string, string>());
@@ -30,6 +38,9 @@ internal static class PhoneNumberPresentationChecks
         var nationalRow = row with { Caller = "21960185389", Destination = "552126551085" };
         check(PhoneNumberPresentation.Normalize(nationalRow.Caller) == "+5521960185389" && PhoneNumberPresentation.Normalize(nationalRow.Destination) == "+552126551085", "Screenshot source and destination normalize together");
         check(nationalRow.Caller == "21960185389" && nationalRow.Destination == "552126551085", "Screenshot originals remain available for diagnosis");
+        var trunkRow = row with { Caller = "021964032745", Destination = "061992053002" };
+        check(PhoneNumberPresentation.Normalize(trunkRow.Caller) == "+5521964032745" && PhoneNumberPresentation.Normalize(trunkRow.Destination) == "+5561992053002", "Trunk prefix normalizes on both ends");
+        check(trunkRow.Caller == "021964032745" && trunkRow.Destination == "061992053002", "Trunk-prefixed originals preserved");
         check(row.Caller == "5508000000697" && row.Destination == "+5508000000697", "Original observation remains available for diagnosis");
     }
 }

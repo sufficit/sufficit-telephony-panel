@@ -18,6 +18,8 @@ public static partial class PhoneNumberPresentation
             value = value.Remove(offset + 2, 1);
         if (value.StartsWith('+')) return value;
         if (BrazilianInternationalNumber().IsMatch(value)) return "+" + value;
+        if (value.StartsWith('0') && BrazilianNationalNumber().IsMatch(value.AsSpan(1)))
+            return "+55" + value[1..];
         return BrazilianNationalNumber().IsMatch(value) ? "+55" + value : value;
     }
 

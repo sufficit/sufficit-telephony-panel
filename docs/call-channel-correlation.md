@@ -88,3 +88,10 @@ valores já com `+` permanecem intactos, salvo a correção estrita de `+550800`
 A inclusão de `+` não é classificada como falha da operadora. O aviso genérico de
 apresentação mantém os originais disponíveis para comparação e diagnóstico.
 A fixture `numberpreview=e164` cobre essa apresentação com fixo e móvel.
+
+O formato nacional com um zero inicial (`0` + DDD + fixo/móvel) também recebe
+`+55`, removendo somente esse zero na apresentação. Exemplos:
+`021964032745` → `+5521964032745`; `061992053002` → `+5561992053002`.
+A regra vale para origem e destino e preserva os originais no diagnóstico.
+Não remove zeros de ramais, prefixos `00`, números locais, DDD inválido nem
+sequências com código de seleção de prestadora; valores com `+` são preservados.
