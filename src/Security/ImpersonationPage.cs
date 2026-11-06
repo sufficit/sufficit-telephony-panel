@@ -8,7 +8,9 @@ public static class ImpersonationPage
     public static string Refused(string refusal, string pathBase)
     {
         var lower = refusal.ToLowerInvariant();
-        var hint = lower.Contains("second factor") ? "Entre de novo no painel usando o segundo fator e tente outra vez."
+        var hint = lower.StartsWith("self:") || lower.StartsWith("not_manager:") || lower.StartsWith("already:") || lower.StartsWith("invalid_request:")
+                ? refusal[(refusal.IndexOf(':') + 1)..].Trim()
+            : lower.Contains("second factor") ? "Entre de novo no painel usando o segundo fator e tente outra vez."
             : lower.Contains("sign in again") ? "Seu login é antigo demais para isso. Saia, entre de novo e tente outra vez."
             : lower.Contains("may not impersonate") ? "Sua conta não tem a permissão identity.users.impersonate."
             : lower.Contains("cannot be impersonated") ? "Administradores, gestores e contas protegidas não podem ser usados."

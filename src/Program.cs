@@ -267,10 +267,22 @@ app.MapGet("/api/fleet", async (HttpContext ctx, PanelSessions sessions, FleetMe
 // "Entrar como": a manager opens the panel as a real customer person (Identity impersonation token, 30 minutes).
 app.MapGet("/impersonate", async (HttpContext ctx, PanelSessions sessions, PanelImpersonation impersonation) =>
 {
-    if (PanelImpersonation.IsImpersonating(ctx.User)) return Results.Redirect(pathBase + "/?impersonate=already");
-    if (!(await sessions.AuthorizationAsync(ctx.User, ctx.RequestAborted)).Manager) return Results.StatusCode(403);
+    var log = ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Impersonation");
+    IResult Explain(string reason, string message)
+    {
+        log.LogWarning("Impersonation not started for {Actor}: {Reason}", ctx.User.FindFirst("sub")?.Value ?? "anonymous", reason);
+        return Results.Content(ImpersonationPage.Refused(message, pathBase), "text/html; charset=utf-8", statusCode: 403);
+    }
+    if (ctx.User.Identity?.IsAuthenticated != true)
+        return Results.Redirect(pathBase + "/login?returnUrl=" + Uri.EscapeDataString(pathBase + ctx.Request.Path + ctx.Request.QueryString));
+    if (PanelImpersonation.IsImpersonating(ctx.User))
+        return Explain("already_impersonating", "already: Volte para a sua conta antes de entrar como outra pessoa.");
+    if (!(await sessions.AuthorizationAsync(ctx.User, ctx.RequestAborted)).Manager)
+        return Explain("not_manager", "not_manager: Só gestores da Sufficit podem entrar como outra pessoa.");
     var target = ctx.Request.Query["userid"].ToString();
-    if (!Guid.TryParse(target, out _)) return Results.BadRequest();
+    if (!Guid.TryParse(target, out _)) return Explain("invalid_target", "invalid_request: Pessoa não informada.");
+    if (string.Equals(target, ctx.User.FindFirst("sub")?.Value, StringComparison.OrdinalIgnoreCase))
+        return Explain("self", "self: Essa é a sua própria conta. Escolha uma pessoa do cliente.");
     var context = Guid.TryParse(ctx.Request.Query["contextid"], out var c) ? c : Guid.Empty;
     var managerToken = await sessions.GetAccessTokenAsync(ctx.User, ctx.RequestAborted);
     var returnKey = ctx.User.FindFirst("panel_session")?.Value;

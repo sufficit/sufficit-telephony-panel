@@ -48,6 +48,7 @@ static class ImpersonationChecks
         check(issued is null && refusal!.StartsWith("access_denied"), "Identity refusal reason reaches the manager");
         check(ImpersonationPage.Refused(refusal!, "").Contains("gestores"), "Refusal page explains privileged targets");
         check(ImpersonationPage.Refused("invalid_grant: Impersonation requires a sign-in with a second factor.", "").Contains("segundo fator"), "Refusal page explains the second factor");
+        check(ImpersonationPage.Refused("self: Essa é a sua própria conta. Escolha uma pessoa do cliente.", "").Contains("sua própria conta"), "Panel-side refusals show their own message");
 
         // The person's session: real panel grants, never monitor or manager.
         using var sessions = new PanelSessions(identity, clock);
