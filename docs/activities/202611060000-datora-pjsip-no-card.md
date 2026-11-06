@@ -1,4 +1,4 @@
-# Datora em PJSIP no card do tronco
+# Interconexões PJSIP nos cards de tronco (Datora, Flux, Rota Brasil)
 
 Pedido do dono (05/11/2026): as linhas registradas da Datora migraram para PJSIP; incluir no card do tronco.
 
@@ -28,3 +28,19 @@ enquanto houver tráfego antigo. Saídas pelo mesmo host de interconexão també
 
 Pendente: conferir o card com chamada real da Datora na mesa; decidir se os 2 registros SIP restantes e os padrões
 `SIP/outdtr0*` (OUTBOUND) podem sair.
+
+## Complemento (06/11): todas as interconexões PJSIP
+
+O dono viu `PJSIP/xep-e6518b18…` sem card. Cada host de interconexão vira um endpoint `xep-<id do host>`
+(`telp_interconnection_hosts`; o id no nome é o Guid do host em formato N). Mapeamento aplicado:
+
+| Card | Interconexão (host) | Endpoint |
+|---|---|---|
+| IN-DATORA | in-datora (pvd-datora, entrada e saída) | `xep-d64e8b18…` |
+| IN-DATORA | out-datora-cli-internacional / -newcontract / -oldcontract / out-datora-tdm | `xep-5e508b18…`, `xep-96508b18…`, `xep-cc508b18…`, `xep-03518b18…` |
+| EXT-FLUX | out-flux, out-flux-01, out-flux-02, icx flux-01/02 | `xep-74518b18…`, `xep-ac518b18…`, `xep-e6518b18…`, `xep-514e8b18…`, `xep-984e8b18…` |
+| ROTABRASIL | rotabrasil-01 | `xep-c8528b18…` |
+
+Todos terminam em `e42ef111aa58f26e44c3a574` e existem nos 3 nós de voz. Revisão nova validada com `tools/BoardRules verify`,
+backup em `/root/board-rules.before-pjsip-carriers-20261106.json`, serviço reiniciado com `/health` e `/board` 200.
+Novas interconexões PJSIP também precisam entrar no card: o motor compara o endpoint exato.

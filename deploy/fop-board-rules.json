@@ -29,7 +29,11 @@
         "SIP/in-dtr-163",
         "SIP/in-dtr-188",
         "SIP/in-dtr-189",
-        "PJSIP/xep-d64e8b18e42ef111aa58f26e44c3a574"
+        "PJSIP/xep-d64e8b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-5e508b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-96508b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-cc508b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-03518b18e42ef111aa58f26e44c3a574"
       ]
     },
     {
@@ -112,7 +116,12 @@
         "SIP/ext-flux-01",
         "SIP/ext-flux-02",
         "SIP/ext-flux-03",
-        "SIP/ext-flux-04"
+        "SIP/ext-flux-04",
+        "PJSIP/xep-74518b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-ac518b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-e6518b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-514e8b18e42ef111aa58f26e44c3a574",
+        "PJSIP/xep-984e8b18e42ef111aa58f26e44c3a574"
       ]
     },
     {
@@ -200,7 +209,8 @@
       "node": "",
       "enabled": true,
       "patterns": [
-        "SIP/rotabrasil-01"
+        "SIP/rotabrasil-01",
+        "PJSIP/xep-c8528b18e42ef111aa58f26e44c3a574"
       ]
     },
     {
