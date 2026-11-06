@@ -72,7 +72,7 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
             if (string.IsNullOrEmpty(token) || !DateTimeOffset.TryParse(entry.Ticket.Properties.GetTokenValue("expires_at"), out var expires)
                 || expires <= clock.GetUtcNow())
             {
-                // TV sessions hold a refresh token (system user enrollment); person sessions end with their access token.
+                // display sessions hold a refresh token (system user enrollment); person sessions end with their access token.
                 token = await RefreshAsync(key, entry.Ticket, ct);
                 if (token is null) { Forget(key); return CurrentAuthorization.None; }
             }
@@ -87,7 +87,7 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         }
         finally { gate.Release(); }
     }
-    /// <summary>Set at startup by the TV pairing service; renews the access token of a session that has a refresh token.</summary>
+    /// <summary>Set at startup by the display pairing service; renews the access token of a session that has a refresh token.</summary>
     public Func<string, CancellationToken, Task<(string Access, string Refresh, DateTimeOffset ExpiresAt)?>>? Refresher { get; set; }
 
     private async Task<string?> RefreshAsync(string key, AuthenticationTicket ticket, CancellationToken ct)

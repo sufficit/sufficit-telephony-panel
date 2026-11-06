@@ -7,15 +7,15 @@ using Sufficit.Identity.Authorization;
 namespace Sufficit.Telephony.Panel.Security;
 
 /// <summary>
-/// TV pairing (owner, 2026-11-06): the TV opens /tv and shows a short code; Sufficit staff type it on the customer's
+/// Monitoring display pairing (owner, 2026-11-06): the display opens /display and shows a short code; Sufficit staff type it on the customer's
 /// panel access screen, which creates an Identity system user holding only <c>telephony.panel:&lt;customer&gt;</c> and an
-/// enrollment code for the TV client, and posts both here. The panel exchanges the enrollment code for a refresh
-/// token and the waiting TV signs in. Possession of a valid enrollment code is the authorization; a TV session never
+/// enrollment code for the display client, and posts both here. The panel exchanges the enrollment code for a refresh
+/// token and the waiting display signs in. Possession of a valid enrollment code is the authorization; a display session never
 /// carries monitor or global access.
 /// </summary>
-public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions, IConfiguration configuration, TimeProvider clock, ILogger<TvPairing> log)
+public sealed class DisplayPairing(IHttpClientFactory clients, PanelSessions sessions, IConfiguration configuration, TimeProvider clock, ILogger<DisplayPairing> log)
 {
-    public const string Cookie = "__Secure-Sufficit.Telephony.Panel.Tv";
+    public const string Cookie = "__Secure-Sufficit.Telephony.Panel.Display";
     public static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(365);
     private const string Alphabet = "ACDEFHJKMNPRTWXY3479"; // no look-alikes (0/O, 1/I/L, 2/Z, 5/S, 8/B)
@@ -25,8 +25,8 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
     private readonly ConcurrentDictionary<string, Pending> byCode = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Pending> byId = new(StringComparer.Ordinal);
 
-    public string ClientId => configuration["Panel:Tv:ClientId"] is { Length: > 0 } id ? id : "sufficit-telephony-panel-tv";
-    private string Authority => (configuration["Panel:Tv:Authority"] is { Length: > 0 } a ? a : "https://identity.sufficit.com.br").TrimEnd('/');
+    public string ClientId => configuration["Panel:Display:ClientId"] is { Length: > 0 } id ? id : "sufficit-telephony-panel-display";
+    private string Authority => (configuration["Panel:Display:Authority"] is { Length: > 0 } a ? a : "https://identity.sufficit.com.br").TrimEnd('/');
 
     public sealed record Paired(string Subject, string Name, Guid Context, string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt);
     private sealed class Pending(string id, string code, DateTimeOffset expires)
@@ -38,13 +38,13 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
         public Paired? Result;
     }
 
-    public enum PairResult { Paired, UnknownCode, InvalidEnrollment, NotTvSafe }
+    public enum PairResult { Paired, UnknownCode, InvalidEnrollment, NotDisplaySafe }
 
-    /// <summary>A new waiting TV: the browser keeps <paramref name="id"/> in a cookie and shows <paramref name="code"/>.</summary>
+    /// <summary>A new waiting display: the browser keeps <paramref name="id"/> in a cookie and shows <paramref name="code"/>.</summary>
     public (string Id, string Code) Begin()
     {
         Sweep();
-        if (byId.Count >= MaxPending) throw new InvalidOperationException("Too many waiting TVs.");
+        if (byId.Count >= MaxPending) throw new InvalidOperationException("Too many waiting displays.");
         for (var i = 0; i < 10; i++)
         {
             var code = string.Concat(Enumerable.Range(0, 8).Select(_ => Alphabet[RandomNumberGenerator.GetInt32(Alphabet.Length)]));
@@ -71,7 +71,7 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
         return pending.Result is null ? "waiting" : "paired";
     }
 
-    /// <summary>Hands the paired session to the TV once; the pairing is gone afterwards.</summary>
+    /// <summary>Hands the paired session to the display once; the pairing is gone afterwards.</summary>
     public Paired? Take(string? id)
     {
         if (id is null || !byId.TryGetValue(id, out var pending) || pending.Result is not { } result) return null;
@@ -96,19 +96,19 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
         var (subject, name) = await UserInfoAsync(tokens.Value.Access, ct);
         if (subject is null) return PairResult.InvalidEnrollment;
         var permissions = await sessions.PermissionsAsync(subject, tokens.Value.Access, ct);
-        if (!IsTvSafe(permissions)) { log.LogWarning("TV pairing refused: subject {Subject} is not limited to one panel context", subject); return PairResult.NotTvSafe; }
-        pending.Result = new Paired(subject, name ?? "TV", permissions.PanelContexts.Single(), tokens.Value.Access, tokens.Value.Refresh,
+        if (!IsDisplaySafe(permissions)) { log.LogWarning("display pairing refused: subject {Subject} is not limited to one panel context", subject); return PairResult.NotDisplaySafe; }
+        pending.Result = new Paired(subject, name ?? "Display", permissions.PanelContexts.Single(), tokens.Value.Access, tokens.Value.Refresh,
             clock.GetUtcNow().AddSeconds(tokens.Value.ExpiresIn));
-        log.LogWarning("TV paired: subject {Subject} context {Context}", subject, pending.Result.Context.ToString("N"));
+        log.LogWarning("display paired: subject {Subject} context {Context}", subject, pending.Result.Context.ToString("N"));
         return PairResult.Paired;
     }
 
-    /// <summary>A TV only views one customer: no manager role, no monitor grant, no all-contexts grant.</summary>
-    public static bool IsTvSafe(CurrentAuthorization permissions)
+    /// <summary>A display only views one customer: no manager role, no monitor grant, no all-contexts grant.</summary>
+    public static bool IsDisplaySafe(CurrentAuthorization permissions)
         => !permissions.Manager && permissions.MonitorContexts.Count == 0 && permissions.PanelContexts.Count == 1
             && !permissions.PanelContexts.Contains(Guid.Empty);
 
-    /// <summary>Refreshes the access token of a TV session; null when the credential was revoked or expired.</summary>
+    /// <summary>Refreshes the access token of a display session; null when the credential was revoked or expired.</summary>
     public async Task<(string Access, string Refresh, DateTimeOffset ExpiresAt)?> RefreshAsync(string refreshToken, CancellationToken ct)
     {
         var tokens = await TokenAsync(new Dictionary<string, string>
@@ -120,10 +120,10 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
     {
         try
         {
-            using var response = await clients.CreateClient("panel-tv").PostAsync(Authority + "/connect/token", new FormUrlEncodedContent(form), ct);
+            using var response = await clients.CreateClient("panel-display").PostAsync(Authority + "/connect/token", new FormUrlEncodedContent(form), ct);
             if (!response.IsSuccessStatusCode)
             {
-                log.LogWarning("TV token request ({Grant}) refused: {Status}", form["grant_type"] == EnrollmentGrant ? "enrollment" : "refresh", (int)response.StatusCode);
+                log.LogWarning("display token request ({Grant}) refused: {Status}", form["grant_type"] == EnrollmentGrant ? "enrollment" : "refresh", (int)response.StatusCode);
                 return null;
             }
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
@@ -137,7 +137,7 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
         }
         catch (Exception error) when (error is HttpRequestException or JsonException or TaskCanceledException)
         {
-            log.LogWarning("TV token request failed ({ErrorType})", error.GetType().Name);
+            log.LogWarning("display token request failed ({ErrorType})", error.GetType().Name);
             return null;
         }
     }
@@ -148,7 +148,7 @@ public sealed class TvPairing(IHttpClientFactory clients, PanelSessions sessions
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, Authority + "/connect/userinfo");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            using var response = await clients.CreateClient("panel-tv").SendAsync(request, ct);
+            using var response = await clients.CreateClient("panel-display").SendAsync(request, ct);
             if (!response.IsSuccessStatusCode) return (null, null);
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
             var root = json.RootElement;
