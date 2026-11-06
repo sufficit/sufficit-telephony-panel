@@ -68,7 +68,12 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
     public async Task<CurrentAuthorization> AuthorizationAsync(ClaimsPrincipal principal, CancellationToken ct)
     {
         var key = principal.FindFirstValue("panel_session");
-        if (principal.Identity?.IsAuthenticated != true || key is null) return CurrentAuthorization.None;
+        if (principal.Identity?.IsAuthenticated != true || key is null)
+        {
+            if (principal.Identity?.IsAuthenticated == true)
+                log?.LogWarning("Authenticated principal {Subject} has no panel session handle", principal.FindFirstValue("sub"));
+            return CurrentAuthorization.None;
+        }
         await gate.WaitAsync(ct);
         try
         {
