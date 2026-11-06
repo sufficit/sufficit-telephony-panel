@@ -77,3 +77,15 @@ Tests: `dotnet run --project tests/Panel.Tests.csproj`; the browser suite
 `tests/customer-access.browser.cjs` uses Development-only synthetic previews on
 localhost, not production credentials or real telephone actions. Generic claim
 delivery and inherited-grant revocation are integration-tested in Identity.
+
+## TV pairing (2026-11-06)
+
+A TV never signs in as a person. `GET /tv` shows an 8-character code (10 minutes, cookie-bound to that browser).
+Staff type it on the Blazor panel access screen (`/pages/telephony/panel-access`, "Adicionar TV"), which creates an
+Identity system user holding only `telephony.panel:<context>`, issues a one-hour enrollment code for the client
+`sufficit-telephony-panel-tv` and calls `POST /api/tv/pair` with both. The enrollment code is the authorization.
+The panel redeems it, refuses any credential that has monitor, the manager role, the all-zero context or more than
+one context, and the TV (`/tv/complete`) gets a 365-day session whose access token is renewed with the refresh
+token (`PanelSessions.Refresher`). Three failed enrollments burn a code. Revoking the TV in Blazor disables the
+system user, which revokes its credential; the next renewal fails and the TV leaves the board.
+Checks: `TvPairingChecks`.

@@ -98,6 +98,7 @@ builder.Services.AddSingleton(new BoardInventoryStore(builder.Configuration["Pan
     ?? "/var/lib/sufficit-telephony-panel/known-resources.json"));
 builder.Services.AddScoped<BoardInventoryAccess>();
 builder.Services.AddSingleton<SupportChat>();
+builder.Services.AddSingleton<TvPairing>();
 builder.Services.AddScoped<Sufficit.Blazor.UI.Services.ISUIToast, Sufficit.Blazor.UI.Services.SUIToastService>();
 builder.Services.AddAuthentication(o =>
 {
@@ -196,6 +197,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 if (builder.Configuration["Panel:Socket"] is { Length: > 0 } socket)
     builder.WebHost.ConfigureKestrel(o => o.ListenUnixSocket(socket));
 var app = builder.Build();
+{
+    var tv = app.Services.GetRequiredService<TvPairing>();
+    app.Services.GetRequiredService<PanelSessions>().Refresher = tv.RefreshAsync;
+}
 app.UseForwardedHeaders();
 if (pathBase.Length > 0) app.UsePathBase(pathBase);
 app.Use(async (ctx, next) =>
@@ -257,5 +262,50 @@ app.MapGet("/api/fleet", async (HttpContext ctx, PanelSessions sessions, FleetMe
     await sessions.IsManagerAsync(ctx.User, ctx.RequestAborted)
         ? Results.Ok(await metrics.ReadAsync(ctx.RequestAborted)) : Results.StatusCode(403))
     .RequireAuthorization("manager");
+// TV pairing: /tv shows a code, staff pair it from the customer's panel access screen (Blazor), the TV signs in.
+app.MapGet("/tv", async (HttpContext ctx, TvPairing tv) =>
+{
+    var cookiePath = pathBase.Length > 0 ? pathBase : "/";
+    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Request.Query["new"] != "1")
+        return Results.Redirect(pathBase + "/board");
+    string id, code;
+    try { (id, code) = tv.Begin(); }
+    catch (InvalidOperationException) { return Results.StatusCode(503); }
+    ctx.Response.Cookies.Append(TvPairing.Cookie, id, new CookieOptions
+    { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, MaxAge = TvPairing.CodeLifetime, Path = cookiePath });
+    await Task.CompletedTask;
+    return Results.Content(TvPage.Html(TvPairing.Display(code), pathBase), "text/html; charset=utf-8");
+}).AllowAnonymous();
+app.MapGet("/tv/status", (HttpContext ctx, TvPairing tv) => Results.Ok(new { status = tv.Status(ctx.Request.Cookies[TvPairing.Cookie]) }))
+    .AllowAnonymous();
+app.MapGet("/tv/complete", async (HttpContext ctx, TvPairing tv) =>
+{
+    var paired = tv.Take(ctx.Request.Cookies[TvPairing.Cookie]);
+    ctx.Response.Cookies.Delete(TvPairing.Cookie, new CookieOptions { Path = pathBase.Length > 0 ? pathBase : "/", Secure = true });
+    if (paired is null) return Results.Redirect(pathBase + "/tv");
+    var identity = new System.Security.Claims.ClaimsIdentity("tv", "name", "role");
+    identity.AddClaim(new System.Security.Claims.Claim("sub", paired.Subject));
+    identity.AddClaim(new System.Security.Claims.Claim("name", paired.Name));
+    identity.AddClaim(new System.Security.Claims.Claim("panel_kind", "tv"));
+    var properties = new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.Add(TvPairing.SessionLifetime) };
+    properties.StoreTokens([
+        new AuthenticationToken { Name = "access_token", Value = paired.AccessToken },
+        new AuthenticationToken { Name = "refresh_token", Value = paired.RefreshToken },
+        new AuthenticationToken { Name = "expires_at", Value = paired.ExpiresAt.ToString("o", System.Globalization.CultureInfo.InvariantCulture) },
+    ]);
+    await ctx.SignInAsync("panel", new System.Security.Claims.ClaimsPrincipal(identity), properties);
+    return Results.Redirect(pathBase + "/board?contextid=" + paired.Context.ToString("N"));
+}).AllowAnonymous();
+// Called by the Blazor panel access screen (server side). The enrollment code is the authorization.
+app.MapPost("/api/tv/pair", async (TvPairRequest request, TvPairing tv, CancellationToken ct) =>
+    await tv.PairAsync(request.Code, request.EnrollmentCode, ct) switch
+    {
+        TvPairing.PairResult.Paired => Results.Ok(new { status = "paired" }),
+        TvPairing.PairResult.UnknownCode => Results.NotFound(new { status = "unknown_code" }),
+        TvPairing.PairResult.NotTvSafe => Results.UnprocessableEntity(new { status = "not_tv_safe" }),
+        _ => Results.BadRequest(new { status = "invalid_enrollment" }),
+    }).AllowAnonymous().DisableAntiforgery();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.Run();
+
+public sealed record TvPairRequest(string? Code, string? EnrollmentCode);

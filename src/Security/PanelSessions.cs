@@ -70,7 +70,12 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
             if (entry is null) return CurrentAuthorization.None;
             var token = entry.Ticket.Properties.GetTokenValue("access_token");
             if (string.IsNullOrEmpty(token) || !DateTimeOffset.TryParse(entry.Ticket.Properties.GetTokenValue("expires_at"), out var expires)
-                || expires <= clock.GetUtcNow()) { Forget(key); return CurrentAuthorization.None; }
+                || expires <= clock.GetUtcNow())
+            {
+                // TV sessions hold a refresh token (system user enrollment); person sessions end with their access token.
+                token = await RefreshAsync(key, entry.Ticket, ct);
+                if (token is null) { Forget(key); return CurrentAuthorization.None; }
+            }
             try
             {
                 var permissions = await authorization.ReadAsync(principal.FindFirstValue("sub")!, token, ct);
@@ -82,5 +87,20 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         }
         finally { gate.Release(); }
     }
+    /// <summary>Set at startup by the TV pairing service; renews the access token of a session that has a refresh token.</summary>
+    public Func<string, CancellationToken, Task<(string Access, string Refresh, DateTimeOffset ExpiresAt)?>>? Refresher { get; set; }
+
+    private async Task<string?> RefreshAsync(string key, AuthenticationTicket ticket, CancellationToken ct)
+    {
+        var refresh = ticket.Properties.GetTokenValue("refresh_token");
+        if (Refresher is null || string.IsNullOrEmpty(refresh)) return null;
+        if (await Refresher(refresh, ct) is not { } renewed) return null;
+        ticket.Properties.UpdateTokenValue("access_token", renewed.Access);
+        ticket.Properties.UpdateTokenValue("refresh_token", renewed.Refresh);
+        ticket.Properties.UpdateTokenValue("expires_at", renewed.ExpiresAt.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+        await RenewAsync(key, ticket);
+        return renewed.Access;
+    }
+
     public void Dispose() { authorization.Dispose(); cache.Dispose(); gate.Dispose(); }
 }
