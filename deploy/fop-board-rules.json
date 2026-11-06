@@ -6,18 +6,19 @@
   "rules": [
     {
       "id": "01a08d2c31807061bfe87f50e15ad289",
-      "label": "IN-GTGI",
+      "label": "GTGI",
       "kind": "trunk",
       "node": "",
       "enabled": true,
       "patterns": [
         "SIP/in-gtgi",
-        "SIP/in-gtgi-panel"
+        "SIP/in-gtgi-panel",
+        "SIP/out-gtgi"
       ]
     },
     {
       "id": "01a08d2c318173eab5ec4c882342f4ef",
-      "label": "IN-DATORA",
+      "label": "DATORA",
       "kind": "trunk",
       "node": "",
       "enabled": true,
@@ -33,7 +34,14 @@
         "PJSIP/xep-5e508b18e42ef111aa58f26e44c3a574",
         "PJSIP/xep-96508b18e42ef111aa58f26e44c3a574",
         "PJSIP/xep-cc508b18e42ef111aa58f26e44c3a574",
-        "PJSIP/xep-03518b18e42ef111aa58f26e44c3a574"
+        "PJSIP/xep-03518b18e42ef111aa58f26e44c3a574",
+        "SIP/outdtr01",
+        "SIP/outdtr02",
+        "SIP/outdtr03",
+        "SIP/outdtr04",
+        "SIP/outdtr05",
+        "SIP/outdtr06",
+        "SIP/outdtr07"
       ]
     },
     {
@@ -53,7 +61,7 @@
     },
     {
       "id": "01a08d2c318172eb939ead564c4c0119",
-      "label": "IN-TIP",
+      "label": "TIP",
       "kind": "trunk",
       "node": "",
       "enabled": true,
@@ -61,7 +69,8 @@
         "SIP/in-tip-01",
         "SIP/in-tip-02",
         "SIP/in-tip-03",
-        "SIP/in-tip-04"
+        "SIP/in-tip-04",
+        "SIP/out-tipbrasil"
       ]
     },
     {
@@ -108,7 +117,7 @@
     },
     {
       "id": "01a08d2c31817631935416242c28bedb",
-      "label": "EXT-FLUX",
+      "label": "FLUX",
       "kind": "trunk",
       "node": "",
       "enabled": true,
@@ -121,7 +130,8 @@
         "PJSIP/xep-ac518b18e42ef111aa58f26e44c3a574",
         "PJSIP/xep-e6518b18e42ef111aa58f26e44c3a574",
         "PJSIP/xep-514e8b18e42ef111aa58f26e44c3a574",
-        "PJSIP/xep-984e8b18e42ef111aa58f26e44c3a574"
+        "PJSIP/xep-984e8b18e42ef111aa58f26e44c3a574",
+        "SIP/out-flux"
       ]
     },
     {
@@ -237,23 +247,13 @@
         "SIP/out-ccs-itx",
         "SIP/out-eai",
         "SIP/out-falemaisvoip",
-        "SIP/out-flux",
-        "SIP/out-gtgi",
         "SIP/out-hivoox",
         "SIP/out-i360",
         "SIP/out-i360-cli",
         "SIP/out-i360-gsm",
         "SIP/out-i360-tdm",
         "SIP/out-syssvoip",
-        "SIP/out-tipbrasil",
         "SIP/out-vittel",
-        "SIP/outdtr07",
-        "SIP/outdtr06",
-        "SIP/outdtr05",
-        "SIP/outdtr04",
-        "SIP/outdtr03",
-        "SIP/outdtr02",
-        "SIP/outdtr01",
         "SIP/outhdtel",
         "SIP/outtlffixo",
         "SIP/outvoiicr",

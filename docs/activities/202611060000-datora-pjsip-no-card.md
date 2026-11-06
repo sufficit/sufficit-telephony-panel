@@ -44,3 +44,10 @@ O dono viu `PJSIP/xep-e6518b18…` sem card. Cada host de interconexão vira um 
 Todos terminam em `e42ef111aa58f26e44c3a574` e existem nos 3 nós de voz. Revisão nova validada com `tools/BoardRules verify`,
 backup em `/root/board-rules.before-pjsip-carriers-20261106.json`, serviço reiniciado com `/health` e `/board` 200.
 Novas interconexões PJSIP também precisam entrar no card: o motor compara o endpoint exato.
+
+## Entrada e saída da mesma operadora no mesmo card (06/11, pedido do dono)
+
+O dono ligou para o celular e a chamada apareceu em OUTBOUND (saída por `SIP/outdtr01`), não na Datora. Decisão do dono:
+entrada e saída da mesma operadora ficam no mesmo card. Os troncos de saída saíram de OUTBOUND e os prefixos `IN-`/`EXT-`
+caíram: DATORA (`SIP/outdtr01`–`07`), GTGI (`SIP/out-gtgi`), FLUX (`SIP/out-flux`), TIP (`SIP/out-tipbrasil`).
+OUTBOUND fica com as operadoras só de saída e o fallback `SIP/out*`. Backup: `/root/board-rules.before-carrier-cards-20261106.json`.
