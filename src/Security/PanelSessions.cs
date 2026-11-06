@@ -30,7 +30,12 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
     private void Remember(string key, AuthenticationTicket ticket) =>
         cache.Set(key, new SessionEntry(ticket), new MemoryCacheEntryOptions
         { Size = 1, AbsoluteExpiration = ticket.Properties.ExpiresUtc ?? DateTimeOffset.UtcNow.AddHours(8) });
-    public Task<AuthenticationTicket?> RetrieveAsync(string key) => Task.FromResult(Entry(key)?.Ticket);
+    public Task<AuthenticationTicket?> RetrieveAsync(string key)
+    {
+        var ticket = Entry(key)?.Ticket;
+        if (ticket is null) log?.LogWarning("Panel session {Key} presented by a browser is unknown or expired", Short(key));
+        return Task.FromResult(ticket);
+    }
     public Task RemoveAsync(string key) { Forget(key); return Task.CompletedTask; }
     private void Forget(string key) { cache.Remove(key); files?.Remove(key); }
     // Memory first; after a restart the encrypted file restores the session once.

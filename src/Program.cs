@@ -108,7 +108,10 @@ builder.Services.AddAuthentication(o =>
     o.DefaultChallengeScheme = "oidc";
 }).AddCookie("panel", o =>
 {
-    o.Cookie.Name = "__Secure-Sufficit.Telephony.Panel";
+    // __Host-: host-only, Path=/, no Domain. A stale same-name cookie from an older deployment (domain-wide or
+    // another path) was sent first and hid the fresh session, so sign-in looped (2026-11-06).
+    o.Cookie.Name = "__Host-Sufficit.Telephony.Panel";
+    o.Cookie.Path = "/";
     o.Cookie.HttpOnly = true;
     o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     o.Cookie.SameSite = SameSiteMode.Lax;
@@ -222,8 +225,13 @@ app.Use(async (ctx, next) =>
         // (2026-11-06). Stop at the landing page instead and keep the evidence in the log.
         if (ctx.Request.Cookies.ContainsKey(AutoSignIn.AttemptCookie))
         {
+            var sent = ctx.Request.Headers.Cookie.SelectMany(h => (h ?? "").Split(';')).Select(c => c.Trim())
+                .Where(c => c.StartsWith("__Host-Sufficit.Telephony.Panel", StringComparison.Ordinal)
+                    || c.StartsWith("__Secure-Sufficit.Telephony.Panel", StringComparison.Ordinal))
+                .Select(c => c.Split('=')[0]).ToArray();
             ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Login")
-                .LogWarning("Automatic sign-in stopped: the previous attempt did not produce a usable session");
+                .LogWarning("Automatic sign-in stopped: the previous attempt did not produce a usable session (panel cookies sent: {Cookies})",
+                    sent.Length == 0 ? "none" : string.Join(", ", sent));
             ctx.Response.Redirect(pathBase + "/?login=failed");
             return;
         }
