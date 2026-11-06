@@ -13,4 +13,9 @@ antes da consulta privada e remoção do vínculo. Publish Release concluído.
 
 Leitura privada em produção confirmou uma fila do contexto R&L em eveo-voip e outra
 em apoint-voip; google-voip retorna 404 (sem fila). Nenhuma credencial foi exposta.
-Publicação do painel e conferência final pendentes neste checkpoint.
+Publicado em eveo-apps, release representative-queues-20261106-c76307e.
+Serviço ativo e health público 200. Hash local/instalado idêntico:
+2adc48fe2f69f54fb06cc4dbc5e15c1b925bbc94c76a514885448162d3a521a1.
+Commit c76307e enviado à main. A API não foi alterada nem republicada.
+A conferência visual autenticada fica para o usuário; a regressão foi validada
+na suíte e a existência das filas foi confirmada por consulta privada somente leitura.
