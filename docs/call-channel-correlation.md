@@ -78,8 +78,12 @@ O reconhecimento é sintático: não verifica se a linha está atribuída/ativa 
 prova que a chamada veio de uma operadora. O sinal `+` ajuda a reconhecer o
 formato internacional, mas não participa da classificação interno/externo.
 
-Não se deduz país ou DDD de números locais. Identificadores de outros países sem
-`+`, códigos especiais não reconhecidos e valores ambíguos ficam como recebidos;
+Números nacionais com DDD brasileiro e o mesmo formato de fixo/móvel recebem
+`+55`, tanto na origem quanto no destino. Exemplo: `21960185389` →
+`+5521960185389`. Essa apresentação assume Brasil quando o formato nacional é
+reconhecido; não comprova o país real de uma sequência sem prefixo internacional.
+Não se deduz DDD de números locais. Sequências sem `+` que não correspondam aos
+formatos reconhecidos, códigos especiais e valores inválidos ficam como recebidos;
 valores já com `+` permanecem intactos, salvo a correção estrita de `+550800`.
 A inclusão de `+` não é classificada como falha da operadora. O aviso genérico de
 apresentação mantém os originais disponíveis para comparação e diagnóstico.
