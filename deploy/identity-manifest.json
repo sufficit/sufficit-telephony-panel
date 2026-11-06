@@ -18,7 +18,7 @@
     "clientType": "public",
     "consentType": "explicit",
     "requirePkce": true,
-    "grantTypes": ["authorization_code"],
+    "grantTypes": ["authorization_code", "urn:ietf:params:oauth:grant-type:token-exchange"],
     "responseTypes": ["code"],
     "scopes": ["openid", "profile", "roles", "entitlements"],
     "redirectUris": [
