@@ -8,7 +8,7 @@ public static class ImpersonationPage
     public static string Refused(string refusal, string pathBase)
     {
         var lower = refusal.ToLowerInvariant();
-        var hint = lower.StartsWith("self:") || lower.StartsWith("not_manager:") || lower.StartsWith("already:") || lower.StartsWith("invalid_request:")
+        var hint = lower.StartsWith("self:") || lower.StartsWith("no_panel:") || lower.StartsWith("no_context:") || lower.StartsWith("not_manager:") || lower.StartsWith("already:") || lower.StartsWith("invalid_request:")
                 ? refusal[(refusal.IndexOf(':') + 1)..].Trim()
             : lower.Contains("second factor") ? "Entre de novo no painel usando o segundo fator e tente outra vez."
             : lower.Contains("sign in again") ? "Seu login é antigo demais para isso. Saia, entre de novo e tente outra vez."

@@ -314,6 +314,12 @@ app.MapGet("/impersonate", async (HttpContext ctx, PanelSessions sessions, Panel
     var (issued, refusal) = await impersonation.ExchangeAsync(managerToken, target, ctx.RequestAborted);
     if (issued is null)
         return Results.Content(ImpersonationPage.Refused(refusal ?? "", pathBase), "text/html; charset=utf-8", statusCode: 403);
+    // Reproduce first, then sign in: a person without panel access would be signed out on the next request.
+    var personAccess = await sessions.PermissionsAsync(target, issued.AccessToken, ctx.RequestAborted);
+    if (!personAccess.PanelAllowed)
+        return Explain("person_without_panel", $"no_panel: {issued.Name ?? "Essa pessoa"} não tem acesso ao painel. É isto que ela vê hoje: acesso negado. Libere o acesso na tela do cliente para que ela possa usar o painel.");
+    if (context != Guid.Empty && !personAccess.CanRead(context))
+        return Explain("person_without_context", $"no_context: {issued.Name ?? "Essa pessoa"} tem acesso ao painel, mas não a este cliente.");
     var identity = new System.Security.Claims.ClaimsIdentity("impersonation", "name", "role");
     identity.AddClaim(new System.Security.Claims.Claim("sub", target));
     identity.AddClaim(new System.Security.Claims.Claim("name", issued.Name ?? target));
