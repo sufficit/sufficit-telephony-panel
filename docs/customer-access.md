@@ -128,3 +128,8 @@ one authorized catalogue; ambiguous keys and foreign accounts remain hidden.
 Calls always require ownership. Limits: 1,000 contexts, 2,000 cards per company,
 10,000 aggregate cards; exceeding a limit reports an error, never silently grants
 or truncates a portfolio. Tests: `RepresentativePortfolioChecks` in the panel suite.
+
+Portfolio queue reads explicitly enumerate the authorized company set, including
+`AnyContext` sources, before projecting the aggregate. They share one five-second
+budget and the reader's four-request concurrency limit. Unrelated fixed sources
+are not queried. `RepresentativeQueueChecks` covers this through session access.

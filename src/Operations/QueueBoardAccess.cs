@@ -19,7 +19,9 @@ public sealed class QueueBoardAccess(PanelAccess access, QueueBoardReader reader
     {
         var permissions = await access.PermissionsAsync(ct);
         context = permissions.SelectContext(context);
-        var result = await reader.Read(context, ct);
+        var result = context is null && !permissions.GlobalPanel
+            ? await reader.ReadContexts(permissions.PanelContexts, ct)
+            : await reader.Read(context, ct);
         permissions = await access.PermissionsAsync(ct);
         permissions.SelectContext(context);
         return result.Where(s => permissions.CanRead(s.ContextId)).ToArray();

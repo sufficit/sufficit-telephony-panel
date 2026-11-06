@@ -51,14 +51,26 @@ public sealed class QueueBoardReader : IDisposable
         var bytes = ip.GetAddressBytes();
         return IPAddress.IsLoopback(ip) || bytes.Length == 4 && bytes[0] == 172 && bytes[1] == 19;
     }
-    public async Task<QueueBoardSample[]> Read(Guid? context, CancellationToken ct)
+    public Task<QueueBoardSample[]> Read(Guid? context, CancellationToken ct) =>
+        ReadSelected(context is { } id ? [id] : null, ct);
+
+    /// <summary>Explicit authorized portfolio, including on-demand sources; never an unscoped read.</summary>
+    public Task<QueueBoardSample[]> ReadContexts(IReadOnlyCollection<Guid> contexts, CancellationToken ct)
+    {
+        if (contexts.Count > 1000 || contexts.Contains(Guid.Empty))
+            throw new InvalidOperationException("Invalid QUEUE portfolio scope.");
+        return ReadSelected(contexts.ToHashSet(), ct);
+    }
+
+    private async Task<QueueBoardSample[]> ReadSelected(HashSet<Guid>? contexts, CancellationToken ct)
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(5));
-        var selected = slots.Where(s => context is null || s.Context == context).ToList();
-        if (context is { } requested && requested != Guid.Empty)
-            foreach (var source in open.Where(o => !selected.Any(s => s.Source.NodeId == o.NodeId)))
-                selected.Add(DynamicSlot(source, requested));
+        var selected = slots.Where(s => contexts is null || contexts.Contains(s.Context)).ToList();
+        if (contexts is not null)
+            foreach (var requested in contexts.Where(id => id != Guid.Empty).Order())
+                foreach (var source in open.Where(o => !selected.Any(s => s.Source.NodeId == o.NodeId && s.Context == requested)))
+                    selected.Add(DynamicSlot(source, requested));
         return await Task.WhenAll(selected.Select(s => Read(s, budget.Token, ct)));
     }
     private Slot DynamicSlot(QueueBoardSource source, Guid context)

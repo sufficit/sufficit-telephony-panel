@@ -85,6 +85,7 @@ await SharedTelemetryChecks.Run(Check);
 CallGroupingChecks.Run(Check);
 QueueCallFlowChecks.Run(Check);
 await QueueBoardChecks.Run(Check);
+await RepresentativeQueueChecks.Run(Check);
 OperatorBoardChecks.Run(Check);
 await BoardConfigurationChecks.Run(Check);
 FopRulesChecks.Run(Check);
