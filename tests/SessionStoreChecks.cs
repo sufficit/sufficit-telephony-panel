@@ -37,6 +37,15 @@ static class SessionStoreChecks
                 check(!File.Exists(Path.Combine(sessionsDir, key + ".session")), "Sign-out removes the persisted session");
                 check(await new PanelSessions(new FakeHttp(), clock, new SessionFileStore(sessionsDir, Protection(), clock)).RetrieveAsync(key) is null, "Removed session never comes back");
             }
+            using (var renewing = new PanelSessions(new FakeHttp(), clock))
+            {
+                var key = await renewing.StoreAsync(Ticket(clock.GetUtcNow().AddHours(8)));
+                // Signing in over an open session: the handler renews the same key with a ticket that has no handle.
+                await renewing.RenewAsync(key, Ticket(clock.GetUtcNow().AddHours(8)));
+                var renewed = await renewing.RetrieveAsync(key);
+                check(renewed?.Principal.FindAll("panel_session").Select(c => c.Value).SequenceEqual([key]) == true,
+                    "A ticket renewed over an open session carries exactly its own session handle");
+            }
             var store = new SessionFileStore(sessionsDir, Protection(), clock);
             var handle = Guid.NewGuid().ToString("N");
             store.Save(handle, Ticket(clock.GetUtcNow().AddHours(1)));

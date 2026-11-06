@@ -309,8 +309,8 @@ app.MapGet("/impersonate", async (HttpContext ctx, PanelSessions sessions, Panel
         return Explain("self", "self: Essa é a sua própria conta. Escolha uma pessoa do cliente.");
     var context = Guid.TryParse(ctx.Request.Query["contextid"], out var c) ? c : Guid.Empty;
     var managerToken = await sessions.GetAccessTokenAsync(ctx.User, ctx.RequestAborted);
-    var returnKey = ctx.User.FindFirst("panel_session")?.Value;
-    if (managerToken is null || returnKey is null) return Results.Redirect(pathBase + "/login?returnUrl=" + Uri.EscapeDataString(pathBase + ctx.Request.Path + ctx.Request.QueryString));
+    var currentKey = ctx.User.FindFirst("panel_session")?.Value;
+    if (managerToken is null || currentKey is null) return Results.Redirect(pathBase + "/login?returnUrl=" + Uri.EscapeDataString(pathBase + ctx.Request.Path + ctx.Request.QueryString));
     var (issued, refusal) = await impersonation.ExchangeAsync(managerToken, target, ctx.RequestAborted);
     if (issued is null)
         return Results.Content(ImpersonationPage.Refused(refusal ?? "", pathBase), "text/html; charset=utf-8", statusCode: 403);
@@ -320,6 +320,13 @@ app.MapGet("/impersonate", async (HttpContext ctx, PanelSessions sessions, Panel
         return Explain("person_without_panel", $"no_panel: {issued.Name ?? "Essa pessoa"} não tem acesso ao painel. É isto que ela vê hoje: acesso negado. Libere o acesso na tela do cliente para que ela possa usar o painel.");
     if (context != Guid.Empty && !personAccess.CanRead(context))
         return Explain("person_without_context", $"no_context: {issued.Name ?? "Essa pessoa"} tem acesso ao painel, mas não a este cliente.");
+    // Signing in over the open session reuses its key, so keep a copy of the manager session under its own key
+    // for "Voltar para minha conta".
+    var current = await sessions.RetrieveAsync(currentKey);
+    if (current is null) return Explain("manager_session_missing", "invalid_request: Sua sessão expirou. Entre de novo no painel.");
+    var returnKey = await sessions.StoreAsync(new AuthenticationTicket(new System.Security.Claims.ClaimsPrincipal(
+        new System.Security.Claims.ClaimsIdentity(current.Principal.Claims.Where(c => c.Type != "panel_session"),
+            current.Principal.Identity?.AuthenticationType, "name", "role")), current.Properties.Clone(), current.AuthenticationScheme));
     var identity = new System.Security.Claims.ClaimsIdentity("impersonation", "name", "role");
     identity.AddClaim(new System.Security.Claims.Claim("sub", target));
     identity.AddClaim(new System.Security.Claims.Claim("name", issued.Name ?? target));
@@ -342,13 +349,12 @@ app.MapPost("/impersonate/exit", async (HttpContext ctx, PanelSessions sessions)
 {
     await ctx.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>().ValidateRequestAsync(ctx);
     var returnKey = ctx.User.FindFirst(PanelImpersonation.ReturnSessionClaim)?.Value;
-    var current = ctx.User.FindFirst("panel_session")?.Value;
     var manager = returnKey is null ? null : await sessions.RetrieveAsync(returnKey);
-    if (current is not null) await sessions.RemoveAsync(current);
     if (manager is null) { await ctx.SignOutAsync("panel"); return Results.LocalRedirect(pathBase + "/?signedout=1"); }
     var identity = new System.Security.Claims.ClaimsIdentity(manager.Principal.Claims.Where(claim => claim.Type != "panel_session"),
         manager.Principal.Identity?.AuthenticationType, "name", "role");
-    await ctx.SignInAsync("panel", new System.Security.Claims.ClaimsPrincipal(identity), manager.Properties);
+    // Renews the current (impersonated) key with the manager ticket; the saved copy is no longer needed.
+    await ctx.SignInAsync("panel", new System.Security.Claims.ClaimsPrincipal(identity), manager.Properties.Clone());
     await sessions.RemoveAsync(returnKey!);
     return Results.LocalRedirect(pathBase + "/");
 });

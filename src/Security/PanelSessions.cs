@@ -17,12 +17,18 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var key = Guid.CreateVersion7().ToString("N");
-        ((ClaimsIdentity)ticket.Principal.Identity!).AddClaim(new Claim("panel_session", key));
         await RenewAsync(key, ticket);
         return key;
     }
+    /// <remarks>
+    /// The cookie handler calls this, not <see cref="StoreAsync"/>, when someone signs in over an open session
+    /// (aspnetcore#22135): the new ticket must carry the handle too, or the session is unusable and sign-in loops.
+    /// </remarks>
     public Task RenewAsync(string key, AuthenticationTicket ticket)
     {
+        var identity = (ClaimsIdentity)ticket.Principal.Identity!;
+        foreach (var stale in identity.FindAll("panel_session").ToArray()) identity.RemoveClaim(stale);
+        identity.AddClaim(new Claim("panel_session", key));
         Remember(key, ticket);
         files?.Save(key, ticket);
         return Task.CompletedTask;
