@@ -505,6 +505,9 @@ public partial class LiveOperations
             new("demo-hugo", "eveo-voip", "peer", "PJSIP/6007", "Reachable", "", "", null, now.AddMinutes(-8), now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", Reachability = "online", Device = "2", RegistrationObservedAt = now.AddMinutes(-7), LastRegisteredObservedAt = now.AddMinutes(-7), ReachabilityObservedAt = now, DeviceObservedAt = now, RoundTripMilliseconds = 12.5m, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
             new("demo-other", "google-voip", "peer", "PJSIP/2003", "Unregistered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "unregistered", Reachability = "offline", RegistrationObservedAt = now, LastRegisteredObservedAt = now.AddMinutes(-6), ReachabilityObservedAt = now, LastEventType = "PeerStatusEvent" } }];
         var demoQuery = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (demoQuery.ContainsKey("numberpreview"))
+            Rows = Rows.Select(row => row.Kind is "call" or "waiting"
+                ? row with { Caller = "5508000000697", Destination = "+5508000000697" } : row).ToArray();
         if (demoQuery.TryGetValue("supervisionpreview", out var supervisionScenario) && supervisionScenario == "multiple")
             Rows = Rows.Append(Rows[0] with { Id = "demo-second-call", Key = "PJSIP/6007-000000ef" }).ToArray();
         if (DemoEndpointResolution) Rows = Rows.Where(row => row.Kind is not ("call" or "waiting")).ToArray();

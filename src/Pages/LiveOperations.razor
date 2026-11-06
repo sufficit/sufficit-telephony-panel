@@ -235,7 +235,7 @@ else
                     }
                     @foreach (var flow in tile.Flows)
                     {
-                        <p>@Display(flow.Caller) → @Display(flow.Destination) · @Text[PhaseLabel(flow.Phase)]</p>
+                        <p><CallNumbers Caller="@flow.Caller" Destination="@flow.Destination" /> · @Text[PhaseLabel(flow.Phase)]</p>
                     }
                     @if (tile.DetailChannels.Length > 0) { @RenderChannels(tile.DetailChannels.Take(100).ToArray()) }
                     else { <p>@Text["No observed channels for this resource."]</p> }

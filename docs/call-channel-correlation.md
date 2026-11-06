@@ -37,3 +37,31 @@ Confere uma chamada/4 canais/1 sem correlação, expansão por teclado, alvo da
 confirmação, filtros e vazio, temas e viewport móvel sem overflow da página.
 As capturas `.impeccable/review/call-groups-*.png` são sintéticas, não evidência de
 uma chamada real ou do acesso autenticado de um operador em produção.
+
+## Normalização de 0800 e diagnóstico
+
+A mesa e os detalhes de canais apresentam `550800` seguido de exatamente sete
+algarismos ASCII como `55800` seguido dos mesmos sete algarismos. Um `+` inicial
+é preservado. Exemplo: `5508000000697` → `558000000697`. Ramais, valores incompletos,
+nomes de filas e números já corretos permanecem intactos.
+
+A normalização é exclusivamente de apresentação: `ObservedResource.Caller`,
+`ObservedResource.Destination` e os fluxos mantêm os valores recebidos. Não altera
+correlação, autorização, roteamento, alvos de supervisão ou eventos de origem.
+O asterisco ao lado do número na mesa indica normalização; o texto acessível e o
+hover informam o diagnóstico. Ao abrir o recurso, o aviso **Número normalizado**
+mostra origem e destino originais. A tabela de canais associa esses valores ao
+servidor, canal, Linkedid e horário da última atualização observada.
+
+Para comunicar uma ocorrência, copiar os valores originais e normalizados com
+servidor, canal/Linkedid e horário enquanto a observação estiver disponível.
+A correção não atribui automaticamente a causa à operadora: ela pode estar no
+provedor ou em alguma etapa interna. Não há envio automático de mensagens nem
+novo arquivo histórico; a retenção continua sendo a da observação ao vivo descrita
+acima. A evidência desaparece quando o canal é removido/expira.
+
+Validação sintética: `tests/phone-number-normalization.browser.cjs`, com
+`PANEL_TEST_URL` apontando para uma instância Development isolada (padrão
+`http://127.0.0.1:5177`). O parâmetro `numberpreview` só é usado pela fixture
+Development, junto com `preview=true`. Testes C# cobrem formato estrito, `+`,
+valores ausentes, preservação dos originais e números que não devem mudar.
