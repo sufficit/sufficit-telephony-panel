@@ -26,4 +26,3 @@ public static partial class PhoneNumberPresentation
     [GeneratedRegex(@"\A55(?:800[0-9]{7}|(?:1[1-9]|2[12478]|3[1-578]|4[1-9]|5[1345]|6[1-9]|7[134579]|8[1-9]|9[1-9])(?:[2-5][0-9]{7}|9[0-9]{8}))\z", RegexOptions.CultureInvariant)]
     private static partial Regex BrazilianInternationalNumber();
 }
-
