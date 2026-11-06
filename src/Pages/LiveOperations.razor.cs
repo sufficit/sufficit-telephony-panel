@@ -56,10 +56,10 @@ public partial class LiveOperations
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
         catch (ObjectDisposedException) when (!UrlReady) { }
     }
-    private async Task ApplyUrl()
+    private async Task ApplyUrl(bool selectContext = true)
     {
         var query = BoardViewQuery.Parse(Navigation.Uri);
-        if (query.ContextId != Context) await SelectClient(query.ContextId, query.ContextId?.ToString("N") ?? Text["Entire exchange"], false);
+        if (selectContext && query.ContextId != Context) await SelectClient(query.ContextId, query.ContextId?.ToString("N") ?? Text["Entire exchange"], false);
         Filter = query.Text; Node = query.Node; StatusFilter = query.State; TextKinds = query.TextKinds;
         OnlyObservedChannels = query.Channels; Page = query.Page;
         Tab = BoardPage ? "board" : query.Tab;
@@ -179,7 +179,7 @@ public partial class LiveOperations
             if (!ReferenceEquals(boardCards, Cards) || !ReferenceEquals(boardObservation, Observation))
             {
                 boardCards = Cards; boardObservation = Observation;
-                cachedTiles = OperatorTile.Create(Cards, Observation.ByCard, !Permissions.Manager && !Context.HasValue);
+                cachedTiles = OperatorTile.Create(Cards, Observation.ByCard, !Permissions.Manager && !Context.HasValue, Observation.CardContexts);
             }
             return cachedTiles;
         }
@@ -268,8 +268,9 @@ public partial class LiveOperations
         if (!first) return;
         Navigation.LocationChanged += LocationChanged;
         var initial = BoardViewQuery.Parse(Navigation.Uri);
-        await SelectClient(initial.ContextId, initial.ContextId?.ToString("N") ?? Text["Entire exchange"], false);
-        await ApplyUrl();
+        var initialContext = Demo ? initial.ContextId : await Access.InitialContext(initial.ContextId, lifetime.Token);
+        await SelectClient(initialContext, initialContext?.ToString("N") ?? Text["Entire exchange"], false);
+        await ApplyUrl(false);
         UrlReady = true;
         WriteUrl(true);
         await ReadBoardConfiguration();

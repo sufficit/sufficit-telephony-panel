@@ -67,9 +67,10 @@ Panel; verify real customer sign-in and cross-context denial before enabling use
 Do not change Asterisk, restart PBXs, or apply an old Identity manifest for this.
 No automatic conversion of legacy grants is provided.
 
-Multi-context aggregate views currently use live authorized evidence. Retained
-inventory is read only inside a selected authorized context, never from the
-manager's central inventory. Events without verifiable ownership remain hidden;
+Multi-context aggregate views combine each authorized company's API catalogue
+with its own live evidence, preserving idle extensions and separate company
+identities. Retained inventory is read only inside a selected authorized context,
+never from the manager's central inventory. Events without verifiable ownership remain hidden;
 their absence is not proof of offline state. The existing 16 active monitoring
 session limit remains and requires capacity review before a wider rollout.
 
@@ -99,3 +100,31 @@ that token, so every permission is the person's real one, resolved by Identity. 
 the manager role, a banner shows who is acting and `POST /impersonate/exit` restores the manager session. Identity
 refuses without `identity.users.impersonate`, a recent second-factor sign-in, or for privileged people, and audits
 every decision. Checks: `ImpersonationChecks`.
+
+## Sales representatives (2026-11-06)
+
+Endpoints expands each explicit `telephony.panel:<context>` grant with the direct
+active customers returned by `SalesRuntime.GetActiveCommissionedCustomers`, the
+same authoritative source used for commercial visibility in FOP. It keeps the
+representative itself, deduplicates customers, rejects the zero GUID, and does not
+traverse a represented customer's portfolio. No monitor or manager permission is
+inherited. Identity remains responsible for direct grants; business relationships
+are resolved by Endpoints (`GET /telephony/panel/contexts`).
+
+The API caches relationships for at most 10 seconds; the panel caches the resolved
+set for 45 seconds. Failed refreshes fail closed. Relationship removal therefore
+propagates within 55 seconds plus the existing polling interval. Direct grant
+revocation retains the Identity client's 60-second bound. A context no longer
+allowed is excluded even if its catalogue is cached.
+
+Landing on the sole directly granted representative's context opens the aggregate
+view automatically, including through "Entrar como". A represented company can
+still be selected separately; selecting the representative inside the running
+panel shows its own resources. Existing impersonation restrictions remain.
+
+Aggregate catalogues preserve idle resources and scope card identity by company.
+Unowned peer status is attributed only to an exact extension present in exactly
+one authorized catalogue; ambiguous keys and foreign accounts remain hidden.
+Calls always require ownership. Limits: 1,000 contexts, 2,000 cards per company,
+10,000 aggregate cards; exceeding a limit reports an error, never silently grants
+or truncates a portfolio. Tests: `RepresentativePortfolioChecks` in the panel suite.

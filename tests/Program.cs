@@ -20,6 +20,7 @@ RegistrationChecks.Run(Check);
 QueueDiagnosticChecks.Run(Check);
 await AccountingChecks.Run(Check);
 await CustomerAccessChecks.Run(Check);
+await RepresentativePortfolioChecks.Run(Check);
 await DisplayPairingChecks.Run(Check);
 await ImpersonationChecks.Run(Check);
 var clock = new FakeClock();

@@ -24,6 +24,8 @@ static class ImpersonationChecks
                     ? Json(new { error = "access_denied", error_description = "Administrators, managers and protected accounts cannot be impersonated." }, HttpStatusCode.BadRequest)
                     : Json(new { access_token = "person-token", token_type = "Bearer", expires_in = 1800 });
             }
+            if (path == "/telephony/panel/contexts")
+                return Json(Grants.Where(g => g.StartsWith("telephony.panel:")).Select(g => Guid.Parse(g.Split(':')[1])).ToArray());
             if (path.StartsWith("/connect/userinfo?entitlements=current"))
                 return Json(new { sub = "person", authorization = new { schemaVersion = 1, grants = Grants } });
             if (path.StartsWith("/connect/userinfo")) return Json(new { sub = "person", name = "Ana Cliente" });

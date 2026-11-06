@@ -26,6 +26,8 @@ static class DisplayPairingChecks
                 if (form.Contains("system-user-enrollment") && !EnrollmentAccepted) return new HttpResponseMessage(HttpStatusCode.BadRequest);
                 return Json(new { access_token = "access-" + TokenCalls, refresh_token = "refresh-" + TokenCalls, expires_in = 3600 });
             }
+            if (path == "/telephony/panel/contexts")
+                return Json(Grants.Where(g => g.StartsWith("telephony.panel:")).Select(g => Guid.Parse(g.Split(':')[1])).ToArray());
             if (path.StartsWith("/connect/userinfo?entitlements=current"))
                 return Json(new { sub = "display-user", authorization = new { schemaVersion = 1, grants = Grants } });
             if (path.StartsWith("/connect/userinfo")) return Json(new { sub = "display-user", name = "Tela da recepção" });

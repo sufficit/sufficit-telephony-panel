@@ -14,6 +14,7 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 200 });
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CurrentAuthorizationClient authorization = new(clients, clock);
+    private readonly PanelPortfolioClient portfolio = new(clients, clock);
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var key = Guid.CreateVersion7().ToString("N");
@@ -68,6 +69,15 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
         { return CurrentAuthorization.None; }
     }
 
+    public async Task<Guid?> InitialContextAsync(ClaimsPrincipal principal, Guid? context, CancellationToken ct)
+    {
+        var expanded = await AuthorizationAsync(principal, ct);
+        var token = Entry(principal.FindFirstValue("panel_session") ?? "")?.Ticket.Properties.GetTokenValue("access_token");
+        if (token is null || expanded.GlobalPanel || expanded.PanelContexts.Count < 2) return context;
+        var direct = await authorization.ReadAsync(principal.FindFirstValue("sub")!, token, ct);
+        return context == direct.SingleContext ? null : context;
+    }
+
     public async Task<bool> IsManagerAsync(ClaimsPrincipal principal, CancellationToken ct) =>
         (await AuthorizationAsync(principal, ct)).Manager;
 
@@ -106,6 +116,7 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
                     log?.LogWarning("Panel session {Key} of {Subject} ended: Identity reports no panel access", Short(key), principal.FindFirstValue("sub"));
                     Forget(key);
                 }
+                permissions = await portfolio.Expand(permissions, token, ct);
                 // "Entrar como": the person's view, never listen/whisper in their name.
                 return PanelImpersonation.IsImpersonating(principal) ? permissions with { Manager = false, MonitorContexts = [] } : permissions;
             }
@@ -135,5 +146,5 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
 
     private static string Short(string key) => key.Length > 8 ? key[..8] : key;
 
-    public void Dispose() { authorization.Dispose(); cache.Dispose(); gate.Dispose(); }
+    public void Dispose() { authorization.Dispose(); portfolio.Dispose(); cache.Dispose(); gate.Dispose(); }
 }

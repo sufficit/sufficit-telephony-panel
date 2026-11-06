@@ -11,6 +11,18 @@ namespace Sufficit.Telephony.Panel.Operations;
 public sealed class OperationsAccess(AuthenticationStateProvider authentication, PanelSessions sessions,
     OperationsPool pool, OperationsApi api, SupervisionPrefixPolicy prefixes, ILogger<OperationsAccess> logger)
 {
+    public async Task<Guid?> InitialContext(Guid? context, CancellationToken ct) =>
+        await sessions.InitialContextAsync((await authentication.GetAuthenticationStateAsync()).User, context, ct);
+
+    private readonly Dictionary<Guid, (DateTimeOffset Expires, EventsPanelCardInfo[] Cards)> catalogues = new();
+    private async Task<EventsPanelCardInfo[]> Catalogue(Guid context, CancellationToken ct)
+    {
+        if (catalogues.TryGetValue(context, out var entry) && entry.Expires > DateTimeOffset.UtcNow) return entry.Cards;
+        var cards = await Cards(context, ct);
+        catalogues[context] = (DateTimeOffset.UtcNow.AddSeconds(60), cards);
+        return cards;
+    }
+
     private async Task<string> Token(CancellationToken ct)
     {
         var principal = (await authentication.GetAuthenticationStateAsync()).User;
@@ -38,6 +50,21 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
         if (permissions.Manager)
             return context is { } managerContext ? AuthorizedObservation.Create(cards, rows, managerContext)
                 : AuthorizedObservation.ForManager(rows);
+        if (context is null && !permissions.GlobalPanel)
+        {
+            foreach (var removed in catalogues.Keys.Where(id => !permissions.CanRead(id)).ToArray()) catalogues.Remove(removed);
+            var scoped = new Dictionary<Guid, EventsPanelCardInfo[]>();
+            var total = 0;
+            foreach (var id in permissions.PanelContexts.Order())
+            {
+                var catalogue = await Catalogue(id, ct);
+                total += catalogue.Length;
+                if (total > 10000) throw new InvalidOperationException("Há mais de 10.000 recursos. Selecione uma empresa.");
+                scoped[id] = catalogue;
+            }
+            permissions = await Permissions(ct);
+            return AuthorizedObservation.ForPortfolio(scoped, rows, permissions);
+        }
         return AuthorizedObservation.ForCustomer(cards, rows, permissions, context);
     }
     public async Task<OperationsConnection> Connection(CancellationToken ct) =>

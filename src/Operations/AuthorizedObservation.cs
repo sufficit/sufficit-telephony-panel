@@ -6,6 +6,42 @@ namespace Sufficit.Telephony.Panel.Operations;
 /// <summary>Tenant-filtered view with a bounded comparison budget; never expose the raw manager stream.</summary>
 public sealed class AuthorizedObservation
 {
+    public Dictionary<EventsPanelCardInfo, Guid> CardContexts { get; } = new();
+
+    /// <summary>Each catalogue is matched inside its own tenant before combining the view.</summary>
+    public static AuthorizedObservation ForPortfolio(IReadOnlyDictionary<Guid, EventsPanelCardInfo[]> catalogues,
+        IEnumerable<ObservedResource> source, CurrentAuthorization permissions)
+    {
+        if (!permissions.PanelAllowed) throw new UnauthorizedAccessException();
+        var result = new AuthorizedObservation();
+        var candidates = source.ToArray();
+        var cards = new List<EventsPanelCardInfo>();
+        var rows = new List<ObservedResource>();
+        var allowed = catalogues.Where(pair => permissions.CanRead(pair.Key)).ToArray();
+        var owners = allowed.SelectMany(pair => OwnedEndpoints(pair.Value).Select(key => (key, pair.Key)))
+            .GroupBy(x => x.key).ToDictionary(g => g.Key, g => g.Select(x => x.Key).Distinct().Count());
+        foreach (var (context, catalogue) in allowed)
+        {
+            // Ambiguous unowned peer status cannot be assigned to either company.
+            var scoped = ForCustomer(catalogue, candidates.Where(row =>
+                Guid.TryParse(row.Account, out var id) && id != Guid.Empty
+                || owners.GetValueOrDefault(row.Key) == 1), permissions, context);
+            cards.AddRange(scoped.Cards);
+            rows.AddRange(scoped.Rows.Select(row => row.Kind == "peer" &&
+                (!Guid.TryParse(row.Account, out var account) || account == Guid.Empty)
+                ? row with { Account = context.ToString("N") } : row));
+            foreach (var card in scoped.Cards) result.CardContexts[card] = context;
+            foreach (var pair in scoped.ByCard) result.ByCard[pair.Key] = pair.Value.Select(row => row.Kind == "peer" &&
+                (!Guid.TryParse(row.Account, out var account) || account == Guid.Empty)
+                ? row with { Account = context.ToString("N") } : row).ToList();
+            foreach (var pair in scoped.Labels) result.Labels.TryAdd(pair.Key, pair.Value);
+            result.Limited |= scoped.Limited;
+        }
+        result.Cards = cards.ToArray();
+        result.Rows = rows.DistinctBy(row => row.Id).ToArray();
+        return result;
+    }
+
     public static AuthorizedObservation ForCustomer(EventsPanelCardInfo[] cards,
         IEnumerable<ObservedResource> source, CurrentAuthorization permissions, Guid? context)
     {
