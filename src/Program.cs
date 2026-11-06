@@ -99,6 +99,8 @@ builder.Services.AddSingleton(new BoardInventoryStore(builder.Configuration["Pan
 builder.Services.AddScoped<BoardInventoryAccess>();
 builder.Services.AddSingleton<SupportChat>();
 builder.Services.AddSingleton<DisplayPairing>();
+builder.Services.AddSingleton<PanelImpersonation>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Sufficit.Blazor.UI.Services.ISUIToast, Sufficit.Blazor.UI.Services.SUIToastService>();
 builder.Services.AddAuthentication(o =>
 {
@@ -262,6 +264,52 @@ app.MapGet("/api/fleet", async (HttpContext ctx, PanelSessions sessions, FleetMe
     await sessions.IsManagerAsync(ctx.User, ctx.RequestAborted)
         ? Results.Ok(await metrics.ReadAsync(ctx.RequestAborted)) : Results.StatusCode(403))
     .RequireAuthorization("manager");
+// "Entrar como": a manager opens the panel as a real customer person (Identity impersonation token, 30 minutes).
+app.MapGet("/impersonate", async (HttpContext ctx, PanelSessions sessions, PanelImpersonation impersonation) =>
+{
+    if (PanelImpersonation.IsImpersonating(ctx.User)) return Results.Redirect(pathBase + "/?impersonate=already");
+    if (!(await sessions.AuthorizationAsync(ctx.User, ctx.RequestAborted)).Manager) return Results.StatusCode(403);
+    var target = ctx.Request.Query["userid"].ToString();
+    if (!Guid.TryParse(target, out _)) return Results.BadRequest();
+    var context = Guid.TryParse(ctx.Request.Query["contextid"], out var c) ? c : Guid.Empty;
+    var managerToken = await sessions.GetAccessTokenAsync(ctx.User, ctx.RequestAborted);
+    var returnKey = ctx.User.FindFirst("panel_session")?.Value;
+    if (managerToken is null || returnKey is null) return Results.Redirect(pathBase + "/login?returnUrl=" + Uri.EscapeDataString(pathBase + ctx.Request.Path + ctx.Request.QueryString));
+    var (issued, refusal) = await impersonation.ExchangeAsync(managerToken, target, ctx.RequestAborted);
+    if (issued is null)
+        return Results.Content(ImpersonationPage.Refused(refusal ?? "", pathBase), "text/html; charset=utf-8", statusCode: 403);
+    var identity = new System.Security.Claims.ClaimsIdentity("impersonation", "name", "role");
+    identity.AddClaim(new System.Security.Claims.Claim("sub", target));
+    identity.AddClaim(new System.Security.Claims.Claim("name", issued.Name ?? target));
+    identity.AddClaim(new System.Security.Claims.Claim(PanelImpersonation.ActorClaim, ctx.User.FindFirst("sub")?.Value ?? ""));
+    identity.AddClaim(new System.Security.Claims.Claim(PanelImpersonation.ActorNameClaim, ctx.User.FindFirst("name")?.Value ?? ""));
+    identity.AddClaim(new System.Security.Claims.Claim(PanelImpersonation.ReturnSessionClaim, returnKey));
+    if (context != Guid.Empty) identity.AddClaim(new System.Security.Claims.Claim(PanelImpersonation.ContextClaim, context.ToString("N")));
+    var properties = new AuthenticationProperties { ExpiresUtc = issued.ExpiresAt };
+    properties.StoreTokens([
+        new AuthenticationToken { Name = "access_token", Value = issued.AccessToken },
+        new AuthenticationToken { Name = "expires_at", Value = issued.ExpiresAt.ToString("o", System.Globalization.CultureInfo.InvariantCulture) },
+    ]);
+    ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Panel.Impersonation")
+        .LogWarning("Manager {Actor} entered the panel as {Target}", ctx.User.FindFirst("sub")?.Value, target);
+    await ctx.SignInAsync("panel", new System.Security.Claims.ClaimsPrincipal(identity), properties);
+    // The person's own permissions decide what loads; a person without panel access lands on the denial screen.
+    return Results.Redirect(pathBase + (context != Guid.Empty ? "/board?contextid=" + context.ToString("N") : "/"));
+});
+app.MapPost("/impersonate/exit", async (HttpContext ctx, PanelSessions sessions) =>
+{
+    await ctx.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>().ValidateRequestAsync(ctx);
+    var returnKey = ctx.User.FindFirst(PanelImpersonation.ReturnSessionClaim)?.Value;
+    var current = ctx.User.FindFirst("panel_session")?.Value;
+    var manager = returnKey is null ? null : await sessions.RetrieveAsync(returnKey);
+    if (current is not null) await sessions.RemoveAsync(current);
+    if (manager is null) { await ctx.SignOutAsync("panel"); return Results.LocalRedirect(pathBase + "/?signedout=1"); }
+    var identity = new System.Security.Claims.ClaimsIdentity(manager.Principal.Claims.Where(claim => claim.Type != "panel_session"),
+        manager.Principal.Identity?.AuthenticationType, "name", "role");
+    await ctx.SignInAsync("panel", new System.Security.Claims.ClaimsPrincipal(identity), manager.Properties);
+    await sessions.RemoveAsync(returnKey!);
+    return Results.LocalRedirect(pathBase + "/");
+});
 // Monitoring display pairing: /display shows a code, staff pair it from the customer's panel access screen (Blazor), the display signs in.
 app.MapGet("/display", async (HttpContext ctx, DisplayPairing display) =>
 {

@@ -1,4 +1,5 @@
 @inject IConfiguration Configuration
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -20,6 +21,13 @@ optional company filter, text/state legend and per-node detail, protected confir
 SETTINGS: SUI rule list and inline editor; ordered exact/prefix matches, draft preview and explicit shared save.
 FORM: established SUI operational world, not a new visual-world selection.
 FINISH: bounded motion, opt-in sound, desktop/mobile evidence and finish review. *@
+    @if (HttpContextAccessor.HttpContext?.User is { } user && PanelImpersonation.IsImpersonating(user))
+    {
+        <div class="impersonation-banner" role="status">
+            <span>Você está vendo o painel como <strong>@user.FindFirst("name")?.Value</strong>, com o acesso real dessa pessoa. Escuta e sussurro ficam desligados.</span>
+            <form method="post" action="impersonate/exit"><AntiforgeryToken /><button type="submit">Sair e voltar para @(user.FindFirst(PanelImpersonation.ActorNameClaim)?.Value is { Length: > 0 } actor ? actor : "minha conta")</button></form>
+        </div>
+    }
     <Routes @rendermode="InteractiveServer" />
     <script src="@Assets["panel.js"]"></script>
     <script src="_framework/blazor.web.js"></script>

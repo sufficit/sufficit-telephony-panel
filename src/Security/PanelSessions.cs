@@ -80,7 +80,8 @@ public sealed class PanelSessions(IHttpClientFactory clients, TimeProvider clock
             {
                 var permissions = await authorization.ReadAsync(principal.FindFirstValue("sub")!, token, ct);
                 if (!permissions.PanelAllowed) Forget(key);
-                return permissions;
+                // "Entrar como": the person's view, never listen/whisper in their name.
+                return PanelImpersonation.IsImpersonating(principal) ? permissions with { Manager = false, MonitorContexts = [] } : permissions;
             }
             catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException or InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
             { return CurrentAuthorization.None; }

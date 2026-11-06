@@ -21,6 +21,7 @@ QueueDiagnosticChecks.Run(Check);
 await AccountingChecks.Run(Check);
 await CustomerAccessChecks.Run(Check);
 await DisplayPairingChecks.Run(Check);
+await ImpersonationChecks.Run(Check);
 var clock = new FakeClock();
 var http = new FakeHttp { Body = "{\"sub\":\"operator-a\",\"role\":[\"manager\"]}" };
 using var sessions = new PanelSessions(http, clock);

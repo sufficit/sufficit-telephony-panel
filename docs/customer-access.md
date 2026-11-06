@@ -89,3 +89,13 @@ one context, and the display (`/display/complete`) gets a 365-day session whose 
 token (`PanelSessions.Refresher`). Three failed enrollments burn a code. Revoking the display in Blazor disables the
 system user, which revokes its credential; the next renewal fails and the display leaves the board.
 Checks: `DisplayPairingChecks`.
+
+## "Entrar como" (2026-11-06)
+
+A manager reproduces a real customer person: `GET /impersonate?userid=<person>&contextid=<customer>` (opened from
+the Blazor panel access screen) exchanges the manager's own panel access token at Identity for a 30-minute token of
+the person (`impersonated_subject`, see sufficit-identity `docs/usage/USAGE-IMPERSONATION.md`). The panel signs in
+that token, so every permission is the person's real one, resolved by Identity. The session never has monitor or
+the manager role, a banner shows who is acting and `POST /impersonate/exit` restores the manager session. Identity
+refuses without `identity.users.impersonate`, a recent second-factor sign-in, or for privileged people, and audits
+every decision. Checks: `ImpersonationChecks`.
