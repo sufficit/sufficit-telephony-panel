@@ -95,3 +95,9 @@ O formato nacional com um zero inicial (`0` + DDD + fixo/móvel) também recebe
 A regra vale para origem e destino e preserva os originais no diagnóstico.
 Não remove zeros de ramais, prefixos `00`, números locais, DDD inválido nem
 sequências com código de seleção de prestadora; valores com `+` são preservados.
+
+O 0800 nacional (`0800` + exatamente sete dígitos ASCII) também é apresentado
+como `+55800` + os mesmos sete dígitos, em origem e destino. Exemplo:
+`08000420502` → `+558000420502`. O original permanece disponível no diagnóstico.
+Comprimentos diferentes, prefixo `00`, outros serviços como 0300 e valores já
+com `+` não são reinterpretados por essa regra.

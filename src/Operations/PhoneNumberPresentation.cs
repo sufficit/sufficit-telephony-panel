@@ -17,6 +17,8 @@ public static partial class PhoneNumberPresentation
         if (digits.Length == 13 && digits.StartsWith("550800", StringComparison.Ordinal))
             value = value.Remove(offset + 2, 1);
         if (value.StartsWith('+')) return value;
+        if (value.Length == 11 && value.StartsWith("0800", StringComparison.Ordinal))
+            return "+55" + value[1..];
         if (BrazilianInternationalNumber().IsMatch(value)) return "+" + value;
         if (value.StartsWith('0') && BrazilianNationalNumber().IsMatch(value.AsSpan(1)))
             return "+55" + value[1..];

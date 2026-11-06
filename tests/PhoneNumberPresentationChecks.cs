@@ -6,7 +6,7 @@ internal static class PhoneNumberPresentationChecks
     {
         check(PhoneNumberPresentation.Normalize("5508000000697") == "+558000000697", "Malformed Brazilian tollfree number is normalized");
         check(PhoneNumberPresentation.Normalize("+5508000000697") == "+558000000697", "Explicit international plus is preserved");
-        foreach (var value in new[] { "", "6007", "08000000697", "+558000000697", "550800000697", "55080000000697", "550800000069x", "550800000069٧", " 5508000000697", "SIP/5508000000697", "Atendimento" })
+        foreach (var value in new[] { "", "6007", "+558000000697", "550800000697", "55080000000697", "550800000069x", "550800000069٧", " 5508000000697", "SIP/5508000000697", "Atendimento" })
             check(PhoneNumberPresentation.Normalize(value) == value, "Other identifiers remain unchanged: " + value);
         foreach (var number in new[] { "558000000697", "5511999999999", "552140627711", "5591981344999", "555133334444" })
         {
@@ -31,6 +31,14 @@ internal static class PhoneNumberPresentationChecks
         }
         foreach (var value in new[] { "0003396015", "0000016004", "0021964032745", "02121964032745", "023964032745", "021664032745", "0988242905", "02196403274", "+021964032745", "021964032745\n", "02196403274٥" })
             check(PhoneNumberPresentation.Normalize(value) == value, "Non-national or invalid trunk identifier preserved: " + value);
+        foreach (var number in new[] { "08000420502", "08000000697" })
+        {
+            var expected = "+55" + number[1..];
+            check(PhoneNumberPresentation.Normalize(number) == expected, "Domestic tollfree normalized: " + number);
+            check(PhoneNumberPresentation.Normalize(PhoneNumberPresentation.Normalize(number)) == expected, "Domestic tollfree normalization is idempotent: " + number);
+        }
+        foreach (var value in new[] { "0800", "0800042050", "080004205020", "008000420502", "+08000420502", "0800042050x", "0800042050٢", "08000420502\n", " 08000420502", "03000420502" })
+            check(PhoneNumberPresentation.Normalize(value) == value, "Invalid or different service format preserved: " + value);
         check(PhoneNumberPresentation.Normalize(null) is null, "Missing identifiers remain missing");
         var now = DateTimeOffset.UtcNow;
         var row = new ObservedResource("test", "google-voip", "call", "SIP/TIP-test", "Up", "5508000000697", "+5508000000697", null, now, now, new Dictionary<string, string>());
@@ -41,6 +49,9 @@ internal static class PhoneNumberPresentationChecks
         var trunkRow = row with { Caller = "021964032745", Destination = "061992053002" };
         check(PhoneNumberPresentation.Normalize(trunkRow.Caller) == "+5521964032745" && PhoneNumberPresentation.Normalize(trunkRow.Destination) == "+5561992053002", "Trunk prefix normalizes on both ends");
         check(trunkRow.Caller == "021964032745" && trunkRow.Destination == "061992053002", "Trunk-prefixed originals preserved");
+        var tollfreeRow = row with { Caller = "08000420502", Destination = "08000000697" };
+        check(PhoneNumberPresentation.Normalize(tollfreeRow.Caller) == "+558000420502" && PhoneNumberPresentation.Normalize(tollfreeRow.Destination) == "+558000000697", "Domestic tollfree normalized on both ends");
+        check(tollfreeRow.Caller == "08000420502" && tollfreeRow.Destination == "08000000697", "Domestic tollfree originals preserved");
         check(row.Caller == "5508000000697" && row.Destination == "+5508000000697", "Original observation remains available for diagnosis");
     }
 }
