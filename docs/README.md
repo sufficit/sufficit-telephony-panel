@@ -18,6 +18,8 @@ When a dated activity report conflicts with it, the system overview wins.
 | Calls versus channel legs | [Call correlation](call-channel-correlation.md) |
 | Remembered resources | [Retained resources](retained-resources.md) |
 | ACD queue projection | [ACD board integration](acd-board-integration.md) |
+| Customer permissions and representative portfolios | [Customer access](customer-access.md) |
+| R & L rollout and customer communication | [R & L delivery](customer-rollout-rl.md) |
 | Legacy FOP rule import | [FOP rule import](fop-rule-import.md) |
 
 Queue configuration, member operation and runtime controller contracts live in
