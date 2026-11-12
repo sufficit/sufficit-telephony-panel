@@ -220,7 +220,7 @@ else
     </div>;
     private RenderFragment ResourceDetails(OperatorTile tile) => @<div class="resource-details">
                     <p>@Text.Observed(tile.Status.Label) · @(tile.Remembered ? Text["Saved last observation (approximate)"] : Text["Last observation"]): @Timestamp(tile.Updated)</p>
-                    @if (tile.Kind == EventsPanelCardKind.QUEUE) { <QueueResourceDetails Tile="tile" /> }
+                    @if (tile.Kind == EventsPanelCardKind.QUEUE) { <QueueResourceDetails Tile="tile" Context="Context" Preview="Demo" /> }
                     @if (tile.Queue is { } queue)
                     {
                         <p>@Text["QUEUE data comes from the queue controller, not native AMI queue events."]</p>

@@ -24,6 +24,20 @@ public sealed class OperationsApi(IHttpClientFactory clients)
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         return document.RootElement.Clone();
     }
+    public async Task<QueueResourceIdentity?> QueueIdentity(string token, string extension, Guid? context, CancellationToken ct)
+    {
+        if (extension is not { Length: > 0 and <= 20 } || !extension.All(char.IsAsciiDigit) || context == Guid.Empty)
+            throw new InvalidOperationException("Invalid legacy queue identity request.");
+        JsonElement json;
+        try { json = await Send(token, "telephony/panel/queue-identity?extension=" + Uri.EscapeDataString(extension)
+            + (context is { } owner ? $"&contextid={owner:N}" : ""), ct); }
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound) { return null; }
+        var result = json.Deserialize<QueueResourceIdentity>(Json);
+        if (!json.TryGetProperty("native", out var native) || native.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || result is null || result.ContextId == Guid.Empty || result.QueueId == Guid.Empty || result.Extension != extension ||
+            context is { } expected && result.ContextId != expected)
+            throw new InvalidDataException("Queue catalogue identity scope mismatch.");
+        return result;
+    }
     public async Task<QueueAccounting> Accounting(string token,Guid context,string node,string recordId,CancellationToken ct)
     {
         if(context==Guid.Empty || !System.Text.RegularExpressions.Regex.IsMatch(recordId,"^[0-9]{9,12}\\.[0-9]{1,20}$") ||

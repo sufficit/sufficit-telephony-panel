@@ -189,3 +189,18 @@ publicação a qualquer momento; cuidado de horário reservado ao servidor Googl
 A release `queue-details-20261112-cd7141e` publicou os detalhes de GUID/gestão e a
 compatibilidade 403/404 somente no eveo-apps, sem alterar controladores. Evidências
 em [publicação do painel](activities/202611121254-publish-panel-queue-details.md).
+
+## Resolução dos cartões numéricos antigos
+
+Ao abrir uma fila sem GUID, o painel consulta a API central com o token do usuário
+em `GET telephony/panel/queue-identity?extension={numero}&contextid={opcional}`.
+A consulta usa o identificador exato do cartão, preservando zeros; não usa título
+nem regex genérica. A resposta é conferida por número e escopo e a autorização é
+revalidada. O resultado vale para o detalhe aberto; não há busca por cartão a
+cada refresh. Trocar/fechar o detalhe cancela a solicitação. Erros têm nova tentativa,
+resultado ambíguo orienta selecionar empresa e ausência não inventa identidade.
+
+A API cruza vínculos numéricos preservados da migração com GUID/empresa presentes
+no cadastro nativo atual; não reativa suff_queue, não concede SQL ao monitoramento
+e não depende de alterar os controladores Google/ARI. A gestão continua aplicando
+sua própria autorização. Vínculo removido do catálogo nativo não gera edição.

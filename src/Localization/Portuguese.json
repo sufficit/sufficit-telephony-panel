@@ -726,5 +726,11 @@
   "Company GUID": "GUID da empresa",
   "Manage this queue in Blazor": "Gerenciar esta fila no Blazor",
   "Open queue management in Blazor": "Abrir gestão de filas no Blazor",
-  "This observation does not report the queue GUID or its company. Find the queue in management to confirm its identity.": "Esta observação não informa o GUID da fila ou sua empresa. Localize a fila na gestão para confirmar a identidade."
+  "This observation does not report the queue GUID or its company. Find the queue in management to confirm its identity.": "Esta observação não informa o GUID da fila ou sua empresa. Localize a fila na gestão para confirmar a identidade.",
+  "Looking up the queue GUID in the catalogue…": "Consultando o GUID da fila no cadastro…",
+  "This GUID belongs to the legacy catalogue. No matching queue exists in the current management catalogue.": "Este GUID pertence ao cadastro legado. Não há fila correspondente na gestão atual.",
+  "The queue catalogue could not be checked. Retry to load its GUID.": "Não foi possível consultar o cadastro da fila. Tente novamente para carregar o GUID.",
+  "More than one queue matches this number. Select a company to identify the correct queue.": "Há mais de uma fila com esse número. Selecione uma empresa para identificar a fila correta.",
+  "No queue with this exact number was found in your authorized catalogue.": "Nenhuma fila com esse número exato foi encontrada no cadastro que você pode consultar.",
+  "Retry lookup": "Consultar novamente"
 }

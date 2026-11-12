@@ -517,6 +517,13 @@ public partial class LiveOperations
             new() { Label = "DID · 551140005678 · Linha antiga", Kind = EventsPanelCardKind.TRUNK, Channels = [$"entry:did:{tenant:N}:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:expired"] },
             new() { Label = "WhatsApp · +5511999991234 · Comercial", Kind = EventsPanelCardKind.TRUNK, Channels = [$"entry:whatsapp:{tenant:N}:{new string('c', 64)}:disabled"] }
         }).ToArray();
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).ContainsKey("queueidentitypreview"))
+        {
+            var legacyCard = Cards.Single(c => c.Kind == EventsPanelCardKind.QUEUE);
+            legacyCard.Label = "0000006500"; legacyCard.Channels = ["0000006500"];
+            Rows = Rows.Select(row => row.Details.GetValueOrDefault("queue") == "fila-demo"
+                ? row with { Details = new Dictionary<string, string>(row.Details) { ["queue"] = "0000006500" } } : row).ToArray();
+        }
         var demoObservation = AuthorizedObservation.Create(Cards, Rows, tenant);
         demoTiles = OperatorTile.Create(Cards, demoObservation.ByCard);
         // Dense operator-board fixture only: never mixed into production observations

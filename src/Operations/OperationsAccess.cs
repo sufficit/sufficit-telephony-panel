@@ -30,6 +30,16 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
             ?? throw new UnauthorizedAccessException("Sessão inválida. Entre novamente na Sufficit Identity.");
         return token;
     }
+    public async Task<QueueResourceIdentity?> QueueIdentity(string extension, Guid? context, CancellationToken ct)
+    {
+        var permissions = await Permissions(ct);
+        context = permissions.SelectContext(context);
+        var result = await api.QueueIdentity(await Token(ct), extension, context, ct);
+        permissions = await Permissions(ct);
+        permissions.SelectContext(context);
+        if (result is not null && !permissions.CanRead(result.ContextId)) throw new UnauthorizedAccessException();
+        return result;
+    }
     public async Task<QueueAccounting> Accounting(Guid context,string node,string recordId,CancellationToken ct)
     {
         if(!(await Permissions(ct)).CanRead(context))throw new UnauthorizedAccessException();

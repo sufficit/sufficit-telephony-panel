@@ -1,25 +1,76 @@
 @using Sufficit.Telephony.Panel.Operations
+@implements IDisposable
 @inject IConfiguration Configuration
+@inject OperationsAccess Access
+@inject PanelDiagnostics Diagnostics
+@inject NavigationManager Navigation
 
 <section class="queue-resource-details" aria-label="@Text["Queue identification"]">
-    @if (Identity is { } identity)
+    @if (Loading)
+    {
+        <p role="status">@Text["Looking up the queue GUID in the catalogue…"]</p>
+    }
+    else if (Identity is { } identity)
     {
         <dl class="queue-resource-identity">
             <div><dt>@Text["Queue GUID"]</dt><dd><code>@identity.QueueId.ToString("D")</code></dd></div>
             <div><dt>@Text["Company GUID"]</dt><dd><code>@identity.ContextId.ToString("D")</code></dd></div>
         </dl>
-        <SUIButton Href="@identity.ManagementUrl(BlazorRoot)" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage this queue in Blazor"]</SUIButton>
+        @if (!identity.Native) { <p class="queue-identity-unavailable">@Text["This GUID belongs to the legacy catalogue. No matching queue exists in the current management catalogue."]</p> }
+        <SUIButton Href="@identity.ManagementUrl(BlazorRoot)" Target="_blank" VariantValue="SUIVariant.Outlined">@Text[identity.Native ? "Manage this queue in Blazor" : "Open queue management in Blazor"]</SUIButton>
     }
     else
     {
-        <p class="queue-identity-unavailable">@Text["This observation does not report the queue GUID or its company. Find the queue in management to confirm its identity."]</p>
-        <SUIButton Href="@(BlazorRoot + "/pages/telephony/queue")" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Open queue management in Blazor"]</SUIButton>
+        <p class="queue-identity-unavailable" role="status">@Text[LookupError ? "The queue catalogue could not be checked. Retry to load its GUID." : Ambiguous ? "More than one queue matches this number. Select a company to identify the correct queue." : Missing ? "No queue with this exact number was found in your authorized catalogue." : "This observation does not report the queue GUID or its company. Find the queue in management to confirm its identity."]</p>
+        @if (LookupError) { <SUIButton OnClick="Retry" VariantValue="SUIVariant.Outlined">@Text["Retry lookup"]</SUIButton> }
+        <SUIButton Href="@ListUrl" Target="_blank" VariantValue="SUIVariant.Text">@Text["Open queue management in Blazor"]</SUIButton>
+        <ErrorDetails Diagnostic="Failure" />
     }
 </section>
 
 @code {
     [Parameter, EditorRequired] public OperatorTile Tile { get; set; } = default!;
-    private QueueResourceIdentity? Identity => QueueResourceIdentity.From(Tile);
+    [Parameter] public Guid? Context { get; set; }
+    [Parameter] public bool Preview { get; set; }
+    private QueueResourceIdentity? Resolved;
+    private QueueResourceIdentity? Identity => QueueResourceIdentity.From(Tile) ?? Resolved;
+    private (string Id, Guid? Context)? Loaded;
+    private CancellationTokenSource? request;
+    private bool Loading, LookupError, Missing, Ambiguous;
+    private PanelDiagnostic? Failure;
     private string BlazorRoot => (Configuration["Panel:BlazorBaseAddress"] is { Length: > 0 } root
         ? root : "https://blazor.sufficit.com.br").TrimEnd('/');
+    private string ListUrl => BlazorRoot + "/pages/telephony/queue" + (Context is { } id ? $"?contextid={id:N}" : "");
+
+    protected override Task OnParametersSetAsync() => Resolve();
+    private async Task Resolve()
+    {
+        var key = (Tile.Id, Context);
+        if (Loaded == key) return;
+        Loaded = key;
+        request?.Cancel(); request?.Dispose();
+        request = new CancellationTokenSource();
+        var current = request;
+        Resolved = null; Failure = null; Loading = LookupError = Missing = Ambiguous = false;
+        if (QueueResourceIdentity.From(Tile) is not null || QueueResourceIdentity.LegacyExtension(Tile) is not { } extension) return;
+        Loading = true;
+        try
+        {
+            var result = Preview ? QueueIdentityFixture.Read(Navigation.Uri, extension) : await Access.QueueIdentity(extension, Context, current.Token);
+            if (!current.IsCancellationRequested) { Resolved = result; Missing = result is null; }
+        }
+        catch (OperationCanceledException) when (current.IsCancellationRequested) { }
+        catch (Exception e)
+        {
+            if (!current.IsCancellationRequested)
+            {
+                Ambiguous = e is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Conflict };
+                LookupError = !Ambiguous;
+                if (LookupError) Failure = Diagnostics.Report(e, "queue-identity-lookup");
+            }
+        }
+        finally { if (request == current) Loading = false; }
+    }
+    private Task Retry() { Loaded = null; return Resolve(); }
+    public void Dispose() { request?.Cancel(); request?.Dispose(); }
 }

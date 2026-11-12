@@ -14,6 +14,7 @@ SupportChatChecks.Run(Check);
 CardMatcherChecks.Run(Check);
 BoardTotalsChecks.Run(Check);
 QueueResourceIdentityChecks.Run(Check);
+await QueueIdentityLookupChecks.Run(Check);
 SharedPrefixChecks.Run(Check);
 QueueDistributionChecks.Run(Check);
 AutoSignInChecks.Run(Check);
