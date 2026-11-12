@@ -1,0 +1,6 @@
+.queue-resource-details { margin-block: 1rem; }
+.queue-resource-identity { display: grid; gap: .75rem; margin: 0 0 1rem; }
+.queue-resource-identity dt { color: var(--sui-text-secondary); font-size: .875rem; }
+.queue-resource-identity dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.queue-resource-identity code { font-size: .875rem; user-select: all; }
+.queue-identity-unavailable { color: var(--sui-text-secondary); max-width: 65ch; }

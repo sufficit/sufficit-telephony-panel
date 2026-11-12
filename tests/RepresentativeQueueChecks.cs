@@ -26,7 +26,7 @@ internal static class RepresentativeQueueChecks
             else
             {
                 var context = Guid.Parse(path.Split('/')[4]);
-                Requested.Add(context);
+                lock (Requested) Requested.Add(context);
                 body = new QueueBoardSnapshot(context.ToString("N"), node.ToString("N"), clock.Now, true, false,
                     [new QueueBoardQueue(context.ToString("N"), "Principal", 0, 0, clock.Now)], []);
             }

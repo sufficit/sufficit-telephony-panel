@@ -13,6 +13,7 @@ PanelDiagnosticChecks.Run(Check);
 SupportChatChecks.Run(Check);
 CardMatcherChecks.Run(Check);
 BoardTotalsChecks.Run(Check);
+QueueResourceIdentityChecks.Run(Check);
 SharedPrefixChecks.Run(Check);
 QueueDistributionChecks.Run(Check);
 AutoSignInChecks.Run(Check);

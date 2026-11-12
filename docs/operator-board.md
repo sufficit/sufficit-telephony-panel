@@ -165,3 +165,18 @@ Uma falha do agregado mantém somente nomes conhecidos com atividade indisponív
 404 em controlador antigo. Preservar o inventário lembrado, sem recriar estado
 atual a partir dele. A instalação exige atualizar controlador/fachada antes do
 painel; commit e testes locais não comprovam publicação nem aceitação em produção.
+
+## Identificação e gestão nos detalhes da fila
+
+Ao clicar em uma fila, os detalhes mostram o GUID completo da fila e da empresa,
+com botão para editar exatamente esse cadastro no Blazor em nova aba. O endereço
+usa `Panel:BlazorBaseAddress` (padrão `https://blazor.sufficit.com.br`) e a rota
+`/pages/telephony/queue/edit?contextid={N}&queueid={N}`. A autorização para gestão
+continua sendo aplicada pelo Blazor; visualizar a fila no painel não concede edição.
+
+A identidade vem dos metadados do controlador ou da chave canônica
+`queue:{empresa}:{fila}`, também preservada para filas nativas lembradas.
+Cartão legado numérico sem GUID/contexto comprovados mostra a limitação e um botão
+para a lista de gestão, sem inventar vínculo por nome ou número. Identidades
+conflitantes também não geram destino de edição. Os detalhes de filas não mostram
+registro SIP, alcance de ramal nem IP/aparelho; canais e supervisão permanecem.

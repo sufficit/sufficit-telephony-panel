@@ -1,0 +1,25 @@
+@using Sufficit.Telephony.Panel.Operations
+@inject IConfiguration Configuration
+
+<section class="queue-resource-details" aria-label="@Text["Queue identification"]">
+    @if (Identity is { } identity)
+    {
+        <dl class="queue-resource-identity">
+            <div><dt>@Text["Queue GUID"]</dt><dd><code>@identity.QueueId.ToString("D")</code></dd></div>
+            <div><dt>@Text["Company GUID"]</dt><dd><code>@identity.ContextId.ToString("D")</code></dd></div>
+        </dl>
+        <SUIButton Href="@identity.ManagementUrl(BlazorRoot)" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Manage this queue in Blazor"]</SUIButton>
+    }
+    else
+    {
+        <p class="queue-identity-unavailable">@Text["This observation does not report the queue GUID or its company. Find the queue in management to confirm its identity."]</p>
+        <SUIButton Href="@(BlazorRoot + "/pages/telephony/queue")" Target="_blank" VariantValue="SUIVariant.Outlined">@Text["Open queue management in Blazor"]</SUIButton>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OperatorTile Tile { get; set; } = default!;
+    private QueueResourceIdentity? Identity => QueueResourceIdentity.From(Tile);
+    private string BlazorRoot => (Configuration["Panel:BlazorBaseAddress"] is { Length: > 0 } root
+        ? root : "https://blazor.sufficit.com.br").TrimEnd('/');
+}
