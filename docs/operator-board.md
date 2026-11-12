@@ -183,3 +183,9 @@ Cartão legado numérico sem GUID/contexto comprovados mostra a limitação e um
 para a lista de gestão, sem inventar vínculo por nome ou número. Identidades
 conflitantes também não geram destino de edição. Os detalhes de filas não mostram
 registro SIP, alcance de ramal nem IP/aparelho; canais e supervisão permanecem.
+
+Atualização operacional de 12/11/2026: painel liberado pelo mantenedor para
+publicação a qualquer momento; cuidado de horário reservado ao servidor Google.
+A release `queue-details-20261112-cd7141e` publicou os detalhes de GUID/gestão e a
+compatibilidade 403/404 somente no eveo-apps, sem alterar controladores. Evidências
+em [publicação do painel](activities/202611121254-publish-panel-queue-details.md).
