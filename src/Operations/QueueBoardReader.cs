@@ -159,9 +159,9 @@ public sealed class QueueBoardReader : IDisposable
     private async Task<QueueBoardSample[]> ReadOverview(GlobalSlot slot, CancellationToken budget, CancellationToken caller)
     {
         var samples = await ReadGlobal(slot, budget, caller);
-        // Older controllers have no aggregate route. Preserve their explicitly configured
+        // Older controllers either refuse the unlisted route (403) or lack it (404). Preserve explicitly configured
         // snapshots, alongside the global coverage warning, until the controller is upgraded.
-        if (samples is [{ HttpStatus: 404, Snapshot: null }])
+        if (samples is [{ HttpStatus: 403 or 404, Snapshot: null }])
         {
             var fallback = await Task.WhenAll(slots.Where(s => s.Source == slot.Source).Select(s => Read(s, budget, caller)));
             return fallback.Concat(samples).ToArray();

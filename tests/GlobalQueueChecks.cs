@@ -64,14 +64,17 @@ internal static class GlobalQueueChecks
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(key, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             var source = new QueueBoardSource("test-node", node, [first], "http://127.0.0.1/", key, true);
             using var reader = new QueueBoardReader([source], http, clock);
-            http.AggregateStatus = HttpStatusCode.NotFound;
+            foreach (var status in new[] { HttpStatusCode.NotFound, HttpStatusCode.Forbidden })
+            {
+            http.AggregateStatus = status;
             using (var legacyReader = new QueueBoardReader([source], http, clock))
             {
                 var legacyAccess = new QueueBoardAccess(new PanelAccess(new PrincipalProvider(principal), sessions), legacyReader);
                 var legacy = await legacyAccess.Read(null, default);
-                check(legacy.Any(s => s.ContextId == first && s.Available) && legacy.Any(s => s.ContextId == Guid.Empty && s.HttpStatus == 404 && !s.Available),
+                check(legacy.Any(s => s.ContextId == first && s.Available) && legacy.Any(s => s.ContextId == Guid.Empty && s.HttpStatus == (int)status && !s.Available),
                     "Old controller preserves configured queue snapshots with explicit incomplete-global-coverage warning");
                 check(legacy.All(s => s.ContextId != second), "Legacy compatibility does not invent unconfigured company coverage");
+            }
             }
             http.AggregateStatus = HttpStatusCode.OK; http.Aggregates = http.Snapshots = 0; http.Requested.Clear();
             var access = new QueueBoardAccess(new PanelAccess(new PrincipalProvider(principal), sessions), reader);
@@ -107,7 +110,7 @@ internal static class GlobalQueueChecks
             check(samples.All(s => !s.Available && s.HttpStatus == 404), "Legacy controller missing aggregate produces explicit source failure");
             clock.Now += TimeSpan.FromSeconds(3); http.AggregateStatus = HttpStatusCode.Forbidden;
             samples = await access.Read(null, default);
-            check(samples.Single() is { ContextId: var scope, Snapshot: null, Available: false } && scope == Guid.Empty, "Upstream denial drops all cached global company data");
+            check(samples.Any(s => s.ContextId == Guid.Empty && s.Snapshot is null && !s.Available) && samples.All(s => s.ContextId != second), "Upstream aggregate denial drops cached global company data; only separately authorized fixed snapshots can return");
             clock.Now += TimeSpan.FromSeconds(3); http.AggregateStatus = HttpStatusCode.OK;
             check((await access.Read(null, default)).Length == 2, "Global aggregate recovers without restarting the panel");
             clock.Now += TimeSpan.FromSeconds(61); http.Global = false;
