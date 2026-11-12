@@ -15,6 +15,15 @@ public sealed class QueueBoardReader : IDisposable
         public QueueBoardSample? Value;
         public DateTimeOffset Attempted;
     }
+    private sealed record GlobalSnapshot(string NodeId, QueueBoardSnapshot[] Snapshots);
+    private sealed class GlobalSlot(QueueBoardSource source)
+    {
+        public readonly QueueBoardSource Source = source;
+        public readonly SemaphoreSlim Gate = new(1);
+        public QueueBoardSample[]? Value;
+        public DateTimeOffset Attempted;
+    }
+    private readonly GlobalSlot[] globals;
     private readonly Slot[] slots;
     private readonly QueueBoardSource[] open;
     // On-demand slots for AnyContext sources; bounded, oldest evicted. Authorization stays in QueueBoardAccess.
@@ -38,6 +47,7 @@ public sealed class QueueBoardReader : IDisposable
             throw new InvalidOperationException("Invalid private QUEUE board sources.");
         slots = definitions.SelectMany(s => s.ContextIds.Select(c => new Slot(s, c))).ToArray();
         open = definitions.Where(s => s.AnyContext).ToArray();
+        globals = open.Select(s => new GlobalSlot(s)).ToArray();
     }
     public static bool ValidSource(QueueBoardSource source)
     {
@@ -66,13 +76,20 @@ public sealed class QueueBoardReader : IDisposable
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(5));
-        var selected = slots.Where(s => contexts is null || contexts.Contains(s.Context)).ToList();
-        if (contexts is not null)
-            foreach (var requested in contexts.Where(id => id != Guid.Empty).Order())
-                foreach (var source in open.Where(o => !selected.Any(s => s.Source.NodeId == o.NodeId && s.Context == requested)))
-                    selected.Add(DynamicSlot(source, requested));
+        if (contexts is null)
+        {
+            var aggregate = globals.Select(s => ReadGlobal(s, budget.Token, ct));
+            // Fixed-only sources retain the previous explicitly scoped read path.
+            var fixedOnly = slots.Where(s => !s.Source.AnyContext).Select(async s => new[] { await Read(s, budget.Token, ct) });
+            return (await Task.WhenAll(aggregate.Concat(fixedOnly))).SelectMany(s => s).ToArray();
+        }
+        var selected = slots.Where(s => contexts.Contains(s.Context)).ToList();
+        foreach (var requested in contexts.Where(id => id != Guid.Empty).Order())
+            foreach (var source in open.Where(o => !selected.Any(s => s.Source.NodeId == o.NodeId && s.Context == requested)))
+                selected.Add(DynamicSlot(source, requested));
         return await Task.WhenAll(selected.Select(s => Read(s, budget.Token, ct)));
     }
+
     private Slot DynamicSlot(QueueBoardSource source, Guid context)
     {
         lock (dynamicGate)
@@ -96,16 +113,8 @@ public sealed class QueueBoardReader : IDisposable
             if (slot.Value is not null && clock.GetUtcNow() - slot.Attempted < TimeSpan.FromSeconds(2)) return slot.Value;
             await requests.WaitAsync(budget); sending = true;
             slot.Attempted = clock.GetUtcNow();
-            var info = new FileInfo(slot.Source.KeyFile);
-            if (!info.Exists || info.Length is < 32 or > 4096) throw new InvalidDataException("Invalid QUEUE credential file.");
-            if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(info.FullName) &
-                (UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.GroupWrite)) != 0)
-                throw new InvalidDataException("QUEUE credential file must be private.");
-            var key = (await File.ReadAllTextAsync(info.FullName, budget)).Trim();
-            if (key.Length is < 32 or > 256 || key.Any(char.IsWhiteSpace)) throw new InvalidDataException("Invalid QUEUE credential.");
-            using var request = new HttpRequestMessage(HttpMethod.Get, slot.Source.BaseUrl.TrimEnd('/') +
-                $"/api/queue/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot");
-            request.Headers.Authorization = new("Bearer", key);
+            using var request = await Request(slot.Source,
+                $"/api/queue/contexts/{slot.Context:N}/nodes/{slot.Source.NodeId:N}/snapshot", budget);
             using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
             // On-demand (AnyContext) reads: the controller answers 404 for a company without queues. That is
             // "no queues here", not a source failure.
@@ -128,6 +137,58 @@ public sealed class QueueBoardReader : IDisposable
                 Diagnostic = diagnostics?.Report(e, "queue-source-read"),
                 HttpStatus = e is HttpRequestException http && http.StatusCode is { } status ? (int)status : null
             };
+            if (locked) { slot.Attempted = clock.GetUtcNow(); slot.Value = failed; }
+            return failed;
+        }
+        finally { if (sending) requests.Release(); if (locked) slot.Gate.Release(); }
+    }
+    private async Task<HttpRequestMessage> Request(QueueBoardSource source, string path, CancellationToken budget)
+    {
+        var info = new FileInfo(source.KeyFile);
+        if (!info.Exists || info.Length is < 32 or > 4096) throw new InvalidDataException("Invalid QUEUE credential file.");
+        if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(info.FullName) &
+            (UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.GroupWrite)) != 0)
+            throw new InvalidDataException("QUEUE credential file must be private.");
+        var key = (await File.ReadAllTextAsync(info.FullName, budget)).Trim();
+        if (key.Length is < 32 or > 256 || key.Any(char.IsWhiteSpace)) throw new InvalidDataException("Invalid QUEUE credential.");
+        var request = new HttpRequestMessage(HttpMethod.Get, source.BaseUrl.TrimEnd('/') + path);
+        request.Headers.Authorization = new("Bearer", key);
+        return request;
+    }
+
+    private async Task<QueueBoardSample[]> ReadGlobal(GlobalSlot slot, CancellationToken budget, CancellationToken caller)
+    {
+        var locked = false; var sending = false;
+        try
+        {
+            await slot.Gate.WaitAsync(budget); locked = true;
+            if (slot.Value is not null && clock.GetUtcNow() - slot.Attempted < TimeSpan.FromSeconds(2)) return slot.Value;
+            await requests.WaitAsync(budget); sending = true;
+            slot.Attempted = clock.GetUtcNow();
+            using var request = await Request(slot.Source, $"/api/queue/nodes/{slot.Source.NodeId:N}/snapshot", budget);
+            using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(budget);
+            if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("Global QUEUE snapshot exceeds its bound.");
+            var snapshot = JsonSerializer.Deserialize<GlobalSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (snapshot is null || !Guid.TryParseExact(snapshot.NodeId, "N", out var node) || node != slot.Source.NodeId ||
+                snapshot.Snapshots is not { Length: <= 1000 } samples ||
+                samples.Any(s => s is null || !Guid.TryParseExact(s.ContextId, "N", out var context) || context == Guid.Empty || !ValidSnapshot(s, context, node)) ||
+                samples.Select(s => Guid.Parse(s.ContextId)).Distinct().Count() != samples.Length)
+                throw new InvalidDataException("Invalid global QUEUE snapshot scope or shape.");
+            return slot.Value = samples.Select(s => new QueueBoardSample(slot.Source.Node, Guid.Parse(s.ContextId), s, true, node)).ToArray();
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or JsonException or UnauthorizedAccessException or OperationCanceledException)
+        {
+            caller.ThrowIfCancellationRequested();
+            var diagnostic = diagnostics?.Report(e, "queue-global-read");
+            var status = e is HttpRequestException http && http.StatusCode is { } code ? (int?)code : null;
+            // Retain names on transient failure, but never retain current activity or authorization-denied data.
+            var retained = e is HttpRequestException { StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden }
+                ? [] : slot.Value ?? [];
+            var failed = retained.Length > 0
+                ? retained.Select(s => s with { Available = false, Diagnostic = diagnostic, HttpStatus = status }).ToArray()
+                : [new QueueBoardSample(slot.Source.Node, Guid.Empty, null, false, slot.Source.NodeId) { Diagnostic = diagnostic, HttpStatus = status }];
             if (locked) { slot.Attempted = clock.GetUtcNow(); slot.Value = failed; }
             return failed;
         }
@@ -160,5 +221,5 @@ public sealed class QueueBoardReader : IDisposable
                 v.Phase is "greeting" or "waiting" or "announcing" or "offering" or "connected" &&
                 Text(v.ChannelId, 256) && Text(v.ChannelName, 256) && Text(v.Caller, 128) && v.EnteredAt <= s.ObservedAt.AddSeconds(5));
     }
-    public void Dispose() { foreach (var slot in slots) slot.Gate.Dispose(); requests.Dispose(); }
+    public void Dispose() { foreach (var slot in slots) slot.Gate.Dispose(); foreach (var global in globals) global.Gate.Dispose(); requests.Dispose(); }
 }

@@ -99,7 +99,7 @@ internal static class QueueBoardChecks
             using (var open = new QueueBoardReader([source with { ContextIds = [], AnyContext = true }], http, clock))
             {
                 check(QueueBoardReader.ValidSource(source with { ContextIds = [], AnyContext = true }) && !QueueBoardReader.ValidSource(source with { ContextIds = [] }), "Empty context list only with AnyContext");
-                check((await open.Read(null, default)).Length == 0, "AnyContext source is not read in the unscoped overview");
+                check((await open.Read(null, default)).Single() is { Available: false, ContextId: var failedContext } && failedContext == Guid.Empty, "Missing global aggregate is visible as source failure, never silently empty");
                 clock.Now = now.AddSeconds(18); http.Status = HttpStatusCode.NotFound;
                 var none = (await open.Read(other, default)).Single();
                 check(none.Available && none.Snapshot is { Queues.Length: 0 } && none.Diagnostic is null, "On-demand 404 is an empty company, not a source failure");

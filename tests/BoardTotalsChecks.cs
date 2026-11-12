@@ -24,6 +24,11 @@ static class BoardTotalsChecks
         var stale = new OperatorTile("q3", "Antiga", "eveo", EventsPanelCardKind.QUEUE,
             [Row("queue", "queue", "stale", new Dictionary<string, string> { ["source"] = "queue", ["pending"] = "9" })]);
         check(BoardTotals.Waiting([legacy, native, stale]) == 5, "Waiting adds observed visits and current native pending, never a stale count");
+        var answered = legacy with { Rows = [Row("a1", "waiting", "answered")] };
+        check(BoardTotals.Waiting([answered]) == 0, "Answered queue calls are not waiting");
+        var truncated = native with { Rows = [..native.Rows, Row("v1", "waiting", "waiting"), Row("v2", "waiting", "answered")] };
+        check(BoardTotals.Waiting([truncated]) == 3, "Authoritative pending wins over truncated or connected visit details");
+        check(BoardTotals.Waiting([legacy with { Rows = [Row("a2", "waiting", "connected")] }]) == 0, "Connected visits are not waiting");
         check(BoardTotals.ActiveCalls([native, busy]) == 3, "A busy card without channels counts as one call, cards with channels count their channels");
     }
 }

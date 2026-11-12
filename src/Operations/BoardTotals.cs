@@ -24,6 +24,6 @@ public static class BoardTotals
 
     /// <summary>Calls waiting: observed waiting visits, or the pending count of a native QUEUE queue.</summary>
     public static int Waiting(IEnumerable<OperatorTile> tiles)
-        => tiles.Sum(t => t.QueueCalls.Length > 0 ? t.QueueCalls.Length
-            : t.Queue is { State: "current" } queue && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0 ? pending : 0);
+        => tiles.Sum(t => t.Queue is { State: "current" } queue && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending)
+            ? Math.Max(0, pending) : t.QueueCalls.Count(r => r.State is not ("answered" or "connected")));
 }

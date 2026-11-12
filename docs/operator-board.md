@@ -141,3 +141,27 @@ chamadas/canais e jamais é ativada por query string em Production.
 Capturas em `.impeccable/review/board-*.png`: claro 1440px e 1977px (largura da
 referência), escuro 1440px, móvel 390px. São dados fictícios explicitamente
 identificados; não comprovam fluxo autenticado nem inventário real.
+
+## Contagem global das filas ARI
+
+A visão com direito global lê `GET /api/queue/nodes/{nodeId:N}/snapshot` de cada
+fonte `AnyContext`: uma requisição por nó, compartilhada entre sessões com cache
+de dois segundos, até quatro consultas simultâneas e orçamento total de cinco
+segundos. O agregado suporta até 1.000 contextos por nó e 4 MiB. Fontes sem
+`AnyContext` continuam limitadas aos contextos fixos. Empresa selecionada e
+carteira de representante usam somente seus contextos autorizados; nunca consultam
+o agregado global. A autorização é revalidada depois da leitura.
+
+Filas comerciais migradas para ARI não produzem os eventos `QueueCaller*` do
+Asterisk. Recursos lembrados também não comprovam estado atual. Por isso, os
+contextos fixos de laboratório e os cartões históricos não substituem o snapshot
+global dos controladores. O total de espera usa `pending` atual e autoritativo,
+mesmo se a lista de visitas vier truncada; visitas já atendidas não contam como
+espera. Na ausência desse total, usa apenas visitas observadas ainda não atendidas.
+Chamadas nos troncos incluem atendimentos e outras etapas e não implicam espera.
+
+Uma falha do agregado mantém somente nomes conhecidos com atividade indisponível;
+401/403 descartam o snapshot em cache. O alerta de fontes informa a falha, inclusive
+404 em controlador antigo. Preservar o inventário lembrado, sem recriar estado
+atual a partir dele. A instalação exige atualizar controlador/fachada antes do
+painel; commit e testes locais não comprovam publicação nem aceitação em produção.
