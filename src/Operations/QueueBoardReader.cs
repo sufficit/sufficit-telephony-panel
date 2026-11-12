@@ -78,7 +78,7 @@ public sealed class QueueBoardReader : IDisposable
         budget.CancelAfter(TimeSpan.FromSeconds(5));
         if (contexts is null)
         {
-            var aggregate = globals.Select(s => ReadGlobal(s, budget.Token, ct));
+            var aggregate = globals.Select(s => ReadOverview(s, budget.Token, ct));
             // Fixed-only sources retain the previous explicitly scoped read path.
             var fixedOnly = slots.Where(s => !s.Source.AnyContext).Select(async s => new[] { await Read(s, budget.Token, ct) });
             return (await Task.WhenAll(aggregate.Concat(fixedOnly))).SelectMany(s => s).ToArray();
@@ -154,6 +154,19 @@ public sealed class QueueBoardReader : IDisposable
         var request = new HttpRequestMessage(HttpMethod.Get, source.BaseUrl.TrimEnd('/') + path);
         request.Headers.Authorization = new("Bearer", key);
         return request;
+    }
+
+    private async Task<QueueBoardSample[]> ReadOverview(GlobalSlot slot, CancellationToken budget, CancellationToken caller)
+    {
+        var samples = await ReadGlobal(slot, budget, caller);
+        // Older controllers have no aggregate route. Preserve their explicitly configured
+        // snapshots, alongside the global coverage warning, until the controller is upgraded.
+        if (samples is [{ HttpStatus: 404, Snapshot: null }])
+        {
+            var fallback = await Task.WhenAll(slots.Where(s => s.Source == slot.Source).Select(s => Read(s, budget, caller)));
+            return fallback.Concat(samples).ToArray();
+        }
+        return samples;
     }
 
     private async Task<QueueBoardSample[]> ReadGlobal(GlobalSlot slot, CancellationToken budget, CancellationToken caller)

@@ -163,8 +163,11 @@ Chamadas nos troncos incluem atendimentos e outras etapas e não implicam espera
 Uma falha do agregado mantém somente nomes conhecidos com atividade indisponível;
 401/403 descartam o snapshot em cache. O alerta de fontes informa a falha, inclusive
 404 em controlador antigo. Preservar o inventário lembrado, sem recriar estado
-atual a partir dele. A instalação exige atualizar controlador/fachada antes do
-painel; commit e testes locais não comprovam publicação nem aceitação em produção.
+atual a partir dele. O painel pode ser instalado antes dos controladores: se a rota agregada inicial
+retornar 404, preserva os snapshots dos contextos fixos e mostra aviso de cobertura
+global incompleta. A cobertura global depende da atualização posterior dos
+controladores/fachada; commit e testes locais não comprovam publicação nem aceitação
+em produção.
 
 ## Identificação e gestão nos detalhes da fila
 

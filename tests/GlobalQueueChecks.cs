@@ -64,6 +64,16 @@ internal static class GlobalQueueChecks
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(key, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             var source = new QueueBoardSource("test-node", node, [first], "http://127.0.0.1/", key, true);
             using var reader = new QueueBoardReader([source], http, clock);
+            http.AggregateStatus = HttpStatusCode.NotFound;
+            using (var legacyReader = new QueueBoardReader([source], http, clock))
+            {
+                var legacyAccess = new QueueBoardAccess(new PanelAccess(new PrincipalProvider(principal), sessions), legacyReader);
+                var legacy = await legacyAccess.Read(null, default);
+                check(legacy.Any(s => s.ContextId == first && s.Available) && legacy.Any(s => s.ContextId == Guid.Empty && s.HttpStatus == 404 && !s.Available),
+                    "Old controller preserves configured queue snapshots with explicit incomplete-global-coverage warning");
+                check(legacy.All(s => s.ContextId != second), "Legacy compatibility does not invent unconfigured company coverage");
+            }
+            http.AggregateStatus = HttpStatusCode.OK; http.Aggregates = http.Snapshots = 0; http.Requested.Clear();
             var access = new QueueBoardAccess(new PanelAccess(new PrincipalProvider(principal), sessions), reader);
             var samples = await access.Read(null, default);
             check(samples.Length == 2 && samples.All(s => s.Available) && samples.Select(s => s.ContextId).ToHashSet().SetEquals([first, second]),
