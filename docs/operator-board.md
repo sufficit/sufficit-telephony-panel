@@ -239,3 +239,18 @@ mudam. Agrupamento em memória reutiliza o resultado enquanto dados/nó não mud
 Um nome ou número antigo, sem GUID/empresa comprovados, não autoriza unir filas
 de clientes diferentes. Esses registros permanecem separados até identificação;
 a resolução ao abrir detalhes continua sem disparar consultas por todos os cartões.
+
+## Fonte global separada da fachada de registro
+
+Uma fonte `AnyContext` pode definir `GlobalBaseUrl` e `GlobalKeyFile` juntos,
+somente em configuração administrativa. O agregado `/api/queue/nodes/{node}/snapshot`
+usa esse par; snapshots por empresa e diagnósticos mantêm `BaseUrl`/`KeyFile`.
+Ambos os endereços obedecem à mesma restrição de IP privado e credenciais locais
+protegidas. A ausência do par mantém o comportamento anterior. Escopo, cache,
+limites, validação e autorização não mudam.
+
+No Google, a fachada de registro na porta18190 não expõe o agregado global.
+O controlador18189 já o fornece. `deploy/90-google-global-queue.conf` direciona
+somente o agregado ao controlador, preservando os registros/diagnósticos na
+fachada e usando uma credencial de monitoramento existente. Essa correção exige
+somente atualização/reinício do painel, sem alteração do serviço Google.

@@ -21,11 +21,13 @@ internal static class GlobalQueueChecks
         public bool Global = true;
         public int Waiting = 3;
         public List<Guid> Requested { get; } = [];
+        public List<(Uri Uri, string? Key)> Seen { get; } = [];
         public QueueBoardSnapshot Sample(Guid context) => new(context.ToString("N"), node.ToString("N"), clock.Now, true, false,
             [new QueueBoardQueue(context.ToString("N"), "Principal", Waiting, 0, clock.Now)], []);
         public HttpClient CreateClient(string name) => new(this, false);
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
+            Seen.Add((request.RequestUri!, request.Headers.Authorization?.Parameter));
             var path = request.RequestUri!.AbsolutePath;
             object body;
             if (path == "/connect/userinfo") body = new { sub = "global-queues", role = Global ? "manager" : "customer",
@@ -63,6 +65,29 @@ internal static class GlobalQueueChecks
             await File.WriteAllTextAsync(key, new string('x', 40));
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(key, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             var source = new QueueBoardSource("test-node", node, [first], "http://127.0.0.1/", key, true);
+            var globalKey = key + "-global";
+            try
+            {
+                await File.WriteAllTextAsync(globalKey, new string('y', 40));
+                if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(globalKey, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                var split = source with { GlobalBaseUrl = "http://127.0.0.1:18189/", GlobalKeyFile = globalKey };
+                using var splitReader = new QueueBoardReader([split], http, clock);
+                check((await splitReader.Read(null, default)).All(s => s.Available)
+                    && http.Seen.Last().Uri.Port == 18189 && http.Seen.Last().Key == new string('y', 40),
+                    "Global discovery uses its dedicated controller URL and credential instead of the registration facade");
+                await splitReader.Read(first, default);
+                check(http.Seen.Last().Uri.Port == 80 && http.Seen.Last().Key == new string('x', 40),
+                    "Company snapshots retain the original registration facade and credential");
+                check(splitReader.DiagnosticSource(first,node) == split && splitReader.DiagnosticSource(second,node) == split,
+                    "Diagnostics keep the original facade even when global discovery has its own endpoint");
+                check(!QueueBoardReader.ValidSource(split with { AnyContext = false })
+                    && !QueueBoardReader.ValidSource(split with { GlobalKeyFile = null })
+                    && !QueueBoardReader.ValidSource(source with { GlobalKeyFile = globalKey }),
+                    "Dedicated global endpoint requires AnyContext and an explicit URL/key pair");
+                foreach (var url in new[] { "https://public.example/", "http://8.8.8.8/", "http://user:pass@127.0.0.1/", "http://127.0.0.1/?token=x" })
+                    check(!QueueBoardReader.ValidSource(split with { GlobalBaseUrl = url }), "Global override cannot bypass private endpoint validation");
+            }
+            finally { File.Delete(globalKey); }
             using var reader = new QueueBoardReader([source], http, clock);
             foreach (var status in new[] { HttpStatusCode.NotFound, HttpStatusCode.Forbidden })
             {

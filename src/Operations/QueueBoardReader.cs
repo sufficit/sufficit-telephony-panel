@@ -59,7 +59,12 @@ public sealed class QueueBoardReader : IDisposable
             uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 || uri.AbsolutePath != "/" ||
             !IPAddress.TryParse(uri.Host, out var ip)) return false;
         var bytes = ip.GetAddressBytes();
-        return IPAddress.IsLoopback(ip) || bytes.Length == 4 && bytes[0] == 172 && bytes[1] == 19;
+        if (!(IPAddress.IsLoopback(ip) || bytes.Length == 4 && bytes[0] == 172 && bytes[1] == 19)) return false;
+        if (source.GlobalBaseUrl is null && source.GlobalKeyFile is null) return true;
+        // Apply the identical private-address/key-file contract to the optional global endpoint.
+        return source.AnyContext && source.GlobalBaseUrl is not null && source.GlobalKeyFile is not null
+            && ValidSource(source with { BaseUrl = source.GlobalBaseUrl, KeyFile = source.GlobalKeyFile,
+                GlobalBaseUrl = null, GlobalKeyFile = null });
     }
     public Task<QueueBoardSample[]> Read(Guid? context, CancellationToken ct) =>
         ReadSelected(context is { } id ? [id] : null, ct);
@@ -142,16 +147,18 @@ public sealed class QueueBoardReader : IDisposable
         }
         finally { if (sending) requests.Release(); if (locked) slot.Gate.Release(); }
     }
-    private async Task<HttpRequestMessage> Request(QueueBoardSource source, string path, CancellationToken budget)
+    private async Task<HttpRequestMessage> Request(QueueBoardSource source, string path, CancellationToken budget, bool global = false)
     {
-        var info = new FileInfo(source.KeyFile);
+        var baseUrl = global ? source.GlobalBaseUrl ?? source.BaseUrl : source.BaseUrl;
+        var keyFile = global ? source.GlobalKeyFile ?? source.KeyFile : source.KeyFile;
+        var info = new FileInfo(keyFile);
         if (!info.Exists || info.Length is < 32 or > 4096) throw new InvalidDataException("Invalid QUEUE credential file.");
         if (!OperatingSystem.IsWindows() && (File.GetUnixFileMode(info.FullName) &
             (UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.GroupWrite)) != 0)
             throw new InvalidDataException("QUEUE credential file must be private.");
         var key = (await File.ReadAllTextAsync(info.FullName, budget)).Trim();
         if (key.Length is < 32 or > 256 || key.Any(char.IsWhiteSpace)) throw new InvalidDataException("Invalid QUEUE credential.");
-        var request = new HttpRequestMessage(HttpMethod.Get, source.BaseUrl.TrimEnd('/') + path);
+        var request = new HttpRequestMessage(HttpMethod.Get, baseUrl.TrimEnd('/') + path);
         request.Headers.Authorization = new("Bearer", key);
         return request;
     }
@@ -178,7 +185,7 @@ public sealed class QueueBoardReader : IDisposable
             if (slot.Value is not null && clock.GetUtcNow() - slot.Attempted < TimeSpan.FromSeconds(2)) return slot.Value;
             await requests.WaitAsync(budget); sending = true;
             slot.Attempted = clock.GetUtcNow();
-            using var request = await Request(slot.Source, $"/api/queue/nodes/{slot.Source.NodeId:N}/snapshot", budget);
+            using var request = await Request(slot.Source, $"/api/queue/nodes/{slot.Source.NodeId:N}/snapshot", budget, global: true);
             using var response = await clients.CreateClient("queue-board").SendAsync(request, budget);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(budget);
