@@ -18,7 +18,7 @@ public sealed record BoardCallFlow(string Id, string Caller, string Destination,
         return tiles.Select(tile => tile with
         {
             Flows = tile.Rows.Where(r => tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.QUEUE
-                ? r.Kind == "waiting" : r.Kind == "call").GroupBy(Identity).Select(anchor =>
+                ? r.Kind == "waiting" && r.State is not ("answered" or "connected") : r.Kind == "call").GroupBy(Identity).Select(anchor =>
             {
                 var related = groups.GetValueOrDefault(anchor.Key, anchor.ToArray());
                 // Conflicting explicit accounts cannot establish a shared business-call view.
@@ -29,7 +29,9 @@ public sealed record BoardCallFlow(string Id, string Caller, string Destination,
                         && LiveProjection.Meaningful(r.Details.GetValueOrDefault("linkedid")))
                     .ThenBy(r => r.FirstSeen).ThenBy(r => r.Id, StringComparer.Ordinal).ToArray();
                 var caller = ordered.Select(r => r.Caller).FirstOrDefault(LiveProjection.Meaningful) ?? "";
-                var queue = related.Where(r => r.Kind == "waiting").OrderByDescending(r => r.Updated).FirstOrDefault();
+                var queue = tile.Kind == Sufficit.Telephony.Panel.EventsPanelCardKind.QUEUE
+                    ? anchor.OrderByDescending(r => r.Updated).First()
+                    : related.Where(r => r.Kind == "waiting").OrderByDescending(r => r.Updated).FirstOrDefault();
                 var destination = queue is not null ? queueNames.GetValueOrDefault(queue.Id, queue.Details.GetValueOrDefault("queue", ""))
                     : ordered.Select(r => r.Destination).FirstOrDefault(d => LiveProjection.Meaningful(d) && d != caller && d != "s") ?? "";
                 return new BoardCallFlow(anchor.Key, caller, destination, queue?.State ?? "channel",

@@ -10,10 +10,13 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public ObservedResource? QueueSummary { get; init; }
     public bool QueueStateIncomplete => Rows.Any(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue" && r.State != "current");
     public ObservedResource? Queue => QueueSummary ?? Rows.FirstOrDefault(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue");
-    public bool HasObservedActivity => Channels.Length > 0 || QueueCalls.Length > 0 ||
-        Queue is { State: "current" } queue && (queue.Details.GetValueOrDefault("pending", "0") != "0" || queue.Details.GetValueOrDefault("connected", "0") != "0");
-    public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting").ToArray();
-    public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels).Concat(Channels).DistinctBy(r => r.Id).ToArray();
+    public bool HasObservedActivity => Kind == EventsPanelCardKind.QUEUE
+        ? Queue is { } queue ? queue.State == "current" && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0
+            : QueueCalls.Length > 0
+        : Channels.Length > 0;
+    public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
+    public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
+        .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => r.Id).ToArray();
     public DateTimeOffset? LastSeen { get; init; }
     private ObservedResource[] PeerRows => Rows.Where(r => r.Kind == "peer").OrderByDescending(r => r.Updated).ToArray();
     /// <summary>Last contact address reported by the PBX: chan_sip "ip:port" or the PJSIP contact URI host.</summary>
@@ -37,7 +40,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         ? ("unknown", InboundCatalogueEntry.Label(entry))
         : Remembered ? ("unknown", "Já visto · sem estado atual")
         : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
-            : queue.Details.GetValueOrDefault("pending") != "0" || queue.Details.GetValueOrDefault("connected") != "0"
+            : queue.Details.GetValueOrDefault("pending", "0") != "0"
                 ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
         : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade")) : Describe(Rows);
     public static (string Tone, string Label) Describe(ObservedResource[] rows)

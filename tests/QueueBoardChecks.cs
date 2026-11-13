@@ -50,6 +50,15 @@ internal static class QueueBoardChecks
             var changed = Project(sample with { Snapshot = snapshot with { Visits = [visit with { Phase = phase }] } }, channel);
             check(changed.Rows.Single(r => r.Kind == "waiting").State == (phase == "connected" ? "answered" : phase), "QUEUE phase preserved: " + phase);
         }
+        var served = Project(sample with { Snapshot = snapshot with { Queues = [queue with { Waiting = 0, Connected = 1 }], Visits = [visit with { Phase = "connected" }] } }, channel);
+        var servedObservation = AuthorizedObservation.Create([nativeCard], [channel], context);
+        servedObservation.AddQueue(served);
+        var servedTiles = BoardCallFlow.Attach(OperatorTile.Create(servedObservation.Cards, servedObservation.ByCard), servedObservation.Rows);
+        var servedQueue = servedTiles.Single(t => t.Queue is not null);
+        check(!servedQueue.HasObservedActivity && servedQueue.Flows.Length == 0 && servedQueue.DetailChannels.Length == 0,
+            "Connected ARI visit leaves queue presentation while original metadata is preserved");
+        check(servedTiles.Single(t => t.Title == "Hugo").DetailChannels.Single().Id == channel.Id,
+            "Connected ARI call remains available on its extension");
         foreach (var stale in new[] { sample with { Available = false }, sample with { Snapshot = snapshot with { ObservedAt = now.AddSeconds(-21) } },
             sample with { Snapshot = snapshot with { ObservedAt = now.AddSeconds(6) } }, sample with { Snapshot = snapshot with { ControllerConnected = false } },
             sample with { Snapshot = snapshot with { ObserverOnly = true } } })

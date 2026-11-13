@@ -15,7 +15,7 @@ const fs = require('node:fs');
       const queue = page.locator('.board-queues .board-tile').first();
       assert.equal(await hugo.locator('.tile-channel').count(), 1, 'Three related legs render as one flow');
       assert.match(await hugo.innerText(), /Cliente demonstração → Atendimento geral/);
-      assert.match(await queue.innerText(), language === 'en' ? /1 waiting · 0 answered/ : /1 aguardando · 0 em atendimento/);
+      assert.match(await queue.innerText(), language === 'en' ? /1 waiting/ : /1 aguardando/);
       assert(!await hugo.innerText().then(text => text.includes('<unknown>')));
       await queue.click();
       const dialog = page.getByRole('dialog'); await dialog.waitFor();

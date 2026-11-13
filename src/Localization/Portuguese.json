@@ -739,5 +739,6 @@
   "Showing 40 of {0} queue cards by server. Refine the filters.": "Exibindo 40 de {0} cartões de filas por servidor. Refine os filtros.",
   "Queues without current data: {0:N0}.": "Filas sem estado atual: {0:N0}.",
   "Partial queue data": "Dados parciais da fila",
-  "{0}. Open details.": "{0}. Abrir detalhes."
+  "{0}. Open details.": "{0}. Abrir detalhes.",
+  "{0} waiting": "{0} aguardando"
 }

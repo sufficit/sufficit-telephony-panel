@@ -37,6 +37,12 @@ internal static class QueueCallFlowChecks
         check(!Read().Any(r => r.Kind == "waiting" && r.Node == "google"), "Queue leave clears waiting before agent connection");
         Send("AgentConnectEvent", new { channel, queue = "6500", linkedid = "1" });
         check(Read().Single(r => r.Kind == "waiting" && r.Node == "google").State == "answered", "AgentConnect retains queue attribution through conversation");
+        var answeredObservation = AuthorizedObservation.Create([peer, queue], Read(), context);
+        var answeredTiles = BoardCallFlow.Attach(OperatorTile.Create([peer, queue], answeredObservation.ByCard), answeredObservation.Rows);
+        var answeredQueue = answeredTiles.Single(t => t.Title == "Atendimento");
+        check(answeredQueue.QueueCalls.Length == 0 && answeredQueue.Flows.Length == 0 && answeredQueue.DetailChannels.Length == 0
+            && !answeredQueue.HasObservedActivity, "Answered legacy visit leaves queue cards, details and supervision channels");
+        check(answeredTiles.Single(t => t.Title == "Hugo").DetailChannels.Length > 0, "Answered legacy call remains on the extension");
         Send("QueueCallerLeaveEvent", new { channel, queue = "6500" });
         check(Read().Any(r => r.Kind == "waiting" && r.Node == "google"), "Late leave cannot erase answered queue call");
         Send("AgentCompleteEvent", new { channel, queue = "6500" });

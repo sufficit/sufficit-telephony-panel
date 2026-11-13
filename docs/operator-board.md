@@ -213,7 +213,7 @@ nativas são identificadas por empresa e GUID, somando uma fila mesmo quando
 observada em mais de um servidor. Cartões sem identidade comprovada permanecem
 separados. Cartões históricos ou com estado indisponível não entram nessa
 contagem. Na visão global do gerente, filas são ordenadas pela utilização atual
-(espera + atendimento), maior primeiro; empate prioriza espera, estado atual,
+(chamadas ainda aguardando), maior primeiro; empate prioriza estado atual,
 nome e identidade. A visão por empresa mantém atividade/estado atual/nome.
 Avisos explicativos e contagem histórica não ocupam o corpo do card.
 
@@ -226,7 +226,7 @@ e detalhes; a mudança não remove filas nem modifica os controladores.
 
 Após autorização e filtro explícito de servidor, o quadro reúne a mesma empresa
 e GUID em um cartão. Chamadas e canais de todos os nós aparecem juntos; o cartão
-mostra a soma de espera e atendimento dos snapshots atuais, uma vez por nó.
+mostra a soma das chamadas ainda aguardando nos snapshots atuais, uma vez por nó.
 Réplicas históricas não criam outro cartão. Estados antigos não entram na soma;
 uma fila parcialmente observada indica dados parciais, além do aviso global.
 
@@ -261,3 +261,17 @@ efetiva, confirmou cobertura válida de todos os três nós: Google464 contextos
 1.161 filas; E/A463 contextos e1.159 filas cada. Na verificação pós-ativação havia
 4 chamadas em espera e5 em atendimento, com8 filas ativas nas primeiras40. Esses
 valores são uma observação daquele instante, não constantes do produto.
+
+## Atendimento encerra a participação na fila
+
+Na apresentação do quadro, fila contém somente quem ainda não foi atendido por
+um ramal. Saudação, anúncio, espera e chamada do atendente continuam na fila;
+`connected`/`answered` deixam de aparecer nos fluxos, canais de detalhes e atividade
+do cartão da fila. O cabeçalho e a ordenação global contam somente espera.
+A chamada atendida continua nos ramais/troncos conforme seus canais autorizados.
+Uma fila configurada pode permanecer visível vazia, sem a chamada atendida.
+
+Os snapshots e o histórico do controlador preservam a contagem original de
+atendimentos para os demais diagnósticos. O filtro ocorre na apresentação e
+não encerra chamadas, altera roteamento ou muda a autorização. É o atendimento
+do ramal, não o estado `Up` do canal do chamador, que remove a chamada da fila.

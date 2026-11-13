@@ -98,10 +98,10 @@
     {
         if (tile.Queue is { } queue)
             return queue.State != "current" ? Text["QUEUE state unavailable"]
-                : Text.Format("{0} pending · {1} in service", queue.Details["pending"], queue.Details["connected"])
+                : Text.Format("{0} waiting", queue.Details["pending"])
                     + (tile.QueueStateIncomplete ? " · " + Text["Partial queue data"] : "");
         if (tile.Kind == EventsPanelCardKind.QUEUE && tile.QueueCalls.Length > 0)
-            return Text.Format("{0} waiting · {1} answered", tile.QueueCalls.Count(r => r.State != "answered"), tile.QueueCalls.Count(r => r.State == "answered"));
+            return Text.Format("{0} waiting", tile.QueueCalls.Length);
         if (tile.Flows.Length == 0) return Text.Observed(tile.Status.Label);
         var correlated = tile.Flows.Count(f => f.Correlated);
         var label = correlated == tile.Flows.Length ? Text.Format("{0} observed calls", correlated)
