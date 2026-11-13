@@ -736,5 +736,8 @@
   "Calls waiting / distinct queues with current data": "Chamadas em espera / filas distintas com dados atuais",
   "Waiting total unavailable: some queue sources have no current data.": "Total em espera indisponível: há fontes de filas sem dados atuais.",
   "Distinct queues with current data. {0:N0} server cards, {1:N0} without current data.": "Contagem de filas distintas com dados atuais. {0:N0} cartões por servidor, {1:N0} sem estado atual.",
-  "Showing 40 of {0} queue cards by server. Refine the filters.": "Exibindo 40 de {0} cartões de filas por servidor. Refine os filtros."
+  "Showing 40 of {0} queue cards by server. Refine the filters.": "Exibindo 40 de {0} cartões de filas por servidor. Refine os filtros.",
+  "Queues without current data: {0:N0}.": "Filas sem estado atual: {0:N0}.",
+  "Partial queue data": "Dados parciais da fila",
+  "{0}. Open details.": "{0}. Abrir detalhes."
 }

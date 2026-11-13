@@ -211,10 +211,29 @@ O cabeçalho mostra chamadas em espera / filas distintas com dados atuais. Filas
 nativas são identificadas por empresa e GUID, somando uma fila mesmo quando
 observada em mais de um servidor. Cartões sem identidade comprovada permanecem
 separados. Cartões históricos ou com estado indisponível não entram nessa
-contagem; o texto abaixo informa o total de cartões por servidor e quantos estão
-sem estado atual. Atividade e observação atual têm prioridade na lista.
+contagem; o texto abaixo informa quantas filas estão sem estado atual.
+Atividade e observação atual têm prioridade na lista.
 
 Se alguma fonte estiver indisponível, desatualizada ou sem cobertura, o total
 em espera aparece como `—`, acompanhado de aviso. Zero só aparece com cobertura
 completa das fontes configuradas. O histórico permanece disponível nos filtros
 e detalhes; a mudança não remove filas nem modifica os controladores.
+
+## Cartão único por fila
+
+Após autorização e filtro explícito de servidor, o quadro reúne a mesma empresa
+e GUID em um cartão. Chamadas e canais de todos os nós aparecem juntos; o cartão
+mostra a soma de espera e atendimento dos snapshots atuais, uma vez por nó.
+Réplicas históricas não criam outro cartão. Estados antigos não entram na soma;
+uma fila parcialmente observada indica dados parciais, além do aviso global.
+
+A seleção usa identidade estável de empresa/GUID, preservando detalhes e link de
+gestão. Os cartões de fila não exibem o servidor. Os canais mantêm nó e
+identificador original para supervisão; prefixos protegidos continuam associados
+aos nós originais e exigem as mesmas validações no servidor. Busca e filtros
+de atividade atuam na fila reunida. Ramais/troncos e inventário persistido não
+mudam. Agrupamento em memória reutiliza o resultado enquanto dados/nó não mudam.
+
+Um nome ou número antigo, sem GUID/empresa comprovados, não autoriza unir filas
+de clientes diferentes. Esses registros permanecem separados até identificação;
+a resolução ao abrir detalhes continua sem disparar consultas por todos os cartões.

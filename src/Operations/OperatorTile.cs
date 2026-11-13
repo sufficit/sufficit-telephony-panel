@@ -7,7 +7,9 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
 {
     public string[] Keys { get; init; } = [];
     public BoardCallFlow[] Flows { get; init; } = [];
-    public ObservedResource? Queue => Rows.FirstOrDefault(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue");
+    public ObservedResource? QueueSummary { get; init; }
+    public bool QueueStateIncomplete => Rows.Any(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue" && r.State != "current");
+    public ObservedResource? Queue => QueueSummary ?? Rows.FirstOrDefault(r => r.Kind == "queue" && r.Details.GetValueOrDefault("source") == "queue");
     public bool HasObservedActivity => Channels.Length > 0 || QueueCalls.Length > 0 ||
         Queue is { State: "current" } queue && (queue.Details.GetValueOrDefault("pending", "0") != "0" || queue.Details.GetValueOrDefault("connected", "0") != "0");
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting").ToArray();

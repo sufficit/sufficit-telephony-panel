@@ -42,7 +42,7 @@ const fs = require('node:fs');
     await page.locator('.board-tile').first().waitFor(); assert.equal(await queue().count(), 0);
     await page.goto(url('waiting') + '&node=eveo-voip'); await page.locator('.board-tile').first().waitFor(); assert.equal(await queue().count(), 0);
     await page.goto(url('waiting').replace(`&contextid=${context}`, '')); await queue().waitFor();
-    assert.match(await queue().innerText(), /google-voip/);
+    assert.equal(await queue().locator(".tile-node").count(), 0);
     fs.mkdirSync('.impeccable/review', { recursive: true });
     await open('greeting');
     await page.screenshot({ path: '.impeccable/review/queue-board-desktop.png' });

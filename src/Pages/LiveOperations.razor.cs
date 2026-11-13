@@ -184,8 +184,24 @@ public partial class LiveOperations
             return cachedTiles;
         }
     }
-    private OperatorTile[] VisibleTiles => BoardTiles
-        .Where(t => (!OnlyObservedChannels || t.HasObservedActivity) && (Node == "all" || t.Node == Node) && (StatusFilter == "all" || StatusFilter == "unknown" && (t.Rows.Length == 0 || t.Queue is { State: "stale" }) || StatusFilter == "busy" && t.HasObservedActivity || t.Rows.Any(MatchStatus))
+    private OperatorTile[]? queueGroupingSource;
+    private string? queueGroupingNode;
+    private OperatorTile[] groupedQueueTiles = [];
+    private OperatorTile[] GroupedBoardTiles
+    {
+        get
+        {
+            var source = BoardTiles;
+            if (!ReferenceEquals(source, queueGroupingSource) || Node != queueGroupingNode)
+            {
+                queueGroupingSource = source; queueGroupingNode = Node;
+                groupedQueueTiles = QueueCardGrouping.Merge(source.Where(t => Node == "all" || t.Node == Node));
+            }
+            return groupedQueueTiles;
+        }
+    }
+    private OperatorTile[] VisibleTiles => GroupedBoardTiles
+        .Where(t => (!OnlyObservedChannels || t.HasObservedActivity) && (StatusFilter == "all" || StatusFilter == "unknown" && (t.Rows.Length == 0 || t.Queue is { State: "stale" }) || StatusFilter == "busy" && t.HasObservedActivity || t.Rows.Any(MatchStatus))
             && (!TextKinds.Contains(t.Kind == EventsPanelCardKind.TRUNK ? "trunks" : t.Kind == EventsPanelCardKind.QUEUE ? "queues" : "peers") || MatchText(t.Title + " " + t.Node + " " + string.Join(" ", t.Keys) + " " + string.Join(" ", t.Rows.Select(r => r.Key + " " + r.Caller + " " + r.Destination)))))
         .ToArray();
     private OperatorTile? SelectedTile => VisibleTiles.FirstOrDefault(t => t.Id == SelectedTileId);
@@ -563,9 +579,21 @@ public partial class LiveOperations
         DemoQueueCoverageIncomplete = demoQuery.GetValueOrDefault("queuesummarypreview") == "partial";
         if (DemoQueueCoverageIncomplete && demoTiles.FirstOrDefault(t => t.Queue is not null) is { } nativeQueue)
         {
+            var replicaRows = nativeQueue.Rows.Select(r => r with {
+                Id = r.Id + "-replica", Node = "apoint-voip",
+                Caller = r.Kind == "waiting" ? "6008" : r.Caller,
+                Key = r.Kind == "waiting" ? "SIP/0000006008-000000ee" : r.Key,
+                Details = r.Kind == "waiting" ? new Dictionary<string, string>(r.Details) {
+                    ["uniqueid"] = "queue-demo-replica", ["linkedid"] = "queue-demo-replica"
+                } : r.Details
+            }).ToArray();
+            Rows = Rows.Concat(Rows.Where(r => r.Kind == "call" && r.Node == nativeQueue.Node
+                && r.Details.GetValueOrDefault("uniqueid") == "queue-demo-1").Select(r => r with {
+                    Id = r.Id + "-replica", Node = "apoint-voip", Caller = "6008", Key = "SIP/0000006008-000000ee",
+                    Details = new Dictionary<string,string>(r.Details) { ["uniqueid"] = "queue-demo-replica", ["linkedid"] = "queue-demo-replica" }
+                })).ToArray();
             demoTiles = demoTiles.Concat(new[] {
-                nativeQueue with { Id = nativeQueue.Id + "-replica", Node = "apoint-voip",
-                    Rows = nativeQueue.Rows.Select(r => r with { Id = r.Id + "-replica", Node = "apoint-voip" }).ToArray() },
+                nativeQueue with { Id = nativeQueue.Id + "-replica", Node = "apoint-voip", Rows = replicaRows },
                 new OperatorTile("historical-queue", "0000006500", "google-voip", EventsPanelCardKind.QUEUE, [])
                     { Keys = ["0000006500"], LastSeen = now.AddDays(-1) }
             }).ToArray();

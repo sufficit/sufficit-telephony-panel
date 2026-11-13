@@ -36,10 +36,10 @@
             <section id="board-queue-region" class="board-section" aria-labelledby="board-queues">
                 <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span class="board-totals" title="@Text["Calls waiting / distinct queues with current data"]">@(QueueCoverageIncomplete ? "—" : BoardTotals.Waiting(Queues).ToString("N0", Text.Culture)) / @BoardTotals.ObservedQueues(Queues).ToString("N0", Text.Culture)</span></header>
                 @if (QueueCoverageIncomplete) { <p class="board-empty" role="status">@Text["Waiting total unavailable: some queue sources have no current data."]</p> }
-                <p class="board-empty">@Text.Format("Distinct queues with current data. {0:N0} server cards, {1:N0} without current data.", Queues.Length, Queues.Count(t => !BoardTotals.CurrentQueue(t)))</p>
+                @if (Queues.Any(t => !BoardTotals.CurrentQueue(t))) { <p class="board-empty">@Text.Format("Queues without current data: {0:N0}.", Queues.Count(t => !BoardTotals.CurrentQueue(t)))</p> }
                 <div class="board-queues">@foreach (var tile in Queues.Take(40)) { @TileButton(tile) }</div>
                 @if (Queues.Length == 0) { <p class="board-empty">@Text["No queues observed or remembered with these filters."]</p> }
-                @if (Queues.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} queue cards by server. Refine the filters.", Queues.Length)</p> }
+                @if (Queues.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} queues. Refine the filters.", Queues.Length)</p> }
             </section>
         </aside>
     </div>
@@ -100,7 +100,8 @@
     {
         if (tile.Queue is { } queue)
             return queue.State != "current" ? Text["QUEUE state unavailable"]
-                : Text.Format("{0} pending · {1} in service", queue.Details["pending"], queue.Details["connected"]);
+                : Text.Format("{0} pending · {1} in service", queue.Details["pending"], queue.Details["connected"])
+                    + (tile.QueueStateIncomplete ? " · " + Text["Partial queue data"] : "");
         if (tile.Kind == EventsPanelCardKind.QUEUE && tile.QueueCalls.Length > 0)
             return Text.Format("{0} waiting · {1} answered", tile.QueueCalls.Count(r => r.State != "answered"), tile.QueueCalls.Count(r => r.State == "answered"));
         if (tile.Flows.Length == 0) return Text.Observed(tile.Status.Label);
@@ -114,9 +115,9 @@
     <button type="button"
         class="board-tile tone-@tile.Status.Tone @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
-        title="@Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label))">
+        title="@(tile.Kind == EventsPanelCardKind.QUEUE ? Text.Format("{0}. Open details.", tile.Title) : Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label)))">
         <span class="tile-title"><span class="tile-dot" aria-hidden="true"></span><strong>@tile.Title</strong></span>
-        <span class="tile-status">@FlowStatus(tile)</span><span class="tile-node">@tile.Node</span>
+        <span class="tile-status">@FlowStatus(tile)</span>@if (tile.Kind != EventsPanelCardKind.QUEUE) { <span class="tile-node">@tile.Node</span> }
         @foreach (var flow in tile.Flows.Take(2)) { <span class="tile-channel"><CallNumbers Caller="@flow.Caller" Destination="@flow.Destination" Compact="true" />@if (tile.Queue is not null) { <text> · @Text[flow.Phase switch { "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent", "answered" => "Answered in queue", _ => "Waiting in queue" }]</text> }</span> }
         @if (tile.Flows.Length > 2) { <span class="tile-channel">@Text.Format("+{0} call flows in details", tile.Flows.Length - 2)</span> }
     </button>

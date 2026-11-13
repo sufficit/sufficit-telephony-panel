@@ -200,7 +200,7 @@ else
             }
             @if (SelectedTile is { } tile)
             {
-                <BoardResourceDialog Title="@($"{tile.Title} · {tile.Node}")" Closed="CloseTile">
+                <BoardResourceDialog Title="@(tile.Kind == EventsPanelCardKind.QUEUE ? tile.Title : $"{tile.Title} · {tile.Node}")" Closed="CloseTile">
                     @ResourceDetails(tile)
                     @ActionConfirmation
                     @ActionResult
@@ -224,6 +224,7 @@ else
                     @if (tile.Queue is { } queue)
                     {
                         <p>@Text["QUEUE data comes from the queue controller, not native AMI queue events."]</p>
+                        @if (tile.QueueStateIncomplete && queue.State == "current") { <p>@Text["Partial queue data"]</p> }
                         @if (queue.State != "current") { <p>@Text["QUEUE state unavailable. Previous activity is not shown as live. Refresh to retry."]</p> }
                         else if (queue.Details["correlation"] == "unavailable") { <p>@Text["This controller reports counts only; channel correlation requires its monitoring update."]</p> }
                     }

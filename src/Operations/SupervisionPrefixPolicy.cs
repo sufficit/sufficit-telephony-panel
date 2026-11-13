@@ -20,7 +20,9 @@ public sealed class SupervisionPrefixPolicy
             RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(10));
     public SupervisionPrefixRule Get(string id) => rules.SingleOrDefault(r => r.Id == id)
         ?? throw new InvalidOperationException("Continuous supervision is not authorized for this resource.");
-    public SupervisionPrefixRule[] For(OperatorTile tile, Guid? context) => rules.Where(r => r.Node == tile.Node
+    public SupervisionPrefixRule[] For(OperatorTile tile, Guid? context) => rules.Where(r => (r.Node == tile.Node || tile.Kind == EventsPanelCardKind.QUEUE
+            && tile.QueueSummary is not null && QueueResourceIdentity.From(tile)?.ContextId == r.ContextId
+            && tile.Rows.Any(row => row.Node == r.Node && Guid.TryParse(row.Account, out var owner) && owner == r.ContextId))
         && (!context.HasValue || r.ContextId == context) && tile.Keys.Contains(r.CardKey, StringComparer.Ordinal)).ToArray();
     public static bool Authorized(SupervisionPrefixRule rule, IEnumerable<EventsPanelCardInfo> cards) =>
         cards.Any(card => card.Channels.Contains(rule.CardKey));
