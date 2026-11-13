@@ -211,12 +211,14 @@ O cabeçalho mostra chamadas em espera / filas distintas com dados atuais. Filas
 nativas são identificadas por empresa e GUID, somando uma fila mesmo quando
 observada em mais de um servidor. Cartões sem identidade comprovada permanecem
 separados. Cartões históricos ou com estado indisponível não entram nessa
-contagem; o texto abaixo informa quantas filas estão sem estado atual.
-Atividade e observação atual têm prioridade na lista.
+contagem. Na visão global do gerente, filas são ordenadas pela utilização atual
+(espera + atendimento), maior primeiro; empate prioriza espera, estado atual,
+nome e identidade. A visão por empresa mantém atividade/estado atual/nome.
+Avisos explicativos e contagem histórica não ocupam o corpo do card.
 
 Se alguma fonte estiver indisponível, desatualizada ou sem cobertura, o total
-em espera aparece como `—`, acompanhado de aviso. Zero só aparece com cobertura
-completa das fontes configuradas. O histórico permanece disponível nos filtros
+em espera aparece como `—`; o motivo fica no tooltip do total e no diagnóstico
+das opções/alertas externos. Zero só aparece com cobertura completa das fontes configuradas. O histórico permanece disponível nos filtros
 e detalhes; a mudança não remove filas nem modifica os controladores.
 
 ## Cartão único por fila
