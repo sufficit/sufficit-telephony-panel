@@ -34,10 +34,12 @@
                  aria-valuemin="15" aria-valuemax="85" aria-valuenow="35" data-board-split="rows"
                  title="@Text["Drag or use arrow keys to resize. Double-click or press Enter to reset."]"></div>
             <section id="board-queue-region" class="board-section" aria-labelledby="board-queues">
-                <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span class="board-totals" title="@Text["Calls waiting / queues"]">@BoardTotals.Waiting(Queues) / @Queues.Length</span></header>
+                <header class="board-section-heading"><h3 id="board-queues">@Text["Call queues"]</h3><span class="board-totals" title="@Text["Calls waiting / distinct queues with current data"]">@(QueueCoverageIncomplete ? "—" : BoardTotals.Waiting(Queues).ToString("N0", Text.Culture)) / @BoardTotals.ObservedQueues(Queues).ToString("N0", Text.Culture)</span></header>
+                @if (QueueCoverageIncomplete) { <p class="board-empty" role="status">@Text["Waiting total unavailable: some queue sources have no current data."]</p> }
+                <p class="board-empty">@Text.Format("Distinct queues with current data. {0:N0} server cards, {1:N0} without current data.", Queues.Length, Queues.Count(t => !BoardTotals.CurrentQueue(t)))</p>
                 <div class="board-queues">@foreach (var tile in Queues.Take(40)) { @TileButton(tile) }</div>
                 @if (Queues.Length == 0) { <p class="board-empty">@Text["No queues observed or remembered with these filters."]</p> }
-                @if (Queues.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} queues. Refine the filters.", Queues.Length)</p> }
+                @if (Queues.Length > 40) { <p class="board-empty">@Text.Format("Showing 40 of {0} queue cards by server. Refine the filters.", Queues.Length)</p> }
             </section>
         </aside>
     </div>
@@ -79,6 +81,7 @@
     { if (e.Key == "ContextMenu" || (e.ShiftKey && e.Key == "F10")) { MenuTile = tile; MenuX = MenuY = 0; } }
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
     [Parameter] public OperatorTile[] Tiles { get; set; } = [];
+    [Parameter] public bool QueueCoverageIncomplete { get; set; }
     [Parameter] public bool Central { get; set; }
     [Parameter] public bool Compact { get; set; }
     [Parameter] public RenderFragment? HeaderTools { get; set; }
@@ -90,7 +93,8 @@
     private int page => Math.Clamp(Page, 0, Pages - 1);
     private OperatorTile[] Peers => Tiles.Where(t => t.Kind == EventsPanelCardKind.PEER).ToArray();
     private OperatorTile[] Trunks => Tiles.Where(t => t.Kind == EventsPanelCardKind.TRUNK).ToArray();
-    private OperatorTile[] Queues => Tiles.Where(t => t.Kind == EventsPanelCardKind.QUEUE).ToArray();
+    private OperatorTile[] Queues => Tiles.Where(t => t.Kind == EventsPanelCardKind.QUEUE).OrderByDescending(t => t.HasObservedActivity)
+        .ThenByDescending(BoardTotals.CurrentQueue).ThenBy(t => t.Title, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Node, StringComparer.Ordinal).ToArray();
     private int Pages => Math.Max(1, (Peers.Length + Size - 1) / Size);
     private string FlowStatus(OperatorTile tile)
     {

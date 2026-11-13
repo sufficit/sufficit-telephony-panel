@@ -22,6 +22,15 @@ public static class BoardTotals
     public static int Reachable(IEnumerable<OperatorTile> tiles)
         => tiles.Count(t => t.Status.Tone is "online" or "busy" or "ringing");
 
+    /// <summary>Whether this queue card carries current evidence, rather than retained or stale state.</summary>
+    public static bool CurrentQueue(OperatorTile tile) => tile.Rows.Length > 0 && tile.Queue is not { State: not "current" };
+
+    /// <summary>Native queues count once per company/GUID across nodes. Unknown legacy identities stay separate.</summary>
+    public static int ObservedQueues(IEnumerable<OperatorTile> tiles) => tiles.Where(CurrentQueue)
+        .Select(tile => QueueResourceIdentity.From(tile) is { } identity
+            ? $"queue:{identity.ContextId:N}:{identity.QueueId:N}" : "observed:" + tile.Id)
+        .Distinct(StringComparer.Ordinal).Count();
+
     /// <summary>Calls waiting: observed waiting visits, or the pending count of a native QUEUE queue.</summary>
     public static int Waiting(IEnumerable<OperatorTile> tiles)
         => tiles.Sum(t => t.Queue is { State: "current" } queue && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending)

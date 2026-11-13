@@ -29,6 +29,16 @@ static class BoardTotalsChecks
         var truncated = native with { Rows = [..native.Rows, Row("v1", "waiting", "waiting"), Row("v2", "waiting", "answered")] };
         check(BoardTotals.Waiting([truncated]) == 3, "Authoritative pending wins over truncated or connected visit details");
         check(BoardTotals.Waiting([legacy with { Rows = [Row("a2", "waiting", "connected")] }]) == 0, "Connected visits are not waiting");
+        var owner = Guid.NewGuid(); var queueId = Guid.NewGuid();
+        var observed = native with { Keys = [$"queue:{owner:N}:{queueId:N}"] };
+        var replica = observed with { Id = "replica", Node = "apoint" };
+        var history = observed with { Id = "history", Rows = [], LastSeen = now.AddDays(-1) };
+        check(BoardTotals.ObservedQueues([observed, replica, history, stale]) == 1,
+            "Same native queue on two nodes counts once; remembered and stale cards do not inflate the observed queue count");
+        check(BoardTotals.ObservedQueues([observed, replica with { Keys = [$"queue:{Guid.NewGuid():N}:{queueId:N}"] }]) == 2,
+            "Queue identities from different companies are never combined");
+        check(!BoardTotals.CurrentQueue(history) && !BoardTotals.CurrentQueue(stale) && BoardTotals.CurrentQueue(observed),
+            "Current queue evidence distinguishes archive and unavailable source state");
         check(BoardTotals.ActiveCalls([native, busy]) == 3, "A busy card without channels counts as one call, cards with channels count their channels");
     }
 }

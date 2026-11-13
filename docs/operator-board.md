@@ -204,3 +204,17 @@ A API cruza vínculos numéricos preservados da migração com GUID/empresa pres
 no cadastro nativo atual; não reativa suff_queue, não concede SQL ao monitoramento
 e não depende de alterar os controladores Google/ARI. A gestão continua aplicando
 sua própria autorização. Vínculo removido do catálogo nativo não gera edição.
+
+## Contagem e cobertura das filas
+
+O cabeçalho mostra chamadas em espera / filas distintas com dados atuais. Filas
+nativas são identificadas por empresa e GUID, somando uma fila mesmo quando
+observada em mais de um servidor. Cartões sem identidade comprovada permanecem
+separados. Cartões históricos ou com estado indisponível não entram nessa
+contagem; o texto abaixo informa o total de cartões por servidor e quantos estão
+sem estado atual. Atividade e observação atual têm prioridade na lista.
+
+Se alguma fonte estiver indisponível, desatualizada ou sem cobertura, o total
+em espera aparece como `—`, acompanhado de aviso. Zero só aparece com cobertura
+completa das fontes configuradas. O histórico permanece disponível nos filtros
+e detalhes; a mudança não remove filas nem modifica os controladores.

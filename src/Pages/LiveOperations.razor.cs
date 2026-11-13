@@ -490,6 +490,7 @@ public partial class LiveOperations
     private void SetTab(string value) { Tab = value; Page = 0; Pending = null; SettingsOpened |= value == "settings"; WriteUrl(); }
     private void Previous() { Page = Math.Max(0, Page - 1); WriteUrl(); }
     private void Next() { Page = Math.Min(Pages - 1, Page + 1); WriteUrl(); }
+    private bool DemoQueueCoverageIncomplete;
     private void LoadDemo()
     {
         Cards = [new() { Label = "Hugo · atendimento", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] }, new() { Label = "Recepção", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/1001"] }, new() { Label = "Comercial", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/1002"] }, new() { Label = "Operadora · saída", Kind = EventsPanelCardKind.TRUNK, Channels = ["PJSIP/trunk-demo"] }, new() { Label = "Atendimento geral", Kind = EventsPanelCardKind.QUEUE, Channels = ["fila-demo"] }];
@@ -559,6 +560,16 @@ public partial class LiveOperations
                 new("eveo-voip", scope, new(scope.ToString("N"), Guid.NewGuid().ToString("N"), now, true, false, []), true)];
         }
         LoadQueueDemo();
+        DemoQueueCoverageIncomplete = demoQuery.GetValueOrDefault("queuesummarypreview") == "partial";
+        if (DemoQueueCoverageIncomplete && demoTiles.FirstOrDefault(t => t.Queue is not null) is { } nativeQueue)
+        {
+            demoTiles = demoTiles.Concat(new[] {
+                nativeQueue with { Id = nativeQueue.Id + "-replica", Node = "apoint-voip",
+                    Rows = nativeQueue.Rows.Select(r => r with { Id = r.Id + "-replica", Node = "apoint-voip" }).ToArray() },
+                new OperatorTile("historical-queue", "0000006500", "google-voip", EventsPanelCardKind.QUEUE, [])
+                    { Keys = ["0000006500"], LastSeen = now.AddDays(-1) }
+            }).ToArray();
+        }
     }
     private void LoadQueueDemo()
     {
