@@ -165,9 +165,10 @@ Uma falha do agregado mantém somente nomes conhecidos com atividade indisponív
 404 em controlador antigo. Preservar o inventário lembrado, sem recriar estado
 atual a partir dele. O painel pode ser instalado antes dos controladores: se a rota agregada inicial
 retornar 403/404, preserva os snapshots dos contextos fixos e mostra aviso de cobertura
-global incompleta. A cobertura global depende da atualização posterior dos
-controladores/fachada; commit e testes locais não comprovam publicação nem aceitação
-em produção.
+global incompleta. A cobertura global exige um endpoint agregado disponível,
+por atualização dos controladores/fachada ou configuração de `GlobalBaseUrl`
+quando o controlador já o fornece. Commit e testes locais não comprovam publicação
+nem aceitação em produção.
 
 ## Identificação e gestão nos detalhes da fila
 
@@ -254,3 +255,9 @@ O controlador18189 já o fornece. `deploy/90-google-global-queue.conf` direciona
 somente o agregado ao controlador, preservando os registros/diagnósticos na
 fachada e usando uma credencial de monitoramento existente. Essa correção exige
 somente atualização/reinício do painel, sem alteração do serviço Google.
+
+Em 13/11/2026, a leitura pelo usuário do serviço, com a DLL instalada e configuração
+efetiva, confirmou cobertura válida de todos os três nós: Google464 contextos e
+1.161 filas; E/A463 contextos e1.159 filas cada. Na verificação pós-ativação havia
+4 chamadas em espera e5 em atendimento, com8 filas ativas nas primeiras40. Esses
+valores são uma observação daquele instante, não constantes do produto.
