@@ -547,6 +547,18 @@ public partial class LiveOperations
                     "Cliente demonstração", "6007", tenant.ToString("N"), now, now,
                     new Dictionary<string, string> { ["linkedid"] = "demo-linked-1" })).ToArray();
         }
+        if (demoQuery.TryGetValue("dialfailurepreview", out var failureState))
+        {
+            Rows = Rows.Where(row => row.Id != "demo-call" || failureState == "new-attempt")
+                .Select(row => row.Id == "demo-hugo" ? row with { Peer = row.Peer! with { Device = "1" } } : row).ToArray();
+            if (failureState != "normal")
+            {
+                var occurred = failureState == "expired" ? now.AddSeconds(-11) : now;
+                Rows = Rows.Append(new ObservedResource("demo-failure", "eveo-voip", "call-result", "PJSIP/6007",
+                    failureState == "no-route" ? "3" : "28", null, null, tenant.ToString("N"), occurred, occurred,
+                    new Dictionary<string, string>())).ToArray();
+            }
+        }
         if (demoQuery.ContainsKey("numberpreview"))
             Rows = Rows.Select(row => row.Kind is "call" or "waiting"
                 ? row with { Caller = demoQuery["numberpreview"] == "e164" ? "552140627711" : "5508000000697", Destination = demoQuery["numberpreview"] == "e164" ? "5511999999999" : "+5508000000697" } : row).ToArray();

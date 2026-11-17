@@ -93,6 +93,7 @@ await QueueBoardChecks.Run(Check);
 await RepresentativeQueueChecks.Run(Check);
 await GlobalQueueChecks.Run(Check);
 OperatorBoardChecks.Run(Check);
+DialFailureChecks.Run(Check);
 await BoardConfigurationChecks.Run(Check);
 FopRulesChecks.Run(Check);
 await BoardInventoryChecks.Run(Check);

@@ -527,3 +527,12 @@ Os efeitos de progresso/pulso aplicam-se exclusivamente a PEER (extensões).
 Troncos e filas mantêm indicação estática mesmo em discagem/toque. Sessão
 negada ou expirada oferece “Entrar novamente” via login HTTP, preservando
 a URL de retorno; reconexão do circuito não renova credenciais expiradas.
+
+### Resultado de discagem inválida
+
+Quando Hangup confirma causa de número inexistente/inválido, prefixo inválido
+ou falta de rota, a extensão mostra texto em error por dez segundos, sem pulso
+de toque ou manutenção do canal ativo. Registro/alcance continuam independentes
+do resultado da tentativa. Nova tentativa remove o aviso; outras extensões,
+troncos e filas não o herdam. O filtro de atividade mantém o aviso breve visível,
+sem somá-lo às chamadas ativas. Sem causa explícita, não presumir falha de discagem.

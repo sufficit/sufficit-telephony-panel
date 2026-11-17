@@ -13,7 +13,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public bool HasObservedActivity => Kind == EventsPanelCardKind.QUEUE
         ? Queue is { } queue ? queue.State == "current" && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0
             : QueueCalls.Length > 0
-        : Channels.Length > 0;
+        : Channels.Length > 0 || FailedDial is not null;
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
         .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => r.Id).ToArray();
@@ -33,6 +33,11 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         return value.TrimEnd('>');
     }
     public bool Remembered => Rows.Length == 0 && LastSeen.HasValue;
+    /// <summary>A brief failure on this endpoint, never an active call or another extension's outcome.</summary>
+    public ObservedResource? FailedDial => Kind == EventsPanelCardKind.PEER && Channels.Length == 0
+        ? Rows.Where(r => r.Kind == "call-result" && DateTimeOffset.UtcNow - r.Updated < RecentDialFailure.Lifetime
+            && DateTimeOffset.UtcNow >= r.Updated && RecentDialFailure.Label(r.State) is not null)
+            .OrderByDescending(r => r.Updated).FirstOrDefault() : null;
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);

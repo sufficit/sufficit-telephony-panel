@@ -286,3 +286,13 @@ O estado AMI original permanece disponível no detalhe. Sem evidência correlaci
 a origem mantém Discando. Canais Local não confirmam toque de endpoint; uma origem
 Up não volta a animar por causa de outra perna em Ringing. Efeitos continuam
 restritos às extensões; troncos/filas permanecem estáticos.
+
+
+### Falha breve de discagem
+
+O card da extensão exibe por dez segundos o motivo explícito reportado no Hangup:
+número inexistente (causa 1), sem rota (2/3), prefixo inválido (5) ou formato
+inválido (28). Ocupado, ausência de resposta, cancelamento e encerramento normal
+não viram “número inválido”. Trata-se de resultado transitório em memória, sem
+canal ativo, sem histórico persistido e sem animação de toque. Nova tentativa
+limpa o aviso. Sem causa reportada pelo PBX, não há resultado inferido.
