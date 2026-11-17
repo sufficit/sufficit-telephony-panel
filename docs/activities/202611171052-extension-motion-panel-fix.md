@@ -2,7 +2,7 @@
 
 Pedido do mantenedor: animação exclusivamente nas extensões e diagnóstico da
 captura com UnauthorizedAccessException. A tarefa original permanece aberta no
-[plano](../PLAN-EXTENSION-MOTION-FIX.md) até liberação do filtro de estado no Google.
+[plano](202611171057-extension-motion-completed.md) até liberação do filtro de estado no Google.
 
 ## Correções publicadas
 
@@ -39,7 +39,7 @@ com o conjunto completo passou.
 
 Template/helper/testes preparados em sufficit-ami-events, commit 49c61e1/main;
 7 testes Python PASS. Aplique somente na janela aprovada: ver
-/mnt/sufficit/sufficit-ami-events/docs/PLAN-EXTENSION-CHANNEL-STATES.md.
+/mnt/sufficit/sufficit-ami-events/docs/activities/202611171057-extension-channel-states.md.
 Nada foi alterado no Google. Esta entrega não comprova toque real nas extensões:
 a evidência de estado está bloqueada no filtro AMI, não deve ser inventada.
 
@@ -70,3 +70,6 @@ A regra de janela do Google vem de
 Limitações e decisão do mantenedor: painel pode ser publicado sem aguardar
 horário, mas Google exige horário mais calmo. Continuidade aguarda decisão
 sobre recarga AMI e eventual reconexão do observador, sem reiniciar Asterisk.
+
+
+Atualização posterior: mantenedor autorizou a janela; filtro Newstate aplicado e validado no Google, com cinco extensões ringing e duas com canais Up na amostra real. Pendência encerrada: [conclusão](202611171057-extension-motion-completed.md).
