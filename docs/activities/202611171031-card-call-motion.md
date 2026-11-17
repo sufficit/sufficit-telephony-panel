@@ -55,3 +55,6 @@ Entrega: commit e push direto na main conforme preferência do mantenedor.
 Sem publicação/deploy solicitado ou executado. As verificações do navegador
 usam `NODE_PATH=/home/hugodeco/.npm/_npx/31e32ef8478fbf80/node_modules` com
 Playwright já disponível no ambiente.
+
+
+Publicação posterior autorizada e concluída: [evidências do deploy](202611171038-deploy-card-call-motion.md).
