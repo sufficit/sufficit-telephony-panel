@@ -4,7 +4,7 @@ Pedido: versão publicada não mostra as tentativas inválidas no ramal PJSIP do
 
 1. CONCLUÍDO — Confirmar versões ativas e capturar somente estados/causas/presença de resultado para o PJSIP identificado nesta sessão, sem números discados ou credenciais.
 2. CONCLUÍDO — Corrigir o defeito comprovado ou registrar exatamente qual evidência falta; validar regressão/isolamento e comportamento real disponível.
-3. EM ANDAMENTO — Publicar alterações necessárias, validar saúde, registrar entrega e converter plano quando todos os checkpoints estiverem comprovados; commit/push main.
+3. CONCLUÍDO — Publicar alterações necessárias, validar saúde, registrar entrega e converter plano quando todos os checkpoints estiverem comprovados; commit/push main.
 
 Versões confirmadas: painel dial-failure-20261117-b938273, observador dial-failure-20261117-5617f2b; ambos ativos. A validação anterior de causa1 era agregada da central; não comprovava as tentativas específicas do ramal PJSIP do usuário. Não transformar causa normal/ausente em número inválido.
 
@@ -57,3 +57,45 @@ para Ring/4 encerrado normalmente em até2s e sem Up observado. Nunca apresentar
 chamada atendida ou cancelamento após toque prolongado como erro de discagem.
 
 Regressão baseada na reprodução falhou antes da correção por resultado ausente. Depois: 1.606 checks PASS, incluindo exclusão de Up, Down, unknown, toque prolongado e transferência com Up anterior. Caso real será apresentado como Tentativa encerrada (warning), nunca Falha/número inválido. Mesmo prazo10s e isolamento anteriores.
+
+
+## Encerramento e publicação
+
+Causa identificada na reprodução do usuário: Ring → Hangup causa16 no mesmo
+milissegundo, às12:21:56.034 BRT. A ausência do aviso anterior não era falta de
+deploy: a regra anterior aceitava apenas causa explícita de número/rota inválida.
+O ajuste apresenta “Tentativa encerrada” em warning por10s para Ring/4 encerrado
+em até2s, sem Up anterior. Não chama causa16 de número inválido. Mantidos avisos
+explícitos, nova tentativa/expiração, isolamento por conta/nó/endpoint e soma
+zero de chamadas ativas. Somente extensões exibem o retorno. Sem novos timers.
+
+Regressão real representada em teste falhou antes da correção. Depois:1.606
+checks PASS e42 de streaming PASS; build/publish Release PASS. Navegador passou
+em Development e contra as DLLs do pacote Release, incluindo retorno neutro,
+falhas explícitas, ausência de aviso para normal clearing comum, expiração,
+nova tentativa, extensão somente e mobile/escuro/reduced-motion. Um caso de
+transferência Up→Ring em chamada curta não gera este aviso. O ensaio de browser
+usa fixture; não foi afirmada uma sessão autenticada real após deploy.
+
+Fonte painel84ad8ae/main, fonte observadorf96bb94/main. Publicados apenas no
+eveo-apps, sem alteração/reload Google/Asterisk/controlador:
+- Painel immediate-attempt-20261117-84ad8ae, PID2659783/NRestarts0.
+- Observador immediate-attempt-20261117-f96bb94, PID2659653/NRestarts0.
+- Legado AMIEvents manteve PID409848.
+- DLL painel SHA256 18f9a22b7f0f34da0d382fc4ea24472788eaec2dafd94005e02a9d4ac7860068.
+- Manifestos instalados completos conferidos antes/depois:239 arquivos painel,
+  36 observador. Configurações e token de observação preservados no host.
+- CSS público Sufficit.Telephony.Panel.m928eddbgz.styles.css idêntico ao pacote,
+  SHA256 86908cfa7f11ac82ada3cadc6b004ae441942de1ce49f73d938cd660bf382b35.
+- Health socket/público200, API fleet anônima401, preview público sem fixture.
+- Journal sem erros no intervalo2min consultado. Gates de rollback passaram.
+
+Anterior do painel dial-failure-20261117-b938273 retida. Manifesto privado:
+/var/backups/sufficit-telephony-panel/immediate-attempt-20261117-84ad8ae/release.json.
+Para reverter, conferir paths, voltar symlink current e reiniciar só painel.
+O observador possui rollback independente na atividade correspondente. Não houve
+rollback necessário. Captura temporária encerrada pelo PID de filho2653028,
+inspecionado antes do kill; sem pkill e sem afetar processos de produção.
+Servidor local de validação encerrado. Planos concluídos convertidos em atividades.
+
+Aplicação do observador: [atividade](../../../sufficit-ami-events/docs/activities/202611171229-pjsip-immediate-attempt.md).
