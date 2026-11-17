@@ -23,7 +23,8 @@ internal static class DialFailureChecks
             var failure = rows.Single();
             check(failure.Kind == "call-result" && failure.State == cause.ToString(), "Explicit failure crosses snapshot transport with numeric cause");
             check(failure.Key == "PJSIP/wss-origin" && failure.Account == tenant.ToString("N"), "Failure retains the exact endpoint/node ownership");
-            check(failure.Caller is null or "" && failure.Destination is null or "" && failure.Details.Count == 0, "Failure retains no caller, destination or linked call metadata");
+            check(failure.Destination == "private-number" && failure.Details.GetValueOrDefault("cause") == cause.ToString(), "Dial result preserves the original dialed destination and numeric Asterisk cause");
+            check(failure.Caller is null or "" && !failure.Details.ContainsKey("linkedid"), "Result does not retain caller or linked call metadata");
             var observation = AuthorizedObservation.ForManager(rows);
             var tile = OperatorTile.Create(observation.Cards, observation.ByCard).Single();
             check(tile.FailedDial is not null && tile.Channels.Length == 0 && tile.Flows.Length == 0, "Failure is visible without a live call or flow");
@@ -60,6 +61,19 @@ internal static class DialFailureChecks
         transferred.Apply("google", "NewStateEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring" }), now.AddMilliseconds(50));
         transferred.Apply("google", "HangupEvent", Event(16), now.AddMilliseconds(100));
         check(transferred.Snapshot(now.AddMilliseconds(100)).Length == 0, "Earlier Up evidence excludes short answered transfers");
+        var routed = new LiveProjection();
+        routed.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring", exten = "*0042#" }), now);
+        routed.Apply("google", "NewStateEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring", connectedlinenum = "another-destination", exten = "h" }), now);
+        routed.Apply("google", "HangupEvent", Event(16), now);
+        var original = routed.Snapshot(now).Single();
+        check(original.State == "attempt-ended" && original.Destination == "*0042#" && original.Details["cause"] == "16", "Immediate attempt retains the original dial string and normal-clearing cause despite later routing updates");
+        foreach (var placeholder in new[] { "", "s", "h", "unknown", "<unknown>" })
+        {
+            var missing = new LiveProjection();
+            missing.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, exten = placeholder }), now);
+            missing.Apply("google", "HangupEvent", Event(28), now);
+            check(missing.Snapshot(now).Single().Destination is null, "Missing or technical extensions do not become a fabricated dialed number");
+        }
         var next = new LiveProjection();
         next.Apply("google", "NewChannelEvent", Event(), now);
         next.Apply("google", "HangupEvent", Event(28), now);

@@ -303,3 +303,11 @@ em até2s sem nenhum Up observado, o card apresenta **Tentativa encerrada**, em
 âmbar e por dez segundos. Não é diagnóstico de número inválido. Uma chamada
 atendida, estado desconhecido/Down ou cancelamento após toque prolongado não
 usa esse aviso.
+
+O aviso inclui o destino originalmente observado no exten do canal e a causa
+numérica do Hangup (por exemplo,16 · Encerramento normal). Isso não é uma
+resposta SIP. O AMI usado aqui não fornece status SIP, que não é inventado ou
+convertido da causa. Ausências aparecem como Não informado. O exten original
+é preservado apesar de mudança de connected-line/rota, sem formatar zeros ou
+caracteres de discagem. Esses dados só acompanham o resultado transitório em
+memória, com a mesma autorização e expiração; não vão para histórico de inventário.

@@ -542,3 +542,9 @@ observado mostra “Tentativa encerrada” em warning, pelo mesmo prazo de dez
 segundos. Esse retorno é neutro: não afirma número inválido. Chamadas já
 atendidas, estados Down/unknown e cancelamento após toque prolongado não usam
 essa indicação.
+
+O resultado temporário inclui “Discado” com o primeiro exten significativo
+observado (literal, preservando zeros e caracteres de discagem) e “Causa
+Asterisk” com número/descrição. Não são códigos SIP. Destino/causa ausentes são
+“Não informado”; extensões técnicas s/h não são exibidas como número discado.
+Os detalhes acompanham o mesmo prazo10s e não entram no inventário persistente.
