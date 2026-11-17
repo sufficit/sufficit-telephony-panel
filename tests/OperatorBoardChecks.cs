@@ -27,6 +27,28 @@ internal static class OperatorBoardChecks
         var dialingTile = new OperatorTile("dialing", "6007", "eveo", EventsPanelCardKind.PEER, [calling]);
         check(BoardTotals.Reachable([dialingTile]) == 1, "Dialing retains the existing reachable total");
         check(BoardTotals.ActiveCalls([dialingTile]) == 1, "Dialing retains the active call total");
+        // Ring on the caller can persist while another authorized leg is already Ringing.
+        var account = Guid.NewGuid().ToString("N");
+        ObservedResource Leg(string id, string state, string linked = "call-1", string node = "eveo", string? tenant = null) =>
+            new(id, node, "call", id, state, "caller", "6007", tenant ?? account, now, now,
+                new Dictionary<string, string> { ["linkedid"] = linked });
+        var origin = Leg("PJSIP/origin-000000aa", "Ring");
+        var destination = Leg("SIP/6007-000000bb", "Ringing");
+        var originTile = new OperatorTile("origin", "Origin", "eveo", EventsPanelCardKind.PEER, [origin]);
+        OperatorTile OriginWith(params ObservedResource[] rows) => BoardCallFlow.Attach([originTile], rows).Single();
+        check(OriginWith(origin, destination).Status == ("ringing", "Destination ringing"), "Caller Ring reflects confirmed ringing on the authorized destination");
+        check(OperatorTile.Describe([origin]).Tone == "dialing", "Ringback presentation does not rewrite the raw caller channel state");
+        check(OriginWith(origin).Status.Tone == "dialing", "No destination evidence retains dialing");
+        check(OriginWith(origin, destination with { State = "Down" }).Status.Tone == "dialing", "Down destination cannot confirm ringing");
+        check(OriginWith(origin, destination with { State = "Up" }).Status.Tone != "ringing", "Answer removes destination ringing");
+        check(OriginWith(origin, Leg("SIP/6007-000000bb", "Ringing", "other-call")).Status.Tone == "dialing", "Matching dialed numbers cannot merge independent calls");
+        check(OriginWith(origin, Leg("SIP/6007-000000bb", "Ringing", node: "google")).Status.Tone == "dialing", "Linked IDs cannot cross PBX nodes");
+        check(OriginWith(origin, Leg("SIP/6007-000000bb", "Ringing", tenant: Guid.NewGuid().ToString("N"))).Status.Tone == "dialing", "Conflicting accounts cannot share ringing evidence");
+        check(OriginWith(origin, destination with { Key = "Local/6007@queue;2" }).Status.Tone == "dialing", "Technical Local ringing does not confirm that an endpoint is ringing");
+        var answeredOrigin = originTile with { Rows = [origin with { State = "Up" }] };
+        check(BoardCallFlow.Attach([answeredOrigin], [answeredOrigin.Rows[0], destination]).Single().Status.Tone == "busy", "An answered origin is not reanimated by another ringing leg");
+        var trunkOrigin = originTile with { Kind = EventsPanelCardKind.TRUNK };
+        check(BoardCallFlow.Attach([trunkOrigin], [origin, destination]).Single().Status.Tone == "dialing", "Ringback presentation is restricted to extensions");
         var card = new EventsPanelCardInfo { Label = "6007", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] };
         var byCard = new Dictionary<EventsPanelCardInfo, List<ObservedResource>> { [card] = [peer, peer with { Node = "google", Id = "other" }] };
         var tiles = OperatorTile.Create([card], byCard);

@@ -537,6 +537,16 @@ public partial class LiveOperations
             Rows = Rows.Where(row => row.Id != "demo-call" || state is not null)
                 .Select(row => row.Id == "demo-call" ? row with { State = state! } : row).ToArray();
         }
+        if (demoQuery.TryGetValue("ringbackpreview", out var ringbackState))
+        {
+            Cards = Cards.Append(new EventsPanelCardInfo { Label = "6007 · destino", Kind = EventsPanelCardKind.PEER, Channels = ["SIP/6007"] }).ToArray();
+            Rows = Rows.Select(row => row.Id == "demo-call" ? row with { State = ringbackState == "answered" ? "Up" : "Ring" } : row).ToArray();
+            if (ringbackState != "removed")
+                Rows = Rows.Append(new ObservedResource("demo-ringback-destination", "eveo-voip", "call", "SIP/6007-000000aa",
+                    ringbackState == "ringing" ? "Ringing" : ringbackState == "answered" ? "Up" : "Down",
+                    "Cliente demonstração", "6007", tenant.ToString("N"), now, now,
+                    new Dictionary<string, string> { ["linkedid"] = "demo-linked-1" })).ToArray();
+        }
         if (demoQuery.ContainsKey("numberpreview"))
             Rows = Rows.Select(row => row.Kind is "call" or "waiting"
                 ? row with { Caller = demoQuery["numberpreview"] == "e164" ? "552140627711" : "5508000000697", Destination = demoQuery["numberpreview"] == "e164" ? "5511999999999" : "+5508000000697" } : row).ToArray();

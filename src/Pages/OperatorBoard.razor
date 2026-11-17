@@ -110,7 +110,7 @@
         return tile.Status.Tone switch
         {
             "dialing" => Text["Dialing"] + " · " + label,
-            "ringing" => Text["Ringing"] + " · " + label,
+            "ringing" => Text[tile.Status.Label == "Destination ringing" ? "Destination ringing" : "Ringing"] + " · " + label,
             _ => label
         };
     }

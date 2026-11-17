@@ -275,3 +275,14 @@ Os snapshots e o histórico do controlador preservam a contagem original de
 atendimentos para os demais diagnósticos. O filtro ocorre na apresentação e
 não encerra chamadas, altera roteamento ou muda a autorização. É o atendimento
 do ramal, não o estado `Up` do canal do chamador, que remove a chamada da fila.
+
+
+### Toque no destino e estado da origem
+
+Uma origem PJSIP pode continuar com estado de canal Ring enquanto o destino SIP
+já está Ringing. A origem apresenta **Destino tocando** e o destino **Tocando**
+quando há correlação autorizada por linkedid no mesmo nó, sem contas conflitantes.
+O estado AMI original permanece disponível no detalhe. Sem evidência correlacionada,
+a origem mantém Discando. Canais Local não confirmam toque de endpoint; uma origem
+Up não volta a animar por causa de outra perna em Ringing. Efeitos continuam
+restritos às extensões; troncos/filas permanecem estáticos.

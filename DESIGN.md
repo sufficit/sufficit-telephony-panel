@@ -515,8 +515,12 @@ no rodapé do card. Ringing/5 usa info, rótulo de toque e pulso duplo no
 contorno interno/ponto. O texto e a grade permanecem imóveis. O ciclo persiste
 apenas enquanto houver a evidência correspondente; Up/6 e remoção do canal
 retiram o efeito. Down/0 e unknown não comprovam discagem nem toque.
-O estado continua baseado nos canais do próprio card, nunca nas pernas
-correlacionadas de outros ramais. Com prefers-reduced-motion, os indicadores
+O estado AMI do canal permanece baseado no próprio card. Quando a origem ainda
+está em discagem e um endpoint autorizado da mesma chamada (linkedid e nó)
+confirma Ringing, a origem passa a apresentar “Destino tocando”, com pulso azul;
+o card de destino continua “Tocando”. Canais Local, números discados iguais sem
+correlação ou contas conflitantes não fornecem essa confirmação. Uma origem já
+Up não volta a animar por haver outro canal tocando. Com prefers-reduced-motion, os indicadores
 ficam estáticos e os rótulos preservam a distinção.
 
 Os efeitos de progresso/pulso aplicam-se exclusivamente a PEER (extensões).

@@ -42,13 +42,38 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
             : queue.Details.GetValueOrDefault("pending", "0") != "0"
                 ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
-        : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade")) : Describe(Rows);
+        : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade")) : CallStatus;
+    private static bool IsDialing(ObservedResource channel) => channel.State.ToLowerInvariant()
+        is "dialing" or "3" or "ring" or "4" or "dialing offhook" or "dialingoffhook" or "8" or "pre-ring" or "prering" or "9";
+    private static bool IsRinging(ObservedResource channel) => channel.State.ToLowerInvariant() is "ringing" or "5";
+    private (string Tone, string Label) CallStatus
+    {
+        get
+        {
+            var observed = Describe(Rows);
+            if (Kind != EventsPanelCardKind.PEER || observed.Tone != "dialing") return observed;
+            // The caller can remain Ring after the destination enters Ringing. Use only
+            // authorized, same-node linked legs; preserve raw states and distinguish ringback.
+            foreach (var caller in Channels.Where(IsDialing))
+            {
+                var linked = caller.Details.GetValueOrDefault("linkedid");
+                if (!LiveProjection.Meaningful(linked)) continue;
+                if (Flows.Where(f => f.Correlated && f.Channels.Any(c => c.Id == caller.Id))
+                    .SelectMany(f => f.Channels).Any(destination => destination.Id != caller.Id
+                        && destination.Node == caller.Node
+                        && destination.Details.GetValueOrDefault("linkedid") == linked
+                        && BoardRuleEngine.IsEndpointKey(destination.Key) && IsRinging(destination)))
+                    return ("ringing", "Destination ringing");
+            }
+            return observed;
+        }
+    }
     public static (string Tone, string Label) Describe(ObservedResource[] rows)
     {
         // This is observed evidence, never a statement that the whole extension is free.
         var calls = rows.Where(r => r.Kind == "call").ToArray();
-        if (calls.Any(r => r.State.ToLowerInvariant() is "ringing" or "5")) return ("ringing", "Tocando no evento");
-        if (calls.Any(r => r.State.ToLowerInvariant() is "dialing" or "3" or "ring" or "4" or "dialing offhook" or "dialingoffhook" or "8" or "pre-ring" or "prering" or "9"))
+        if (calls.Any(IsRinging)) return ("ringing", "Tocando no evento");
+        if (calls.Any(IsDialing))
             return ("dialing", "Dialing");
         if (calls.Length > 0) return ("busy", $"{calls.Length} canal(is) observado(s)");
         var peer = rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
