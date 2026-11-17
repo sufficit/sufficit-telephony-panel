@@ -28,3 +28,21 @@ Ao retomar, conferir PID/log e expiração; não confundir eventos agregados com
 reprodução do usuário. Próximo passo depende de uma tentativa nova e do
 identificador completo/atual do card PJSIP. Encerrar watcher se ainda ativo após
 a evidência necessária; inspecionar PID explícito antes de parar o processo.
+
+
+Retomada 17/11/2026 12:19 BRT: usuário informou que fez a tentativa, mas suspeita
+que a janela terminou. Processo anterior PID2616315 já encerrado; log terminou
+11:47:34 BRT. Foram preservados210 eventos PJSIP de um endpoint anonimizado,
+com69 Hangup (causa21:31,16:25,17:7,20:6); não há como atribuí-los ao ramal do
+usuário sem o identificador atual e o horário. Nenhum deles confirmou causa1/28,
+portanto não reinterpretar rejeição/normal/ocupado/ausente como número inválido.
+
+Captura reaberta às12:19:48 BRT, duração máxima60min, até aproximadamente13:20 BRT:
+PID2653023 (runuser), /tmp/pjsip-attempt-watch-extended-20261117/Probe.dll;
+log privado /tmp/pjsip-attempt-watch-extended-20261117.log, modo0600 confirmado.
+Versão do probe e campos continuam somente leitura e anonimizados. A captura
+anterior foi preservada; nenhum serviço foi reiniciado ou pacote de produto
+alterado. Ao retomar, conferir processo/log, correlacionar SHA256 do identificador
+informado pelo usuário e finalizar o diagnóstico. Ainda falta identificador
+atual do card e horário aproximado da tentativa; pode ser necessário reproduzir
+na nova janela. Plano permanece aberto, sem encerrar os checkpoints pendentes.
