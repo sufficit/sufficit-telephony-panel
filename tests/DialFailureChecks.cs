@@ -40,6 +40,26 @@ internal static class DialFailureChecks
             projection.Apply("google", "HangupEvent", Event(cause), now);
             check(projection.Snapshot(now).Length == 0, "Normal, busy, no answer and cancellation are not invalid dialing");
         }
+        var immediate = new LiveProjection();
+        immediate.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring", accountcode = tenant.ToString("N") }), now);
+        immediate.Apply("google", "HangupEvent", Event(16), now);
+        check(immediate.Snapshot(now).Single().State == "attempt-ended", "Immediate PJSIP Ring/normal-clearing attempt remains visible without inventing an invalid number");
+        foreach (var state in new[] { "Up", "6", "Down", "unknown" })
+        {
+            var completed = new LiveProjection();
+            completed.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = state }), now);
+            completed.Apply("google", "HangupEvent", Event(16), now.AddMilliseconds(100));
+            check(completed.Snapshot(now.AddMilliseconds(100)).Length == 0, "Answered/unknown channels cannot be reported as immediate pre-answer attempts");
+        }
+        var longRing = new LiveProjection();
+        longRing.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring" }), now);
+        longRing.Apply("google", "HangupEvent", Event(16), now.AddSeconds(3));
+        check(longRing.Snapshot(now.AddSeconds(3)).Length == 0, "Ordinary ringing cancellation is not an immediate attempt result");
+        var transferred = new LiveProjection();
+        transferred.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Up" }), now);
+        transferred.Apply("google", "NewStateEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring" }), now.AddMilliseconds(50));
+        transferred.Apply("google", "HangupEvent", Event(16), now.AddMilliseconds(100));
+        check(transferred.Snapshot(now.AddMilliseconds(100)).Length == 0, "Earlier Up evidence excludes short answered transfers");
         var next = new LiveProjection();
         next.Apply("google", "NewChannelEvent", Event(), now);
         next.Apply("google", "HangupEvent", Event(28), now);

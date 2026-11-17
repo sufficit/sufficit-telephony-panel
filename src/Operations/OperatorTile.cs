@@ -33,7 +33,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         return value.TrimEnd('>');
     }
     public bool Remembered => Rows.Length == 0 && LastSeen.HasValue;
-    /// <summary>A brief failure on this endpoint, never an active call or another extension's outcome.</summary>
+    /// <summary>A brief dialing outcome on this endpoint, never an active call or another extension's outcome.</summary>
     public ObservedResource? FailedDial => Kind == EventsPanelCardKind.PEER && Channels.Length == 0
         ? Rows.Where(r => r.Kind == "call-result" && DateTimeOffset.UtcNow - r.Updated < RecentDialFailure.Lifetime
             && DateTimeOffset.UtcNow >= r.Updated && RecentDialFailure.Label(r.State) is not null)

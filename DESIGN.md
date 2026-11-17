@@ -536,3 +536,9 @@ de toque ou manutenção do canal ativo. Registro/alcance continuam independente
 do resultado da tentativa. Nova tentativa remove o aviso; outras extensões,
 troncos e filas não o herdam. O filtro de atividade mantém o aviso breve visível,
 sem somá-lo às chamadas ativas. Sem causa explícita, não presumir falha de discagem.
+
+Uma tentativa com Ring/4 encerrada normalmente em até dois segundos e sem Up
+observado mostra “Tentativa encerrada” em warning, pelo mesmo prazo de dez
+segundos. Esse retorno é neutro: não afirma número inválido. Chamadas já
+atendidas, estados Down/unknown e cancelamento após toque prolongado não usam
+essa indicação.

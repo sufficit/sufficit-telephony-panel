@@ -2,9 +2,9 @@
 
 Pedido: versão publicada não mostra as tentativas inválidas no ramal PJSIP do mantenedor. Confirmar versão e evidência do endpoint visto nas capturas desta sessão antes de alterar a interpretação.
 
-1. AGUARDANDO REPRODUÇÃO/IDENTIFICAÇÃO — Confirmar versões ativas e capturar somente estados/causas/presença de resultado para o PJSIP identificado nesta sessão, sem números discados ou credenciais.
-2. PENDENTE — Corrigir o defeito comprovado ou registrar exatamente qual evidência falta; validar regressão/isolamento e comportamento real disponível.
-3. PENDENTE — Publicar alterações necessárias, validar saúde, registrar entrega e converter plano quando todos os checkpoints estiverem comprovados; commit/push main.
+1. CONCLUÍDO — Confirmar versões ativas e capturar somente estados/causas/presença de resultado para o PJSIP identificado nesta sessão, sem números discados ou credenciais.
+2. CONCLUÍDO — Corrigir o defeito comprovado ou registrar exatamente qual evidência falta; validar regressão/isolamento e comportamento real disponível.
+3. EM ANDAMENTO — Publicar alterações necessárias, validar saúde, registrar entrega e converter plano quando todos os checkpoints estiverem comprovados; commit/push main.
 
 Versões confirmadas: painel dial-failure-20261117-b938273, observador dial-failure-20261117-5617f2b; ambos ativos. A validação anterior de causa1 era agregada da central; não comprovava as tentativas específicas do ramal PJSIP do usuário. Não transformar causa normal/ausente em número inválido.
 
@@ -46,3 +46,14 @@ alterado. Ao retomar, conferir processo/log, correlacionar SHA256 do identificad
 informado pelo usuário e finalizar o diagnóstico. Ainda falta identificador
 atual do card e horário aproximado da tentativa; pode ser necessário reproduzir
 na nova janela. Plano permanece aberto, sem encerrar os checkpoints pendentes.
+
+
+Identificação fornecida pelo mantenedor: endpointHash E5E1EEC4C20A. Captura real
+17/11 12:21:56.034 BRT: NewChannel/Ring seguido de Hangup/Ring causa16, no mesmo
+milissegundo observado. Confirma defeito de cobertura: regra anterior mostrava
+somente causas explícitas1/2/3/5/28, omitindo esta tentativa. Não há evidência de
+número inválido nessa causa. Acrescentar resultado neutro “Tentativa encerrada”
+para Ring/4 encerrado normalmente em até2s e sem Up observado. Nunca apresentar
+chamada atendida ou cancelamento após toque prolongado como erro de discagem.
+
+Regressão baseada na reprodução falhou antes da correção por resultado ausente. Depois: 1.606 checks PASS, incluindo exclusão de Up, Down, unknown, toque prolongado e transferência com Up anterior. Caso real será apresentado como Tentativa encerrada (warning), nunca Falha/número inválido. Mesmo prazo10s e isolamento anteriores.

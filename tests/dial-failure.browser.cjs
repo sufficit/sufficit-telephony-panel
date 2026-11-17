@@ -10,13 +10,14 @@ const fs = require('node:fs');
             localStorage.setItem('telephony-panel-language-v2', 'pt-BR');
             localStorage.setItem('telephony-panel-theme', 'light');
         });
-        for (const state of ['invalid', 'no-route', 'normal', 'expired', 'new-attempt']) {
+        for (const state of ['immediate', 'invalid', 'no-route', 'normal', 'expired', 'new-attempt']) {
             await page.goto(`http://127.0.0.1:5169/?preview=true&dialfailurepreview=${state}`);
             const card = page.locator('.board-grid .board-tile').filter({ hasText: 'Hugo · atendimento' });
             await card.waitFor();
-            if (state === 'invalid' || state === 'no-route') {
+            if (state === 'immediate' || state === 'invalid' || state === 'no-route') {
                 await card.locator('.tile-failure').waitFor();
-                assert.match(await card.locator('.tile-failure').innerText(), state === 'invalid' ? /Formato de número inválido/ : /Sem rota para o destino/);
+                assert.match(await card.locator('.tile-failure').innerText(), state === 'immediate' ? /^Tentativa encerrada$/ : state === 'invalid' ? /Formato de número inválido/ : /Sem rota para o destino/);
+                if (state === 'immediate') assert.equal(await card.locator('.tile-failure.is-ended').count(), 1, 'Immediate clearing uses neutral outcome styling');
                 assert.equal(await card.locator('.tile-channel').count(), 0, 'Failure is not kept as an active call');
                 assert.equal(await card.evaluate(el => getComputedStyle(el, '::after').animationName), 'none', 'Failure never rings');
                 assert.equal(await page.locator('.board-trunks .tile-failure, .board-queues .tile-failure').count(), 0);

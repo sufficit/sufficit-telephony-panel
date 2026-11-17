@@ -555,7 +555,7 @@ public partial class LiveOperations
             {
                 var occurred = failureState == "expired" ? now.AddSeconds(-11) : now;
                 Rows = Rows.Append(new ObservedResource("demo-failure", "eveo-voip", "call-result", "PJSIP/6007",
-                    failureState == "no-route" ? "3" : "28", null, null, tenant.ToString("N"), occurred, occurred,
+                    failureState == "no-route" ? "3" : failureState == "immediate" ? "attempt-ended" : "28", null, null, tenant.ToString("N"), occurred, occurred,
                     new Dictionary<string, string>())).ToArray();
             }
         }

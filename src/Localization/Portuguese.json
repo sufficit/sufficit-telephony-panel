@@ -289,6 +289,7 @@
   "Invalid": "Inválido",
   "Unavailable": "Indisponível",
   "Sign in again": "Entrar novamente",
+  "Attempt ended": "Tentativa encerrada",
   "Call failed: {0}": "Falha na discagem: {0}",
   "Number does not exist": "Número inexistente",
   "No route to destination": "Sem rota para o destino",

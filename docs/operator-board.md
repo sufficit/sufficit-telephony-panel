@@ -296,3 +296,10 @@ inválido (28). Ocupado, ausência de resposta, cancelamento e encerramento norm
 não viram “número inválido”. Trata-se de resultado transitório em memória, sem
 canal ativo, sem histórico persistido e sem animação de toque. Nova tentativa
 limpa o aviso. Sem causa reportada pelo PBX, não há resultado inferido.
+
+O PBX também pode encerrar imediatamente uma tentativa PJSIP com causa16
+(normal), mesmo quando o usuário relata discagem inválida. Se Ring/4 termina
+em até2s sem nenhum Up observado, o card apresenta **Tentativa encerrada**, em
+âmbar e por dez segundos. Não é diagnóstico de número inválido. Uma chamada
+atendida, estado desconhecido/Down ou cancelamento após toque prolongado não
+usa esse aviso.
