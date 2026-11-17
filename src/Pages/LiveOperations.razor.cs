@@ -523,6 +523,13 @@ public partial class LiveOperations
             new("demo-hugo", "eveo-voip", "peer", "PJSIP/6007", "Reachable", "", "", null, now.AddMinutes(-8), now, new Dictionary<string,string>()) { Peer = new() { Registration = "registered", Reachability = "online", Device = "2", RegistrationObservedAt = now.AddMinutes(-7), LastRegisteredObservedAt = now.AddMinutes(-7), ReachabilityObservedAt = now, DeviceObservedAt = now, RoundTripMilliseconds = 12.5m, LastEventType = "ContactStatusEvent", LastReachabilityIsContact = true } },
             new("demo-other", "google-voip", "peer", "PJSIP/2003", "Unregistered", "", "", null, now, now, new Dictionary<string,string>()) { Peer = new() { Registration = "unregistered", Reachability = "offline", RegistrationObservedAt = now, LastRegisteredObservedAt = now.AddMinutes(-6), ReachabilityObservedAt = now, LastEventType = "PeerStatusEvent" } }];
         var demoQuery = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        // Development-only state fixture; the production path never calls LoadDemo.
+        if (demoQuery.TryGetValue("callmotionpreview", out var motionState))
+        {
+            var state = motionState.ToString() switch { "dialing" => "Ring", "ringing" => "Ringing", "answered" => "Up", "idle" => null, _ => "Up" };
+            Rows = Rows.Where(row => row.Id != "demo-call" || state is not null)
+                .Select(row => row.Id == "demo-call" ? row with { State = state! } : row).ToArray();
+        }
         if (demoQuery.ContainsKey("numberpreview"))
             Rows = Rows.Select(row => row.Kind is "call" or "waiting"
                 ? row with { Caller = demoQuery["numberpreview"] == "e164" ? "552140627711" : "5508000000697", Destination = demoQuery["numberpreview"] == "e164" ? "5511999999999" : "+5508000000697" } : row).ToArray();

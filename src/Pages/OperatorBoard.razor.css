@@ -24,7 +24,7 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .board-legend { display:flex; flex-wrap:wrap; gap:8px 20px; padding:12px 4px; color:var(--sui-text-secondary); font-size:12px; }
 .board-legend span::before { content:""; display:inline-block; width:8px; height:8px; margin-right:6px; background:currentColor; border-radius:50%; }
 .board-legend .legend-online { color:var(--sui-color-success); }
-.board-legend .legend-busy { color:var(--sui-color-warning); }
+.board-legend .legend-dialing, .board-legend .legend-busy { color:var(--sui-color-warning); }
 .board-legend .legend-ringing { color:var(--sui-color-info); }
 .board-legend .legend-offline { color:var(--sui-color-error); }
 .board-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,24%); gap:14px; align-items:start; }
@@ -36,7 +36,7 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 /* A taller card stretches its grid row; keep every card's content pinned to the top instead of the button's default vertical centering. */
 .board-tile { display:flex; flex-direction:column; justify-content:flex-start; align-items:stretch; width:100%; min-width:0; min-height:62px; text-align:left; font:inherit; padding:6px 8px; border:1px solid var(--sui-border-strong); border-radius:5px; color:var(--sui-text-primary); background:var(--sui-surface-2); cursor:pointer; transition:background-color .2s,border-color .2s; }
 .board-tile.tone-online { background:color-mix(in srgb,var(--sui-color-success) 16%,var(--sui-surface)); }
-.board-tile.tone-busy { background:color-mix(in srgb,var(--sui-color-warning) 22%,var(--sui-surface)); }
+.board-tile.tone-dialing, .board-tile.tone-busy { background:color-mix(in srgb,var(--sui-color-warning) 22%,var(--sui-surface)); }
 .board-tile.tone-ringing { background:color-mix(in srgb,var(--sui-color-info) 20%,var(--sui-surface)); }
 .board-tile.tone-offline { background:color-mix(in srgb,var(--sui-color-error) 12%,var(--sui-surface)); }
 .board-tile:hover { border-color:var(--sui-color-primary); }
@@ -45,7 +45,7 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .tile-title strong { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .tile-dot { width:8px; height:8px; flex:none; border-radius:50%; background:var(--sui-text-secondary); }
 .tone-online .tile-dot { background:var(--sui-color-success); }
-.tone-busy .tile-dot { background:var(--sui-color-warning); }
+.tone-dialing .tile-dot, .tone-busy .tile-dot { background:var(--sui-color-warning); }
 .tone-ringing .tile-dot { background:var(--sui-color-info); }
 .tone-offline .tile-dot { background:var(--sui-color-error); }
 .tile-status, .tile-node { display:block; margin-top:3px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -88,3 +88,20 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .board-card { position: relative; min-width: 0; }
 .board-card > .board-tile { width: 100%; height: 100%; padding-inline-end: 34px; }
 .board-fill .board-grid { max-height:var(--board-available-height, 60vh); min-height:200px; }
+
+/* Motion belongs to the observed card state, never to correlated remote legs.
+   Overlays animate without moving text, the selection outline or the action menu. */
+.board-tile { position:relative; overflow:hidden; --call-dial-cycle:1.6s; --call-ring-cycle:1.8s; }
+.board-tile.tone-dialing::after, .board-tile.tone-ringing::after { content:""; position:absolute; pointer-events:none; }
+.board-tile.tone-dialing::after { height:2px; width:24%; bottom:2px; left:2px; border-radius:2px; background:var(--sui-color-warning); animation:call-dial-progress var(--call-dial-cycle) ease-in-out infinite alternate; }
+.board-tile.tone-ringing::after { inset:1px; border:2px solid var(--sui-color-info); border-radius:3px; animation:call-ring-pulse var(--call-ring-cycle) ease-in-out infinite; }
+.tone-dialing .tile-dot { box-sizing:border-box; border:2px dotted var(--sui-color-warning); background:transparent; animation:call-dial-turn var(--call-dial-cycle) ease-in-out infinite; transform-origin:center; }
+.tone-ringing .tile-dot { animation:call-ring-dot var(--call-ring-cycle) ease-in-out infinite; transform-origin:center; }
+@keyframes call-dial-progress { from { transform:translateX(0); } to { transform:translateX(300%); } }
+@keyframes call-dial-turn { to { transform:rotate(360deg); } }
+@keyframes call-ring-pulse { 0%, 25%, 50%, 100% { opacity:.2; } 15%, 35% { opacity:1; } }
+@keyframes call-ring-dot { 0%, 25%, 50%, 100% { transform:scale(1); } 15%, 35% { transform:scale(1.35); } }
+@media(prefers-reduced-motion:reduce) {
+ .board-tile { transition:none; }
+ .board-tile.tone-dialing::after, .board-tile.tone-ringing::after, .tone-dialing .tile-dot, .tone-ringing .tile-dot { animation:none; }
+}

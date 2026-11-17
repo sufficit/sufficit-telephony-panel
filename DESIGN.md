@@ -143,7 +143,7 @@ Esta documentação preserva o mundo visual já declarado em src/App.razor e imp
 - SUI como biblioteca de componentes e fonte de tokens.
 - Uma única cor de identidade; cores semânticas acompanhadas de texto.
 - Tema claro e escuro com a mesma hierarquia.
-- Movimento limitado à interação e à consulta; som opcional.
+- Movimento limitado à interação, consulta e estados transitórios observados de chamada; som opcional.
 
 Fontes: PRODUCT.md, src/App.razor, src/PanelTheme.cs, src/Pages/Home.razor,
 src/wwwroot/panel.css e src/wwwroot/panel.js, complementados pelos contratos
@@ -506,3 +506,15 @@ localmente; a preferência de som não é persistida nesta implementação.
 - Don't conectar trechos de histórico através de períodos sem amostras.
 - Don't usar cor ou som como único portador de estado.
 - Don't interpretar capturas de fixtures como validação de login, deploy ou métricas reais.
+
+### Movimento nos cards de chamada
+
+Discagem observada (Dialing/3, Ring/4, Dialing Offhook/8 e Pre-ring/9)
+usa warning, rótulo “Discando”, ponto vazado giratório e traço de progresso
+no rodapé do card. Ringing/5 usa info, rótulo de toque e pulso duplo no
+contorno interno/ponto. O texto e a grade permanecem imóveis. O ciclo persiste
+apenas enquanto houver a evidência correspondente; Up/6 e remoção do canal
+retiram o efeito. Down/0 e unknown não comprovam discagem nem toque.
+O estado continua baseado nos canais do próprio card, nunca nas pernas
+correlacionadas de outros ramais. Com prefers-reduced-motion, os indicadores
+ficam estáticos e os rótulos preservam a distinção.

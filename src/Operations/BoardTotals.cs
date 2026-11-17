@@ -20,7 +20,7 @@ public static class BoardTotals
 
     /// <summary>Cards whose current state says the device answers: reachable, registered, in use or ringing.</summary>
     public static int Reachable(IEnumerable<OperatorTile> tiles)
-        => tiles.Count(t => t.Status.Tone is "online" or "busy" or "ringing");
+        => tiles.Count(t => t.Status.Tone is "online" or "busy" or "dialing" or "ringing");
 
     /// <summary>Whether this queue card carries current evidence, rather than retained or stale state.</summary>
     public static bool CurrentQueue(OperatorTile tile) => tile.Rows.Length > 0 && tile.Queue is not { State: not "current" };

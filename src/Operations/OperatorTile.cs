@@ -47,7 +47,9 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     {
         // This is observed evidence, never a statement that the whole extension is free.
         var calls = rows.Where(r => r.Kind == "call").ToArray();
-        if (calls.Any(r => r.State.ToLowerInvariant() is "ring" or "ringing" or "4" or "5")) return ("ringing", "Tocando no evento");
+        if (calls.Any(r => r.State.ToLowerInvariant() is "ringing" or "5")) return ("ringing", "Tocando no evento");
+        if (calls.Any(r => r.State.ToLowerInvariant() is "dialing" or "3" or "ring" or "4" or "dialing offhook" or "8" or "pre-ring" or "9"))
+            return ("dialing", "Dialing");
         if (calls.Length > 0) return ("busy", $"{calls.Length} canal(is) observado(s)");
         var peer = rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
         if (peer?.DeviceLabel is "Tocando" or "Tocando em uso") return ("ringing", peer.DeviceLabel);

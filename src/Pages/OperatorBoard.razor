@@ -6,7 +6,7 @@
     @if (!Compact)
     {
     <div class="board-legend" aria-label="@Text["Observed state legend"]">
-        <span class="legend-online">@Text["Reachable / registered"]</span><span class="legend-busy">@Text["With channels / in use"]</span><span class="legend-ringing">@Text["Ringing"]</span><span class="legend-offline">@Text["No response / unregistered"]</span><span>@Text["No information"]</span>
+        <span class="legend-online">@Text["Reachable / registered"]</span><span class="legend-busy">@Text["With channels / in use"]</span><span class="legend-dialing">@Text["Dialing"]</span><span class="legend-ringing">@Text["Ringing"]</span><span class="legend-offline">@Text["No response / unregistered"]</span><span>@Text["No information"]</span>
     </div>
     }
     <div class="board-columns" @ref="Columns">
@@ -107,9 +107,14 @@
         var label = correlated == tile.Flows.Length ? Text.Format("{0} observed calls", correlated)
             : correlated == 0 ? Text.Format("{0} uncorrelated channels", tile.Flows.Length)
             : Text.Format("{0} correlated calls · {1} uncorrelated channels", correlated, tile.Flows.Length - correlated);
-        return tile.Status.Tone == "ringing" ? Text["Ringing"] + " · " + label : label;
+        return tile.Status.Tone switch
+        {
+            "dialing" => Text["Dialing"] + " · " + label,
+            "ringing" => Text["Ringing"] + " · " + label,
+            _ => label
+        };
     }
-    private RenderFragment TileButton(OperatorTile tile) => @<div class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
+    private RenderFragment TileButton(OperatorTile tile) => @<div @key="tile.Id" class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
     <button type="button"
         class="board-tile tone-@tile.Status.Tone @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
