@@ -14,7 +14,7 @@ internal static class OperatorBoardChecks
         check(OperatorTile.Describe([peer with { Peer = new() { Reachability = "offline" } }]).Tone == "offline", "Negative reachability retains distinct state");
         check(OperatorTile.Describe([peer with { Kind = "call", State = "Down" }]).Tone == "busy", "Observed Down channel not treated as a free extension");
         check(OperatorTile.Describe([peer with { Kind = "call", State = "Ringing" }]).Tone == "ringing", "Ringing channel receives text and distinct tone");
-        foreach (var state in new[] { "Ring", "4", "Dialing", "3", "Dialing Offhook", "8", "Pre-ring", "9" })
+        foreach (var state in new[] { "Ring", "4", "Dialing", "3", "Dialing Offhook", "DialingOffhook", "8", "Pre-ring", "PreRing", "9" })
             check(OperatorTile.Describe([peer with { Kind = "call", State = state }]).Tone == "dialing", $"{state} is a calling attempt, not confirmed ringing");
         foreach (var state in new[] { "Ringing", "5", "RINGING" })
             check(OperatorTile.Describe([peer with { Kind = "call", State = state }]).Tone == "ringing", $"{state} confirms ringing");

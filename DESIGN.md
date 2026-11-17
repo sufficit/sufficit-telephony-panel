@@ -507,7 +507,7 @@ localmente; a preferência de som não é persistida nesta implementação.
 - Don't usar cor ou som como único portador de estado.
 - Don't interpretar capturas de fixtures como validação de login, deploy ou métricas reais.
 
-### Movimento nos cards de chamada
+### Movimento nos cards de extensões
 
 Discagem observada (Dialing/3, Ring/4, Dialing Offhook/8 e Pre-ring/9)
 usa warning, rótulo “Discando”, ponto vazado giratório e traço de progresso
@@ -518,3 +518,8 @@ retiram o efeito. Down/0 e unknown não comprovam discagem nem toque.
 O estado continua baseado nos canais do próprio card, nunca nas pernas
 correlacionadas de outros ramais. Com prefers-reduced-motion, os indicadores
 ficam estáticos e os rótulos preservam a distinção.
+
+Os efeitos de progresso/pulso aplicam-se exclusivamente a PEER (extensões).
+Troncos e filas mantêm indicação estática mesmo em discagem/toque. Sessão
+negada ou expirada oferece “Entrar novamente” via login HTTP, preservando
+a URL de retorno; reconexão do circuito não renova credenciais expiradas.

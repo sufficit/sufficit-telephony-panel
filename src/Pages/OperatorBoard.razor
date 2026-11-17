@@ -116,7 +116,7 @@
     }
     private RenderFragment TileButton(OperatorTile tile) => @<div @key="tile.Id" class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
     <button type="button"
-        class="board-tile tone-@tile.Status.Tone @(Selected == tile.Id ? "is-selected" : "")"
+        class="board-tile tone-@tile.Status.Tone @(tile.Kind == EventsPanelCardKind.PEER ? "call-motion" : "") @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
         title="@(tile.Kind == EventsPanelCardKind.QUEUE ? Text.Format("{0}. Open details.", tile.Title) : Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label)))">
         <span class="tile-title"><span class="tile-dot" aria-hidden="true"></span><strong>@tile.Title</strong></span>

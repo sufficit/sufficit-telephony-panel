@@ -35,6 +35,11 @@ const fs = require('node:fs');
             await page.waitForTimeout(250);
             assert.match(await card.getAttribute('class'), new RegExp(`tone-${tone}\\b`));
             assert.match(await card.locator('.tile-status').innerText(), new RegExp(label));
+            for (const other of await page.locator('.board-trunks .board-tile, .board-queues .board-tile').all()) {
+                const motion = await animations(other);
+                assert.equal(motion.border, 'none', 'Trunks/queues never animate their border');
+                assert.equal(motion.dot, 'none', 'Trunks/queues never animate their dot');
+            }
             const observed = await animations(card);
             assert.match(observed.border, new RegExp(`^${effect}(?:-b-.*)?$`), `${state} effect`);
             if (effect === 'none') assert.equal(observed.dot, 'none', `${state} stops the dot effect`);
@@ -76,6 +81,14 @@ const fs = require('node:fs');
             }
             // The remote Local/Ring leg belongs to the same flow, but cannot animate the answered card.
         }
+        await page.goto('http://127.0.0.1:5169/board?preview=true&sessionpreview=expired&node=eveo-voip');
+        const recovery = page.getByRole('link', { name: 'Entrar novamente', exact: true });
+        await recovery.waitFor();
+        const href = new URL(await recovery.getAttribute('href'), page.url());
+        assert.equal(href.pathname, '/login', 'Session recovery performs a real login');
+        assert.equal(href.searchParams.get('returnUrl'), '/board?preview=true&sessionpreview=expired&node=eveo-voip', 'Sign-in retains board and filters');
+        assert.equal(await page.locator('.board-blocked').getByRole('button', { name: 'Reconectar e atualizar', exact: true }).count(), 0, 'Expired session does not offer an ineffective circuit retry');
+        assert.equal(await page.locator('.board-tile').count(), 0, 'Expired session hides all authorized data');
         assert.deepEqual(errors, []);
         console.log('PASS card motion: dialing/ringing/answered/idle, live CSS animation, stable text, light/dark/mobile, reduced motion, keyboard details');
     } finally { await browser.close(); }

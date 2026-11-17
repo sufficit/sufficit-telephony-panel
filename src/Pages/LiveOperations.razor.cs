@@ -421,6 +421,9 @@ public partial class LiveOperations
     /// <summary>Supervision dialog on the board: the only permission block there is the missing preferred extension.</summary>
     private Task OpenContextSupport() => DeniedContext is { } denied
         ? OpenSupport("context-not-authorized", denied, "contextid=" + denied.ToString("N")) : Task.CompletedTask;
+    private bool ReauthenticationSuggested => !DeniedContext.HasValue && Failure?.Category == nameof(UnauthorizedAccessException);
+    private string SignInUrl => new Uri(new Uri(Navigation.BaseUri), "login") + "?returnUrl="
+        + Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
     private string OwnContextsUrl => Navigation.GetUriWithQueryParameters(Navigation.BaseUri, new Dictionary<string, object?> { ["preview"] = Demo ? "true" : null, ["previewaccess"] = Demo ? Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).GetValueOrDefault("previewaccess").ToString() is { Length: > 0 } access ? access : null : null, ["tab"] = BoardPage ? null : (Tab == "board" ? null : Tab) });
     private Task OpenBoardSupport(OperatorTile tile) => OpenSupport("preferred-extension-missing",
         Context ?? (Guid.TryParse(tile.Rows.FirstOrDefault()?.Account, out var id) ? id : Guid.Empty), $"{tile.Node} {tile.Title}");
@@ -527,6 +530,10 @@ public partial class LiveOperations
         if (demoQuery.TryGetValue("callmotionpreview", out var motionState))
         {
             var state = motionState.ToString() switch { "dialing" => "Ring", "ringing" => "Ringing", "answered" => "Up", "idle" => null, _ => "Up" };
+            // Keep a trunk in the same state to prove that only extensions animate.
+            if (state is not null)
+                Rows = Rows.Append(new ObservedResource("demo-trunk-call", "google-voip", "call", "PJSIP/trunk-demo-000000aa", state,
+                    "", "", tenant.ToString("N"), now, now, new Dictionary<string, string>())).ToArray();
             Rows = Rows.Where(row => row.Id != "demo-call" || state is not null)
                 .Select(row => row.Id == "demo-call" ? row with { State = state! } : row).ToArray();
         }
@@ -581,6 +588,12 @@ public partial class LiveOperations
             var scope = Guid.Parse("11111111-1111-7111-8111-111111111111");
             QueueSamples = [new("google-voip", scope, new(scope.ToString("N"), Guid.NewGuid().ToString("N"), default, false, false, []), true),
                 new("eveo-voip", scope, new(scope.ToString("N"), Guid.NewGuid().ToString("N"), now, true, false, []), true)];
+        }
+        if (demoQuery.GetValueOrDefault("sessionpreview") == "expired")
+        {
+            ClearAuthorizedState();
+            Error = ErrorText(new UnauthorizedAccessException());
+            Failure = new("demo-session-expired", now, nameof(UnauthorizedAccessException));
         }
         LoadQueueDemo();
         DemoQueueCoverageIncomplete = demoQuery.GetValueOrDefault("queuesummarypreview") == "partial";

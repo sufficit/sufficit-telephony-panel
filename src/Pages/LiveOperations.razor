@@ -37,7 +37,7 @@ else
     </div>
     @if (!Permissions.SingleContext.HasValue) { <ContextPicker Permissions="Permissions" Context="Context" ClientName="@ClientName" Busy="Busy" ClearDisabled="ActionBusy" @bind-SearchText="SearchText" Searched="Searched" Clients="Clients" Search="Search" Select="@(c => SelectClient(c.Id, c.Title))" Clear="ClearCompany" /> }
     @if (Busy) { <SUIProgressLinear Indeterminate="true" aria-label="@Text["Checking permissions and resources"]" /> }
-    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
+    @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)@if (ReauthenticationSuggested) { <SUIButton Href="@SignInUrl" data-enhance-nav="false" VariantValue="SUIVariant.Text">@Text["Sign in again"]</SUIButton> }<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
     @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)<ErrorDetails Diagnostic="SearchFailure" /></SUIAlert> }
     @if (QueueError is not null) { <SUIAlert ToneValue="SUITone.Warning">@QueueError<QueueSourceDetails Samples="QueueSamples" /></SUIAlert> }
     <div class="operations-scope">
@@ -212,9 +212,12 @@ else
         <h2>@(DeniedContext.HasValue ? Text["No access to this company"] : Text["The board could not be loaded"])</h2>
         <p>@(DeniedContext.HasValue ? Text.Format("Your account does not have access to company {0}. Only the companies granted to you can be opened here.", DeniedContext.Value.ToString("N")) : Error)</p>
         <div class="tools">
-            <SUIButton Href="@OwnContextsUrl" VariantValue="SUIVariant.Filled">@Text["Open my companies"]</SUIButton>
+            @if (ReauthenticationSuggested)
+            { <SUIButton Href="@SignInUrl" data-enhance-nav="false" VariantValue="SUIVariant.Filled">@Text["Sign in again"]</SUIButton> }
+            else
+            { <SUIButton Href="@OwnContextsUrl" VariantValue="SUIVariant.Filled">@Text["Open my companies"]</SUIButton> }
             @if (DeniedContext.HasValue && Support.Enabled) { <SUIButton OnClick="OpenContextSupport" VariantValue="SUIVariant.Outlined">@Text["Request access from support"]</SUIButton> }
-            @if (!DeniedContext.HasValue) { <SUIButton OnClick="Reload" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton> }
+            @if (!DeniedContext.HasValue && !ReauthenticationSuggested) { <SUIButton OnClick="Reload" VariantValue="SUIVariant.Text" StartIcon="@SUIIcons.Refresh">@Text["Reconnect and refresh"]</SUIButton> }
         </div>
         <ErrorDetails Diagnostic="Failure" />
     </div>;
