@@ -123,3 +123,11 @@ is `/etc/sufficit/telephony-panel/google-registration-monitor.key`. The guarded
 denied writes/resources, and all three sources as the actual Panel Unix user before
 changing its drop-in. Only Panel restarts to load this configuration. On health
 failure the new drop-in is renamed and the previous source restored.
+
+## Canonical PJSIP endpoint registration
+
+The operations board reads `telephony/panel/endpoint-presence` using the authenticated user's token, with authorization checked before and after the API read. Scoped views and portfolios read their authorized companies; the global registration snapshot requires a manager. Only active dynamic contacts associated with the endpoint's proven tenant qualify, regardless of the legacy `tech_pjsip` flag: every legacy SIP extension also has a canonical PJSIP GUID identity.
+
+The API card catalogue includes canonical PJSIP/WSS aliases using exact endpoint identities within the same company. Registration snapshots supply idle realtime contacts that may not emit an initial AMI event. The panel caches them for ten seconds and rejects evidence older than fifteen seconds or past contact expiry. They remain separate from the shared AMI stream, preserve independent AMI reachability/device evidence and never create channels or imply that the phone is free or reachable.
+
+[Delivery evidence](activities/202611191805-pjsip-endpoint-presence.md).
