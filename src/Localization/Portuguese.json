@@ -753,5 +753,19 @@
   "Queues without current data: {0:N0}.": "Filas sem estado atual: {0:N0}.",
   "Partial queue data": "Dados parciais da fila",
   "{0}. Open details.": "{0}. Abrir detalhes.",
-  "{0} waiting": "{0} aguardando"
+  "{0} waiting": "{0} aguardando",
+  "Channel actions": "Ações do canal",
+  "End channel": "Encerrar canal",
+  "End only this channel": "Encerrar somente este canal",
+  "End this channel?": "Encerrar este canal?",
+  "Confirm and end channel": "Confirmar encerramento do canal",
+  "This ends only the selected channel immediately and may disconnect its call. This action cannot be undone.": "O canal selecionado será encerrado imediatamente, podendo desligar sua chamada. Esta ação não pode ser desfeita.",
+  "Only managers can end a channel.": "Somente gerentes podem encerrar um canal.",
+  "Reconnect before ending a channel.": "Reconecte antes de encerrar um canal.",
+  "This channel has no verified identity for termination.": "Este canal não tem identificação confirmada para encerramento.",
+  "The selected channel ended or changed. Refresh before trying again.": "O canal selecionado terminou ou mudou. Atualize antes de tentar novamente.",
+  "Demonstration: termination confirmed. No channel was ended.": "Demonstração: encerramento confirmado. Nenhum canal foi encerrado.",
+  "Channel termination accepted. Wait for the channel to disappear from the event stream.": "Encerramento aceito. Aguarde o canal desaparecer nos eventos.",
+  "Channel termination was not confirmed. Refresh the channel status before trying again. No automatic retry.": "O encerramento não foi confirmado. Atualize o estado do canal antes de tentar novamente. Não haverá repetição automática.",
+  "End a channel…": "Encerrar um canal…"
 }

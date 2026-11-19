@@ -129,9 +129,9 @@ else
         }
         @if (Tab is "calls" or "channels") { <p class="muted section-hint">@(Supervisor is { } supervisor ? Text.Format("Your supervision extension: {0}.", supervisor.Title) : Text[SupervisorFailure is not null ? "Could not load your supervision extension. Reconnect and refresh to try again." : "Set your preferred extension in the portal to enable supervision."]) @Text["Select the correct channel to listen or whisper. Actions require a recent event and verified company association."]</p><ErrorDetails Diagnostic="SupervisorFailure" /> }
         @if (Tab is not ("board" or "settings")) { <div class="live-pagination"><span>@Text.Format("{0} results with current filters", TotalVisible)</span><Pager Total="TotalVisible" Page="Page" PageSize="PageSize" PageChanged="SetBoardPage" /></div> }
-        @if (Pending is { } pendingChannel && SelectedTile is null)
+        @if ((Pending is not null || HangupPending is not null) && SelectedTile is null)
         {
-            <BoardResourceDialog Title="@Text.Format("Supervision: {0}", pendingChannel.Key)" Closed="CancelAction">@ActionConfirmation</BoardResourceDialog>
+            <BoardResourceDialog Title="@(HangupPending is not null ? Text["End this channel?"] : Text.Format("Supervision: {0}", Pending!.Key))" Closed="CancelAction">@ActionConfirmation</BoardResourceDialog>
         }
         @ActionResult
         <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary><ObservationNote Since="Since" LastEvent="LastEvent" /></details>
@@ -142,6 +142,16 @@ else
 
 @code {
     private RenderFragment ActionConfirmation => @<div>
+        @if (HangupPending is { } ending)
+        {
+            <section class="monitor-confirm" role="region" aria-labelledby="hangup-confirm-title" tabindex="-1" @ref="Confirmation">
+                <h2 id="hangup-confirm-title">@Text["End this channel?"]</h2>
+                <p><CallNumbers Caller="@ending.Caller" Destination="@ending.Destination" /> · <code>@ending.Key</code> · @ending.Node</p>
+                <p>@Text["This ends only the selected channel immediately and may disconnect its call. This action cannot be undone."]</p>
+                @if (HangupBlockReason(ending) is { } reason) { <p>@Text[reason]</p> }
+                <div class="tools"><SUIButton OnClick="ConfirmHangup" Disabled="@(HangupBlockReason(ending) is not null)" ToneValue="SUITone.Danger">@Text["Confirm and end channel"]</SUIButton><SUIButton OnClick="CancelAction" Disabled="ActionBusy" VariantValue="SUIVariant.Text">@Text["Cancel"]</SUIButton></div>
+            </section>
+        }
         @if (Pending is { } target)
         {
             <section class="monitor-confirm" role="region" aria-labelledby="confirm-title" tabindex="-1" @ref="Confirmation">
@@ -193,14 +203,14 @@ else
     [CascadingParameter(Name = "PanelLanguage")] public string Language { get; set; } = "en";
     private RenderFragment BoardContent => @<div class="board-focus" id="board-focus">
             @DedicatedOptions
-            <OperatorBoard SortQueuesByUtilization="@(Permissions.Manager && !Context.HasValue)" QueueCoverageIncomplete="@(QueueError is not null || DemoQueueCoverageIncomplete)" Compact="true" HeaderTools="FilterTrigger" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" CanContinuous="CanSuperviseContinuously" Page="Page" PageChanged="SetBoardPage" />
+            <OperatorBoard CanEndChannels="Permissions.Manager" SortQueuesByUtilization="@(Permissions.Manager && !Context.HasValue)" QueueCoverageIncomplete="@(QueueError is not null || DemoQueueCoverageIncomplete)" Compact="true" HeaderTools="FilterTrigger" Tiles="VisibleTiles" Central="@(!Context.HasValue && !Demo)" Selected="SelectedTileId" Select="SelectTile" Supervise="PrepareBoardSupervision" CanSupervise="CanSuperviseTile" CanContinuous="CanSuperviseContinuously" Page="Page" PageChanged="SetBoardPage" />
             @if (BoardAction is { } action)
             {
                 <BoardSupervisionDialog @key="action" Request="action" Context="Context" Connected="Connected" Demo="Demo" DemoEndpointResolution="DemoEndpointResolution" Supervisor="Supervisor" SupervisorFailure="SupervisorFailure" Manager="Permissions.Manager" Closed="() => BoardAction = null" Support="@(Support.Enabled ? EventCallback.Factory.Create(this, () => OpenBoardSupport(action.Tile)) : default)" />
             }
             @if (SelectedTile is { } tile)
             {
-                <BoardResourceDialog Title="@(tile.Kind == EventsPanelCardKind.QUEUE ? tile.Title : $"{tile.Title} · {tile.Node}")" Closed="CloseTile">
+                <BoardResourceDialog Title="@(tile.Kind != EventsPanelCardKind.PEER ? tile.Title : $"{tile.Title} · {tile.Node}")" Closed="CloseTile">
                     @ResourceDetails(tile)
                     @ActionConfirmation
                     @ActionResult
@@ -264,6 +274,6 @@ else
             </div>
         }
         </header>;
-    private RenderFragment RenderChannels(ObservedResource[] channels) => @<ChannelTable Channels="channels" Label="LabelFor" BlockReason="SupervisionBlockReason" Prepare="@(a => Prepare(a.Channel, a.Mode))" Support="@(Support.Enabled ? EventCallback.Factory.Create<(ObservedResource Channel, string Reason)>(this, OpenSupport) : default)" />;
+    private RenderFragment RenderChannels(ObservedResource[] channels) => @<ChannelTable Channels="channels" CanHangup="Permissions.Manager" HangupBlockReason="HangupBlockReason" Hangup="PrepareHangup" Label="LabelFor" BlockReason="SupervisionBlockReason" Prepare="@(a => Prepare(a.Channel, a.Mode))" Support="@(Support.Enabled ? EventCallback.Factory.Create<(ObservedResource Channel, string Reason)>(this, OpenSupport) : default)" />;
     [Parameter] public bool Preview { get; set; }
 }

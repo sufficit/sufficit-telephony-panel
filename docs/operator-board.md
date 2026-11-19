@@ -311,3 +311,27 @@ convertido da causa. Ausências aparecem como Não informado. O exten original
 é preservado apesar de mudança de connected-line/rota, sem formatar zeros ou
 caracteres de discagem. Esses dados só acompanham o resultado transitório em
 memória, com a mesma autorização e expiração; não vão para histórico de inventário.
+
+## Troncos por fornecedor e encerramento de canal
+
+O quadro reúne troncos com o mesmo nome/fornecedor, ignorando diferenças de
+espaçamento e caixa, após autorização e filtro explícito de servidor. Entradas
+DID/WhatsApp do catálogo continuam separadas. Seleção é estável por fornecedor;
+chaves, fluxos, chamadas e históricos conservam a origem. Canais iguais em nós
+diferentes continuam distintos no total e nos detalhes. A escuta contínua oferece
+escolha explícita de nó/prefixo, preservando os controles existentes.
+
+Gerentes encontram “Encerrar um canal…” no menu de cartões com chamadas e
+“Encerrar canal” na tabela comum dos detalhes de ramal, tronco, fila ou canais.
+A confirmação identifica canal e servidor. Cancelar, fechar ou trocar de visão
+descarta a intenção; abrir/atualizar nunca envia encerramento. O botão funciona
+independentemente de ramal preferido ou do suporte à escuta de canais Local.
+
+O painel relê permissão, conexão e identidade antes do POST central
+`telephony/panel/channels/hangup`. A API exige gerente, nó administrativo
+conhecido e nome exato; relê UNIQUEID no AMI antes de Hangup e audita o operador
+da sessão. Permissão telephony.monitor não concede encerramento. Canal sem
+identidade, terminado ou desconectado não permite ação. Aceitação não apaga o
+canal antecipadamente: a atualização vem do evento real. Falha não provoca
+repetição automática. Testes usam fixtures/transportes simulados, sem encerrar
+chamadas reais.

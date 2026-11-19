@@ -6,6 +6,7 @@
 <div @ref="Element" class="board-card-menu" popover="auto" role="menu" aria-label="@Text.Format("Actions for {0}", Tile.Title)">
     <strong class="card-menu-title">@Tile.Title</strong>
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="Details">@Text["Open details"]</SUIButton>
+    @if (CanHangup) { <SUIButton role="menuitem" VariantValue="SUIVariant.Text" ToneValue="SUITone.Danger" OnClick="Details">@Text["End a channel…"]</SUIButton> }
     @if (Action.HasDelegate)
     {
     <SUIButton role="menuitem" VariantValue="SUIVariant.Text" OnClick="() => Start(TelephonyMonitorActionMode.Listen, false)">@Text["Listen to a channel"]</SUIButton>
@@ -27,6 +28,7 @@
     [Parameter] public EventCallback<OperatorTile> Selected { get; set; }
     [Parameter] public EventCallback<BoardSupervisionAction> Action { get; set; }
     /// <summary>Offer continuous (prefix) supervision only when the card has an exclusive prefix.</summary>
+    [Parameter] public bool CanHangup {get;set;}
     [Parameter] public bool Continuous { get; set; } = true;
     private ElementReference Element;
     private IJSObjectReference? module, session;

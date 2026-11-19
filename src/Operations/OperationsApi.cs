@@ -84,6 +84,13 @@ public sealed class OperationsApi(IHttpClientFactory clients)
         if (json.ValueKind != JsonValueKind.Object || !json.TryGetProperty("id", out var id) || !id.TryGetGuid(out var guid)) return null;
         return (guid, json.TryGetProperty("title", out var title) ? title.GetString() ?? guid.ToString("N") : guid.ToString("N"));
     }
+    public async Task Hangup(string token, ObservedResource target, CancellationToken ct)
+    {
+        var json=await Send(token,"telephony/panel/channels/hangup",ct,new {
+            node=target.Node,channel=target.Key,uniqueId=target.Details.GetValueOrDefault("uniqueid") });
+        if(json.ValueKind!=JsonValueKind.Object || !json.TryGetProperty("accepted",out var accepted) || accepted.ValueKind!=JsonValueKind.True)
+            throw new InvalidOperationException("The PBX did not accept channel termination.");
+    }
     public async Task Action(string token, TelephonyMonitorActionRequest request, CancellationToken ct)
     {
         var json = await Send(token, "telephony/monitor/actions", ct, request);

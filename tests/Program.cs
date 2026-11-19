@@ -15,6 +15,7 @@ CardMatcherChecks.Run(Check);
 BoardTotalsChecks.Run(Check);
 QueueCardGroupingChecks.Run(Check);
 QueueCardOrderChecks.Run(Check);
+TrunkGroupingHangupChecks.Run(Check);
 QueueResourceIdentityChecks.Run(Check);
 await QueueIdentityLookupChecks.Run(Check);
 SharedPrefixChecks.Run(Check);

@@ -16,7 +16,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         : Channels.Length > 0 || FailedDial is not null;
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
-        .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => r.Id).ToArray();
+        .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => (r.Node, r.Id)).ToArray();
     public DateTimeOffset? LastSeen { get; init; }
     private ObservedResource[] PeerRows => Rows.Where(r => r.Kind == "peer").OrderByDescending(r => r.Updated).ToArray();
     /// <summary>Last contact address reported by the PBX: chan_sip "ip:port" or the PJSIP contact URI host.</summary>

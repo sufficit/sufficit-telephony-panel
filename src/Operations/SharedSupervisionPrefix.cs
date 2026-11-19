@@ -29,6 +29,12 @@ public static partial class SharedSupervisionPrefix
             .Select(row => PrefixOf(row.Key)).OfType<string>()
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Take(8).ToArray();
 
+    public sealed record Target(string Node, string Prefix);
+    public static Target[] TargetsFor(OperatorTile tile,bool manager,bool connected) => !manager || !connected || tile.Kind!=EventsPanelCardKind.TRUNK ? []
+        : tile.Rows.Where(r=>r.Kind=="call" && !string.IsNullOrWhiteSpace(r.Node)).Select(r=>new {r.Node,Prefix=PrefixOf(r.Key)})
+            .Where(r=>r.Prefix is not null).Select(r=>new Target(r.Node,r.Prefix!)).Distinct().OrderBy(r=>r.Node,StringComparer.Ordinal)
+            .ThenBy(r=>r.Prefix,StringComparer.Ordinal).Take(24).ToArray();
+
     /// <summary>Companies with calls on the prefix right now (audit only; unknown legs reported as such).</summary>
     public static string[] Companies(IEnumerable<ObservedResource> rows, string node, string prefix) => rows
         .Where(row => row.Kind == "call" && row.Node == node && row.Key.StartsWith(prefix, StringComparison.Ordinal))

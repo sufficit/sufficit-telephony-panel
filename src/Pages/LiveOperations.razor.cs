@@ -65,7 +65,7 @@ public partial class LiveOperations
         Tab = BoardPage ? "board" : query.Tab;
         if (Tab == "trunks" && !Context.HasValue) Tab = "extensions";
         SettingsOpened |= Tab == "settings";
-        SelectedTileId = null; Pending = null;
+        SelectedTileId = null; Pending = null; HangupPending = null;
         WriteUrl(true);
     }
     private bool FullscreenError;
@@ -195,7 +195,7 @@ public partial class LiveOperations
             if (!ReferenceEquals(source, queueGroupingSource) || Node != queueGroupingNode)
             {
                 queueGroupingSource = source; queueGroupingNode = Node;
-                groupedQueueTiles = QueueCardGrouping.Merge(source.Where(t => Node == "all" || t.Node == Node));
+                groupedQueueTiles = TrunkCardGrouping.Merge(QueueCardGrouping.Merge(source.Where(t => Node == "all" || t.Node == Node)));
             }
             return groupedQueueTiles;
         }
@@ -205,13 +205,13 @@ public partial class LiveOperations
             && (!TextKinds.Contains(t.Kind == EventsPanelCardKind.TRUNK ? "trunks" : t.Kind == EventsPanelCardKind.QUEUE ? "queues" : "peers") || MatchText(t.Title + " " + t.Node + " " + string.Join(" ", t.Keys) + " " + string.Join(" ", t.Rows.Select(r => r.Key + " " + r.Caller + " " + r.Destination)))))
         .ToArray();
     private OperatorTile? SelectedTile => VisibleTiles.FirstOrDefault(t => t.Id == SelectedTileId);
-    private void SelectTile(OperatorTile tile) { SelectedTileId = tile.Id; Pending = null; }
-    private void CloseTile() { SelectedTileId = null; Pending = null; }
+    private void SelectTile(OperatorTile tile) { SelectedTileId = tile.Id; Pending = null; HangupPending = null; }
+    private void CloseTile() { SelectedTileId = null; Pending = null; HangupPending = null; }
     private bool Busy, Searched, ActionBusy, FocusConfirmation;
     private string? Error, SearchError, ActionMessage;
     private string StatusFilter = "all";
     private bool OnlyObservedChannels;
-    private void ToggleObservedChannels() { OnlyObservedChannels = !OnlyObservedChannels; Page = 0; SelectedTileId = null; Pending = null; WriteUrl(); }
+    private void ToggleObservedChannels() { OnlyObservedChannels = !OnlyObservedChannels; Page = 0; SelectedTileId = null; Pending = null; HangupPending = null; WriteUrl(); }
     private (Guid Id, string Title)[] Clients = [];
     private (Guid Id, string Title)? Supervisor;
     private EventsPanelCardInfo[] Cards = [];
@@ -312,7 +312,7 @@ public partial class LiveOperations
         var version = ++selectionVersion;
         inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
         DeniedContext = null;
-        Busy = true; Error = null; Failure = null; SupervisorFailure = null; QueueSamples = []; QueueError = null; SearchError = null; Pending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
+        Busy = true; Error = null; Failure = null; SupervisorFailure = null; QueueSamples = []; QueueError = null; SearchError = null; Pending = null; HangupPending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
         Context = id; ClientName = title; SelectedTileId = null; BoardAction = null;
         if (writeUrl) WriteUrl();
         if (!id.HasValue && Tab == "trunks") Tab = "extensions";
@@ -448,7 +448,7 @@ public partial class LiveOperations
     private void ClearAuthorizedState()
     {
         inventoryTiles = null; Rows = []; Cards = []; PortalCards = []; Observation = new(); QueueSamples = [];
-        Pending = null; BoardAction = null; SelectedTileId = null; Connection = null; Supervisor = null;
+        Pending = null; HangupPending = null; BoardAction = null; SelectedTileId = null; Connection = null; Supervisor = null;
         Permissions = CurrentAuthorization.None; BoardConfiguration = new(); SettingsOpened = false;
     }
     private bool CanSuperviseTile(OperatorTile tile) => (Demo && Permissions.Manager) || tile.Rows.Any(row =>
@@ -459,12 +459,12 @@ public partial class LiveOperations
     private bool CanSuperviseContinuously(OperatorTile tile) => Demo && Permissions.Manager
         || PrefixPolicy.For(tile, Context).Length > 0
         || EndpointSupervisionTarget.For(tile, Context, Connected, DateTimeOffset.UtcNow).Length > 0
-        || SharedSupervisionPrefix.For(tile, Permissions.Manager, Connected).Length > 0;
+        || SharedSupervisionPrefix.TargetsFor(tile, Permissions.Manager, Connected).Length > 0;
     private BoardSupervisionAction? BoardAction;
     private bool DemoEndpointResolution => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query)
         .TryGetValue("supervisionpreview", out var scenario) && scenario == "idle";
     private void PrepareBoardSupervision(BoardSupervisionAction action)
-    { CloseTile(); Pending = null; BoardAction = action; }
+    { CloseTile(); Pending = null; HangupPending = null; BoardAction = action; }
     private string? SupervisionBlockReason(ObservedResource row)
     {
         if (ActionBusy) return "A supervision request is already in progress.";
@@ -479,14 +479,14 @@ public partial class LiveOperations
     }
     private void Prepare(ObservedResource row, TelephonyMonitorActionMode mode)
     {
-        Pending = row; Mode = mode; ActionMessage = null; FocusConfirmation = true;
+        HangupPending = null; Pending = row; Mode = mode; ActionMessage = null; FocusConfirmation = true;
     }
-    private void CancelAction() => Pending = null;
+    private void CancelAction() { Pending = null; HangupPending = null; }
     private async Task Confirm()
     {
         if (ActionBusy || Pending is null) return;
         ActionBusy = true; ActionMessage = null; ActionFailure = null;
-        var target = Pending; Pending = null;
+        var target = Pending; Pending = null; HangupPending = null;
         try
         {
             if (Demo) { ActionMessage = Text["Demonstration: confirmation validated. No call was sent."]; Toast.Add(ActionMessage, SUITone.Info, 8000); return; }
@@ -505,8 +505,8 @@ public partial class LiveOperations
     private string ErrorText(Exception e) => Text[PanelDiagnostics.UserMessage(e)];
     private void SetFilter(string? value) { Filter = value ?? ""; Page = 0; WriteUrl(true); }
     private void SetNode(string value) { Node = value; Page = 0; WriteUrl(); }
-    private void SetStatus(string value) { StatusFilter = value; Page = 0; Pending = null; WriteUrl(); }
-    private void SetTab(string value) { Tab = value; Page = 0; Pending = null; SettingsOpened |= value == "settings"; WriteUrl(); }
+    private void SetStatus(string value) { StatusFilter = value; Page = 0; Pending = null; HangupPending = null; WriteUrl(); }
+    private void SetTab(string value) { Tab = value; Page = 0; Pending = null; HangupPending = null; SettingsOpened |= value == "settings"; WriteUrl(); }
     private void Previous() { Page = Math.Max(0, Page - 1); WriteUrl(); }
     private void Next() { Page = Math.Min(Pages - 1, Page + 1); WriteUrl(); }
     private bool DemoQueueCoverageIncomplete;
@@ -620,6 +620,17 @@ public partial class LiveOperations
             Failure = new("demo-session-expired", now, nameof(UnauthorizedAccessException));
         }
         LoadQueueDemo();
+        if (demoQuery.ContainsKey("trunkpreview") && (Context is null || Context == tenant))
+        {
+            var replicas=new[] {"google-voip","eveo-voip","apoint-voip"}.Select((node,index)=> {
+                var row=new ObservedResource(node+"|trunk-demo-call",node,"call","SIP/provider-000000ef","Up","600"+index,"700"+index,
+                    tenant.ToString("N"),now.AddSeconds(-40),now,new Dictionary<string,string>{["uniqueid"]="1234567890."+(100+index),["linkedid"]="trunk-demo-"+node});
+                return new OperatorTile("trunk-demo|"+node,"Fornecedor demonstração",node,EventsPanelCardKind.TRUNK,[row]){Keys=["SIP/provider"]};
+            }).ToArray();
+            demoTiles=demoTiles.Concat(replicas).ToArray();Rows=Rows.Concat(replicas.SelectMany(t=>t.Rows)).ToArray();
+        }
+        Rows=Rows.Select((r,index)=>r.Kind=="call" && string.IsNullOrWhiteSpace(r.Details.GetValueOrDefault("uniqueid"))
+            ? r with {Details=new Dictionary<string,string>(r.Details){["uniqueid"]="1234567890."+index}} : r).ToArray();
         DemoQueueCoverageIncomplete = demoQuery.GetValueOrDefault("queuesummarypreview") == "partial";
         if (DemoQueueCoverageIncomplete && demoTiles.FirstOrDefault(t => t.Queue is not null) is { } nativeQueue)
         {

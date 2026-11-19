@@ -181,6 +181,22 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
         }
         finally { connection.ActionGate.Release(); }
     }
+    public async Task Hangup(ObservedResource expected, CancellationToken ct)
+    {
+        var permissions=await Permissions(ct);
+        if(!permissions.Manager) throw new UnauthorizedAccessException();
+        var connection=await Connection(ct);
+        if(!await connection.ActionGate.WaitAsync(0,ct)) throw new InvalidOperationException("A request is already in progress.");
+        try {
+            var row=connection.Projection.Snapshot(DateTimeOffset.UtcNow).FirstOrDefault(r=>r.Id==expected.Id && r.Node==expected.Node && r.Key==expected.Key);
+            if(row is null || row.Node!=expected.Node || row.Key!=expected.Key
+                || row.Details.GetValueOrDefault("uniqueid")!=expected.Details.GetValueOrDefault("uniqueid")
+                || ChannelHangupGuard.BlockReason(row,permissions.Manager,connection.Connected) is not null)
+                throw new InvalidOperationException("The selected channel ended or changed. Refresh before trying again.");
+            await api.Hangup(await Token(ct),row,ct);
+        }
+        finally {connection.ActionGate.Release();}
+    }
     public async Task Monitor(Guid context, string targetId, TelephonyMonitorActionMode mode, CancellationToken ct)
     {
         var permissions = await Permissions(ct);

@@ -14,7 +14,7 @@ public static class BoardTotals
     public static int ActiveCalls(IEnumerable<OperatorTile> tiles)
     {
         var list = tiles as IReadOnlyCollection<OperatorTile> ?? tiles.ToArray();
-        return list.SelectMany(t => t.Channels).Select(c => c.Id).Distinct(StringComparer.Ordinal).Count()
+        return list.SelectMany(t => t.Channels).Select(c => (c.Node,c.Id)).Distinct().Count()
             + list.Count(t => t.Channels.Length == 0 && t.Status.Tone is "busy" or "ringing");
     }
 

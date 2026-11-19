@@ -22,7 +22,8 @@ const fs = require('node:fs');
     for (const section of ['.board-grid', '.board-trunks', '.board-queues']) {
       await page.locator(section + ' .board-tile').first().click({ button: 'right' });
       await menu.waitFor();
-      assert.equal(await menu.getByRole('menuitem').count(), 5);
+      const hasEnd=await menu.getByRole('menuitem',{name:'End a channel…',exact:true}).count();
+      assert.equal(await menu.getByRole('menuitem').count(),5+hasEnd);
       if (section === '.board-grid') await page.screenshot({ path: '.impeccable/review/supervision-menu-desktop.png', fullPage: true });
       await page.keyboard.press('End');
       assert(await menu.getByRole('menuitem', { name: 'Whisper continuously by prefix', exact: true }).evaluate(el => el === document.activeElement));
