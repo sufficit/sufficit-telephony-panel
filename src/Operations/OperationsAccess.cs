@@ -60,6 +60,17 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
         registrations[key] = (DateTimeOffset.UtcNow.AddSeconds(10), rows);
         return rows.Where(r => r.Current(DateTimeOffset.UtcNow)).ToArray();
     }
+    public bool InboundUnavailable { get; private set; }
+    private async Task<ObservedResource[]> InboundRows(Guid context, EventsPanelCardInfo[] cards, ObservedResource[] rows, CancellationToken ct)
+    {
+        if (!cards.Any(c => InboundCatalogueEntry.State(c.Channels) is not null && c.Channels.Single().StartsWith("entry:did:", StringComparison.Ordinal))) return rows;
+        var sources = await api.Inbound(await Token(ct), context, ct);
+        if (!(await Permissions(ct)).CanRead(context)) throw new UnauthorizedAccessException();
+        var now = DateTimeOffset.UtcNow;
+        InboundUnavailable |= sources.Any(s => !s.Fresh(now));
+        return InboundCallSnapshot.Merge(rows, sources.Where(s => s.Fresh(now)).SelectMany(s => s.Calls).Where(c => c.Fresh(now)))
+            .Concat(InboundCallSnapshot.IdleEvidence(cards, sources, context, now)).ToArray();
+    }
     public async Task<AuthorizedObservation> Observation(Guid? context, EventsPanelCardInfo[] cards, CancellationToken ct)
     {
         var permissions = await Permissions(ct);
@@ -78,6 +89,8 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
             rows = EndpointRegistration.Merge(rows, presence, DateTimeOffset.UtcNow);
             if (context.HasValue) cards = EndpointRegistration.Attach(cards, presence);
         }
+        InboundUnavailable = false;
+        if (context is { } inboundContext) rows = await InboundRows(inboundContext, cards, rows, ct);
         if (permissions.Manager) rows = AuthorizedObservation.InheritCallAccounts(rows);
         if (permissions.Manager)
             return context is { } managerContext ? AuthorizedObservation.Create(cards, rows, managerContext)
@@ -93,6 +106,7 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
                 total += catalogue.Length;
                 if (total > 10000) throw new InvalidOperationException("Há mais de 10.000 recursos. Selecione uma empresa.");
                 var presence = await Registrations(id, ct);
+                rows = await InboundRows(id, catalogue, rows, ct);
                 scoped[id] = EndpointRegistration.Attach(catalogue, presence);
                 rows = EndpointRegistration.Merge(rows, presence, DateTimeOffset.UtcNow);
             }

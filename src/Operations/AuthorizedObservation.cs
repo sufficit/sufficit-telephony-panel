@@ -149,7 +149,7 @@ public sealed class AuthorizedObservation
             foreach (var card in cards)
             {
                 if (++comparisons > ComparisonLimit) { result.Limited = true; break; }
-                if (!LiveProjection.Matches(card, row)) continue;
+                if (!LiveProjection.Matches(card, row) && !InboundCatalogueEntry.Matches(card, row)) continue;
                 matched = true;
                 if (!result.ByCard.TryGetValue(card, out var list)) result.ByCard[card] = list = [];
                 list.Add(row); result.Labels.TryAdd(row.Id, card.Label);

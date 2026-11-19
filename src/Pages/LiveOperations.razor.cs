@@ -218,6 +218,7 @@ public partial class LiveOperations
     private EventsPanelCardInfo[] PortalCards = [];
     private bool DiagnosticPreview => Demo && Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).ContainsKey("diagnosticpreview");
     private string? QueueError;
+    private string? InboundError;
     private QueueBoardSample[] QueueSamples = [];
     private PanelDiagnostic? Failure, SearchFailure, ActionFailure, BoardFailure, InventoryFailure, SupervisorFailure;
     private static string PhaseLabel(string phase) => LiveFormat.PhaseLabel(phase);
@@ -312,7 +313,7 @@ public partial class LiveOperations
         var version = ++selectionVersion;
         inventoryTiles = null; ConfirmClearInventory = false; InventoryMessage = null; InventoryError = null;
         DeniedContext = null;
-        Busy = true; Error = null; Failure = null; SupervisorFailure = null; QueueSamples = []; QueueError = null; SearchError = null; Pending = null; HangupPending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
+        Busy = true; Error = null; Failure = null; SupervisorFailure = null; QueueSamples = []; QueueError = null; InboundError = null; SearchError = null; Pending = null; HangupPending = null; ActionMessage = null; Rows = []; Cards = []; PortalCards = []; Supervisor = null; Clients = []; Searched = false;
         Context = id; ClientName = title; SelectedTileId = null; BoardAction = null;
         if (writeUrl) WriteUrl();
         if (!id.HasValue && Tab == "trunks") Tab = "extensions";
@@ -408,6 +409,7 @@ public partial class LiveOperations
                 ? Text["Some QUEUE sources are unavailable. Queue activity is shown only with current controller data."] : null;
         Permissions = await Access.Permissions(lifetime.Token);
         Observation = await Access.Observation(selectedContext, PortalCards, lifetime.Token);
+        InboundError = Access.InboundUnavailable ? Text["Some DID sources are unavailable. Incoming call totals may be incomplete."] : null;
         Observation.AddQueue(QueueBoardProjection.Create(samples, Observation.Rows, selectedContext, DateTimeOffset.UtcNow));
         Cards = Observation.Cards;
         Rows = Observation.Rows;
@@ -447,7 +449,7 @@ public partial class LiveOperations
     private Guid TargetContext(ObservedResource row) => Context ?? (Guid.TryParse(row.Account, out var id) ? id : Guid.Empty);
     private void ClearAuthorizedState()
     {
-        inventoryTiles = null; Rows = []; Cards = []; PortalCards = []; Observation = new(); QueueSamples = [];
+        inventoryTiles = null; Rows = []; Cards = []; PortalCards = []; Observation = new(); QueueSamples = []; InboundError = null;
         Pending = null; HangupPending = null; BoardAction = null; SelectedTileId = null; Connection = null; Supervisor = null;
         Permissions = CurrentAuthorization.None; BoardConfiguration = new(); SettingsOpened = false;
     }

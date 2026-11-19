@@ -41,8 +41,8 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);
-    public (string Tone, string Label) Status => InboundCatalogueEntry.State(Keys) is { } entry
-        ? ("unknown", InboundCatalogueEntry.Label(entry))
+    public (string Tone, string Label) Status => Channels.Length == 0 && InboundCatalogueEntry.State(Keys) is { } entry
+        ? ("unknown", Rows.Any(r => r.Kind == "inbound" && r.State == "current") ? "No incoming calls" : InboundCatalogueEntry.Label(entry))
         : Remembered ? ("unknown", "Já visto · sem estado atual")
         : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
             : queue.Details.GetValueOrDefault("pending", "0") != "0"
@@ -95,7 +95,8 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         IReadOnlyDictionary<EventsPanelCardInfo, Guid>? cardContexts = null) => cards
         .Where(c => c.Kind is EventsPanelCardKind.PEER or EventsPanelCardKind.TRUNK or EventsPanelCardKind.QUEUE)
         .SelectMany(c => (byCard.TryGetValue(c, out var rows) && rows.Count > 0
-            ? rows.GroupBy(r => r.Node).Select(g => (Node: g.Key, Rows: g.ToArray()))
+            ? rows.GroupBy(r => InboundCatalogueEntry.State(c.Channels) is not null ? "" : r.Node)
+                .Select(g => (Node: g.Select(r => r.Node).Distinct().Count() == 1 ? g.First().Node : "", Rows: g.ToArray()))
             : [(Node: InboundCatalogueEntry.State(c.Channels) is not null ? "Entrada do cliente" : "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
             .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node
                 + (isolateContexts ? "|" + (cardContexts is not null && cardContexts.TryGetValue(c, out var context) ? context.ToString("N") : g.Rows.FirstOrDefault()?.Account) : ""),

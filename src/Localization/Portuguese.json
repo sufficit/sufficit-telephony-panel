@@ -1,4 +1,6 @@
 {
+  "No incoming calls": "Sem chamadas recebidas",
+  "Some DID sources are unavailable. Incoming call totals may be incomplete.": "Algumas fontes de DID estão indisponíveis. O total de chamadas recebidas pode estar incompleto.",
   "Resize extensions and sidebar": "Redimensionar ramais e coluna lateral",
   "Resize trunks and queues": "Redimensionar troncos e filas",
   "Drag or use arrow keys to resize. Double-click or press Enter to reset.": "Arraste ou use as setas para redimensionar. Clique duas vezes ou pressione Enter para restaurar.",

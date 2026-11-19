@@ -34,7 +34,7 @@ public static class BoardRuleEngine
         foreach (var tile in tiles)
         {
             // Queue/member keys are not SIP endpoint identifiers. Keep the queue identity.
-            if (tile.Kind == EventsPanelCardKind.QUEUE)
+            if (tile.Kind == EventsPanelCardKind.QUEUE || InboundCatalogueEntry.State(tile.Keys) is not null)
             {
                 output[tile.Id] = (tile, tile.Rows.ToList());
                 continue;

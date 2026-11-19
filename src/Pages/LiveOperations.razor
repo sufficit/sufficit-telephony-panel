@@ -40,6 +40,7 @@ else
     @if (Error is not null) { <SUIAlert ToneValue="SUITone.Danger">@Text.Observed(Error)@if (ReauthenticationSuggested) { <SUIButton Href="@SignInUrl" data-enhance-nav="false" VariantValue="SUIVariant.Text">@Text["Sign in again"]</SUIButton> }<ErrorDetails Diagnostic="Failure" /></SUIAlert> }
     @if (SearchError is not null) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(SearchError)<ErrorDetails Diagnostic="SearchFailure" /></SUIAlert> }
     @if (QueueError is not null) { <SUIAlert ToneValue="SUITone.Warning">@QueueError<QueueSourceDetails Samples="QueueSamples" /></SUIAlert> }
+    @if (InboundError is not null) { <SUIAlert ToneValue="SUITone.Warning">@InboundError</SUIAlert> }
     <div class="operations-scope">
         @if (Overflow || Observation.Limited) { <SUIAlert ToneValue="SUITone.Warning">@Text["Observation limit reached. Some resources may be missing. Reduce this customer's configured resource set or reconnect to start a new window."]</SUIAlert> }
         <nav class="live-tabs" aria-label="@Text["Resource type"]">
@@ -169,7 +170,7 @@ else
     [Parameter] public bool Dark { get; set; }
     [Parameter] public EventCallback ThemeChanged { get; set; }
     private bool FiltersActive => Context.HasValue || Filter.Length > 0 || Node != "all" || StatusFilter != "all" || OnlyObservedChannels || TextKinds.Length != 3;
-    private bool ObservationWarning => !Connected || Error is not null || QueueError is not null || BoardError is not null || InventoryError is not null || Overflow || Observation.Limited;
+    private bool ObservationWarning => !Connected || Error is not null || QueueError is not null || InboundError is not null || BoardError is not null || InventoryError is not null || Overflow || Observation.Limited;
     private string NormalPanelUrl(string? tab = null) => Navigation.GetUriWithQueryParameters(Navigation.BaseUri, new Dictionary<string, object?>(CurrentQuery.Parameters()) { ["preview"] = Demo ? "true" : null, ["tab"] = tab });
     private RenderFragment FilterTrigger => @<SUIButton Class="@(FiltersActive || ObservationWarning ? "board-filter-trigger is-marked" : "board-filter-trigger")" VariantValue="SUIVariant.Text" SizeValue="SUISize.Small" StartIcon="@SUIIcons.Filter" popovertarget="board-options" aria-label="@Text["Board filters and options"]" title="@Text["Board filters and options"]">
         @if (ObservationWarning) { <span aria-label="@Text["Check observation status"]">!</span> }
@@ -190,7 +191,7 @@ else
         @if (Permissions.Manager) { <RetentionControls Retain="BoardConfiguration.RetainSeenResources" RetainChanged="SetRetention" Disabled="@(Busy || InventoryBusy || Error is not null)" Busy="InventoryBusy" @bind-Confirming="ConfirmClearInventory" ScopeLabel="@(Context.HasValue ? Text["this company"] : Text["entire exchange"])" Error="@InventoryError" Failure="InventoryFailure" Message="@InventoryMessage" Clear="ClearInventory" Simulate="SimulateCallback" /> }
         <details class="observation-details"><summary>@Text["Observation limits and timestamps"]</summary><ObservationNote Since="Since" LastEvent="LastEvent" /></details>
         }
-        @foreach (var message in new[] { Error, SearchError, QueueError, BoardError, InventoryError }.Where(m => m is not null)) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(message!)</SUIAlert> }
+        @foreach (var message in new[] { Error, SearchError, QueueError, InboundError, BoardError, InventoryError }.Where(m => m is not null)) { <SUIAlert ToneValue="SUITone.Warning">@Text.Observed(message!)</SUIAlert> }
         @if (Error is not null) { <ErrorDetails Diagnostic="Failure" /> }
         @if (SearchError is not null) { <ErrorDetails Diagnostic="SearchFailure" /> }
         @if (QueueError is not null) { <QueueSourceDetails Samples="QueueSamples" /> }

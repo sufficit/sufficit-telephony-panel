@@ -48,6 +48,18 @@ public sealed class OperationsApi(IHttpClientFactory clients)
             record.Status is not ("not_observed" or "pending_debit" or "legacy_debit_unknown" or "not_reconciled" or "confirmed"))throw new InvalidDataException("Accounting scope mismatch.");
         return record;
     }
+    public async Task<InboundCallSource[]> Inbound(string token, Guid context, CancellationToken ct)
+    {
+        if (context == Guid.Empty) throw new ArgumentException("Concrete context required.");
+        var json = await Send(token, $"telephony/panel/inbound?contextid={context:D}", ct);
+        var sources = json.Deserialize<InboundCallSource[]>(Json) ?? [];
+        if (sources.Length > 16 || sources.Any(s => s is null || string.IsNullOrWhiteSpace(s.Node) || s.Node.Length > 128
+            || s.Calls is null || s.Calls.Length > 100 || s.Calls.Any(c => c is null || c.ContextId != context || c.DidId == Guid.Empty
+                || c.Node != s.Node || c.Channel is not { Length: > 0 and <= 256 } || c.Channel.Any(char.IsControl)
+                || c.UniqueId is not { Length: > 0 and <= 128 } || c.UniqueId != c.LinkedId)))
+            throw new InvalidDataException("Inbound snapshot ownership or shape mismatch.");
+        return sources;
+    }
     public async Task<EndpointRegistration[]> Registrations(string token, Guid? context, CancellationToken ct)
     {
         var json = await Send(token, "telephony/panel/endpoint-presence" + (context is { } id ? $"?contextid={id:D}" : ""), ct);

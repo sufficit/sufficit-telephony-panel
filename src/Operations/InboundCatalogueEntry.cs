@@ -14,6 +14,14 @@ public static class InboundCatalogueEntry
             parts[4] is not ("configured" or "disabled" or "expired")) return null;
         return parts[4];
     }
+    public static bool Matches(EventsPanelCardInfo card, ObservedResource row)
+    {
+        if (card.Kind != EventsPanelCardKind.TRUNK || row.Kind != "call" || State(card.Channels) is null
+            || row.Details.GetValueOrDefault("source") != "did-inbound") return false;
+        var parts = card.Channels.Single().Split(':');
+        return parts[1] == "did" && Guid.TryParse(row.Account, out var owner)
+            && owner == Guid.ParseExact(parts[2], "N") && row.Details.GetValueOrDefault("didid") == parts[3];
+    }
     public static string Label(string state) => state switch
     {
         "disabled" => "Entrada desabilitada",
