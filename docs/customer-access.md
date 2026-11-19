@@ -144,3 +144,18 @@ provider tokens and routing internals are not exposed. These cards do not claim
 registration, reachability or live call activity: no safe per-ingress correlation
 is currently available in the panel's AMI projection. Existing SIP trunk live
 state remains unchanged. Ownership is rechecked by the API and portfolio projection.
+
+## Retomada após expiração e proteção de login
+
+Uma navegação de documento sem sessão utilizável inicia o login automaticamente,
+preservando o destino local permitido. Prefetch/prerender não iniciam esse fluxo.
+Uma tentativa pendente, cookie antigo ou acesso concorrente não provam falha.
+O marcador anti-loop é emitido somente no recebimento do ticket OIDC de um fluxo
+automático, reconhecido nas propriedades protegidas do state. Se o retorno
+seguinte ainda não tiver sessão utilizável, o fluxo para na tela de falha.
+
+Esse marcador usa cookie __Host- (Secure, HttpOnly, host-only, Path=/), dura30s e
+é removido ao validar sessão ou iniciar login manual. Não autentica o navegador
+nem concede permissões. Falhas reais do OIDC continuam na tela de erro, recusas
+de permissão permanecem recusas e logout explícito não reinicia login. O tempo
+da sessão e as políticas de autorização não são ampliados.

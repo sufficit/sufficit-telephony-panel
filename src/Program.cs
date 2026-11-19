@@ -176,6 +176,11 @@ builder.Services.AddAuthentication(o =>
         }
         log.LogWarning("Sign-in completed for subject {Subject} (manager: {Manager})", subject, permissions.Manager);
     };
+    o.Events.OnTicketReceived = ctx =>
+    {
+        AutoSignIn.TicketReceived(ctx.HttpContext, ctx.Properties);
+        return Task.CompletedTask;
+    };
     o.Events.OnRemoteFailure = async ctx =>
     {
         ctx.HandleResponse();
@@ -223,7 +228,7 @@ app.Use(async (ctx, next) =>
     {
         // A sign-in that just finished and still lands here unauthenticated would loop until Identity rate-limits
         // (2026-11-06). Stop at the landing page instead and keep the evidence in the log.
-        if (ctx.Request.Cookies.ContainsKey(AutoSignIn.AttemptCookie))
+        if (AutoSignIn.CompletedAttempt(ctx.Request))
         {
             var sent = ctx.Request.Headers.Cookie.SelectMany(h => (h ?? "").Split(';')).Select(c => c.Trim())
                 .Where(c => c.StartsWith("__Host-Sufficit.Telephony.Panel", StringComparison.Ordinal)
@@ -235,13 +240,10 @@ app.Use(async (ctx, next) =>
             ctx.Response.Redirect(pathBase + "/?login=failed");
             return;
         }
-        ctx.Response.Cookies.Append(AutoSignIn.AttemptCookie, "1", new CookieOptions
-        { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromSeconds(30), Path = pathBase.Length > 0 ? pathBase : "/" });
         ctx.Response.Redirect(AutoSignIn.LoginPath(ctx.Request, pathBase)); return;
     }
     // A request that is authenticated clears the attempt marker, so the next expiry can sign in again.
-    if (ctx.User.Identity?.IsAuthenticated == true && ctx.Request.Cookies.ContainsKey(AutoSignIn.AttemptCookie))
-        ctx.Response.Cookies.Delete(AutoSignIn.AttemptCookie, new CookieOptions { Path = pathBase.Length > 0 ? pathBase : "/", Secure = true });
+    if (ctx.User.Identity?.IsAuthenticated == true) AutoSignIn.ClearAttempt(ctx, pathBase);
     await next();
 });
 app.UseAuthorization();
@@ -256,7 +258,8 @@ app.MapGet("/login", async (HttpContext ctx) =>
     {
         var returnUrl = ctx.Request.Query["returnUrl"].ToString();
         var safeReturn = PanelReturnUrl.Validate(returnUrl, pathBase);
-        await ctx.ChallengeAsync("oidc", new AuthenticationProperties { RedirectUri = safeReturn });
+        AutoSignIn.ClearAttempt(ctx, pathBase);
+        await ctx.ChallengeAsync("oidc", AutoSignIn.Challenge(safeReturn, ctx.Request.Query["automatic"] == "1"));
     }
     catch (Exception error) when (!ctx.Response.HasStarted && !ctx.RequestAborted.IsCancellationRequested)
     {
