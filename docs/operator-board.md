@@ -60,7 +60,8 @@ na área expansível “Recursos lembrados e limpeza” e em “Configurar mesa�
 A aba inicial usa o mosaico compacto solicitado: recursos à esquerda, troncos
 conhecidos e filas à direita. As abas Ramais, Chamadas,
 Canais e Filas permanecem disponíveis. O mosaico usa os mesmos dados autorizados
-e a mesma conexão gRPC compartilhada, sem AMI por cartão ou navegador.
+e a mesma conexão gRPC compartilhada, complementada pelos snapshots autorizados
+de registro e de chamadas por DID na API, sem AMI no navegador.
 
 ## Leitura
 
@@ -335,3 +336,9 @@ identidade, terminado ou desconectado não permite ação. Aceitação não apag
 canal antecipadamente: a atualização vem do evento real. Falha não provoca
 repetição automática. Testes usam fixtures/transportes simulados, sem encerrar
 chamadas reais.
+
+## Chamadas recebidas por DID
+
+A entrada DID mantém sua identidade de catálogo mesmo quando o fornecedor do canal tem uma regra global de tronco. A API confirma a empresa, NUMENTRADA, GUID da DID, canal raiz e Uniqueid atual. O mesmo tronco compartilhado ou o número discado no destino não comprovam uma chamada recebida. Uma DID reúne os canais dos nós autorizados no mesmo cartão; cada chamada recebida conta uma vez pelo canal raiz.
+
+O Status privado por nó e o resultado por contexto usam cache de dois segundos. O painel atualiza em seu ciclo existente e rejeita snapshots com mais de oito segundos. Uma leitura completa sem chamada mostra “Sem chamadas recebidas”; uma fonte indisponível avisa que o total pode estar incompleto. Chamadas encerradas saem do próximo snapshot; não há histórico completo e chamadas muito breves entre consultas podem não aparecer.

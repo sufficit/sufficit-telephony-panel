@@ -140,10 +140,12 @@ The scoped cards API includes owned DIDs and non-deleted WhatsApp ingress routes
 as TRUNK cards, including expired DIDs and disabled routes with explicit state.
 Their `entry:<kind>:<context>:<opaque-id>:<state>` identifiers are inventory keys,
 never patterns for shared carrier channels. WhatsApp session IDs are hashed;
-provider tokens and routing internals are not exposed. These cards do not claim
-registration, reachability or live call activity: no safe per-ingress correlation
-is currently available in the panel's AMI projection. Existing SIP trunk live
-state remains unchanged. Ownership is rechecked by the API and portfolio projection.
+provider tokens and routing internals are not exposed. DID cards now receive live
+calls from the authorized API inbound snapshot, matched by tenant/DID GUID after
+NUMENTRADA, root channel, Uniqueid and current account verification. A complete
+fresh empty snapshot displays "No incoming calls"; missing sources produce a warning.
+WhatsApp entries remain inventory and never infer live activity, registration or
+reachability from configuration. Ownership is rechecked by the API and portfolio projection.
 
 ## Retomada após expiração e proteção de login
 
