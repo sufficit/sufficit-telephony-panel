@@ -409,7 +409,7 @@ public partial class LiveOperations
                 ? Text["Some QUEUE sources are unavailable. Queue activity is shown only with current controller data."] : null;
         Permissions = await Access.Permissions(lifetime.Token);
         Observation = await Access.Observation(selectedContext, PortalCards, lifetime.Token);
-        InboundError = Access.InboundUnavailable ? Text["Some DID sources are unavailable. Incoming call totals may be incomplete."] : null;
+        InboundError = Access.InboundUnavailable ? Text["Some call sources are unavailable. Call totals may be incomplete."] : null;
         Observation.AddQueue(QueueBoardProjection.Create(samples, Observation.Rows, selectedContext, DateTimeOffset.UtcNow));
         Cards = Observation.Cards;
         Rows = Observation.Rows;

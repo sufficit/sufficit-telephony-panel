@@ -25,6 +25,20 @@ static class InboundCallChecks
         var two = AuthorizedObservation.Create([card], [row, (incoming with { Node = "eveo-voip", Channel = "SIP/provider-00000002", UniqueId = "1795123456.43", LinkedId = "1795123456.43" }).Row()], context);
         var grouped = OperatorTile.Create(two.Cards, two.ByCard);
         check(grouped.Length == 1 && BoardTotals.ActiveCalls(grouped) == 2, "One DID card aggregates live channels across nodes");
+        var endpoint = Guid.NewGuid();
+        var receiving = incoming with { Channel = "PJSIP/0004756200-00000a92", UniqueId = "1795126417.571344", LinkedId = "1795126416.571333", ReceiverEndpointId = endpoint };
+        var peer = new EventsPanelCardInfo { Kind = EventsPanelCardKind.PEER, Label = "6200", Channels = ["^SIP/0004756200", $"^PJSIP/{endpoint:N}"] };
+        var receivingView = AuthorizedObservation.Create([card, peer], [receiving.Row()], context);
+        var receivingTiles = OperatorTile.Create(receivingView.Cards, receivingView.ByCard);
+        check(receivingTiles.All(t => BoardTotals.ActiveCalls([t]) == 1 && t.Status.Tone == "busy"), "Captured numeric PJSIP receiver appears on DID and extension with cached GUID-only catalogue");
+        var nonAnchor = receiving with { DidAnchor = false };
+        check(!InboundCatalogueEntry.Matches(card, nonAnchor.Row()) && InboundCallSnapshot.MatchesEndpoint(peer, nonAnchor.Row()), "Non-anchor receiver still belongs to extension but does not double-count DID");
+        var endpointOnly = nonAnchor with { DidId = Guid.Empty };
+        check(!InboundCatalogueEntry.Matches(card, endpointOnly.Row()) && InboundCallSnapshot.MatchesEndpoint(peer, endpointOnly.Row()), "A direct receiving endpoint call does not fabricate a DID association");
+        var originAndReceiver = AuthorizedObservation.Create([card, peer], [incoming.Row(), nonAnchor.Row()], context);
+        var split = OperatorTile.Create(originAndReceiver.Cards, originAndReceiver.ByCard);
+        check(split.Single(t => t.Kind == EventsPanelCardKind.TRUNK).Channels.Length == 1 && split.Single(t => t.Kind == EventsPanelCardKind.PEER).Channels.Length == 1,
+            "DID and receiving extension each count one channel when origin is also observed");
         var classified = BoardRuleEngine.Apply([tile], new BoardConfiguration { Rules = [new BoardRule { Id = "carrier", Label = "Shared carrier", Kind = "trunk", Patterns = ["SIP/provider*"] }] });
         check(classified.Single().Title == card.Label && classified.Single().Keys.SequenceEqual(card.Channels), "Carrier classification cannot consume customer DID identity");
         var ended = AuthorizedObservation.Create([card], [], context);

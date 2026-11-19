@@ -142,7 +142,11 @@ Their `entry:<kind>:<context>:<opaque-id>:<state>` identifiers are inventory key
 never patterns for shared carrier channels. WhatsApp session IDs are hashed;
 provider tokens and routing internals are not exposed. DID cards now receive live
 calls from the authorized API inbound snapshot, matched by tenant/DID GUID after
-NUMENTRADA, root channel, Uniqueid and current account verification. A complete
+NUMENTRADA and current channel identity. Receiving endpoint legs additionally prove
+their owner through the exact catalogue endpoint and the endpoint account configured
+on the PBX; an inherited originator billing account does not identify the receiver.
+Only this verified receiving resource is scoped to its owner. Raw foreign-account
+AMI calls remain excluded. A complete
 fresh empty snapshot displays "No incoming calls"; missing sources produce a warning.
 WhatsApp entries remain inventory and never infer live activity, registration or
 reachability from configuration. Ownership is rechecked by the API and portfolio projection.

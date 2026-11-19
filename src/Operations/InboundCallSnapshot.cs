@@ -5,6 +5,12 @@ namespace Sufficit.Telephony.Panel.Operations;
 public sealed record InboundCallSnapshot(Guid ContextId, Guid DidId, string Node, string Channel,
     string UniqueId, string LinkedId, string State, string? Caller, string? Destination, DateTimeOffset ObservedAt)
 {
+    public bool DidAnchor { get; init; } = true;
+    public Guid? ReceiverEndpointId { get; init; }
+    public static bool MatchesEndpoint(EventsPanelCardInfo card, ObservedResource row) => card.Kind == EventsPanelCardKind.PEER
+        && row.Kind == "call" && row.Details.GetValueOrDefault("source") == "did-inbound"
+        && Guid.TryParseExact(row.Details.GetValueOrDefault("receiver-endpoint"), "N", out var endpoint) && endpoint != Guid.Empty
+        && card.Channels.Contains($"^PJSIP/{endpoint:N}");
     public bool Fresh(DateTimeOffset now) => ObservedAt >= now.AddSeconds(-8) && ObservedAt <= now.AddSeconds(2);
     public ObservedResource Row()
     {
@@ -13,7 +19,8 @@ public sealed record InboundCallSnapshot(Guid ContextId, Guid DidId, string Node
         return new($"{node}|call|{Channel}", node, "call", Channel, State, Caller, Destination,
             ContextId.ToString("N"), ObservedAt, ObservedAt, new Dictionary<string,string> {
                 ["source"] = "did-inbound", ["didid"] = DidId.ToString("N"),
-                ["uniqueid"] = UniqueId, ["linkedid"] = LinkedId });
+                ["uniqueid"] = UniqueId, ["linkedid"] = LinkedId,
+                ["did-anchor"] = DidAnchor ? "true" : "false", ["receiver-endpoint"] = ReceiverEndpointId?.ToString("N") ?? "" });
     }
     public static ObservedResource[] IdleEvidence(EventsPanelCardInfo[] cards, InboundCallSource[] sources, Guid context, DateTimeOffset now)
     {

@@ -51,7 +51,8 @@ public sealed class AuthorizedObservation
         // Endpoint status events (registration, qualify) carry no AccountCode. They are attributed to
         // the selected context only when the key is exactly one of its own catalogued extensions
         // (anchored literal "^SIP/0000286651" from the portal registry, whose titles are globally unique).
-        // Calls always need the tenant AccountCode; foreign accounts are never re-attributed.
+        // Raw calls require the tenant AccountCode. Verified API snapshots can separately prove a
+        // receiving endpoint owner; regexes/numbers never re-attribute a foreign AMI channel.
         var owned = context.HasValue ? OwnedEndpoints(cards) : [];
         var rows = source.Where(row => Guid.TryParse(row.Account, out var account) && account != Guid.Empty
             ? permissions.CanRead(account) && (!context.HasValue || account == context)
@@ -149,7 +150,7 @@ public sealed class AuthorizedObservation
             foreach (var card in cards)
             {
                 if (++comparisons > ComparisonLimit) { result.Limited = true; break; }
-                if (!LiveProjection.Matches(card, row) && !InboundCatalogueEntry.Matches(card, row)) continue;
+                if (!LiveProjection.Matches(card, row) && !InboundCatalogueEntry.Matches(card, row) && !InboundCallSnapshot.MatchesEndpoint(card, row)) continue;
                 matched = true;
                 if (!result.ByCard.TryGetValue(card, out var list)) result.ByCard[card] = list = [];
                 list.Add(row); result.Labels.TryAdd(row.Id, card.Label);

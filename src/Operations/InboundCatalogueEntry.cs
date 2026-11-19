@@ -19,7 +19,8 @@ public static class InboundCatalogueEntry
         if (card.Kind != EventsPanelCardKind.TRUNK || row.Kind != "call" || State(card.Channels) is null
             || row.Details.GetValueOrDefault("source") != "did-inbound") return false;
         var parts = card.Channels.Single().Split(':');
-        return parts[1] == "did" && Guid.TryParse(row.Account, out var owner)
+        return parts[1] == "did" && row.Details.GetValueOrDefault("did-anchor", "true") == "true"
+            && Guid.TryParse(row.Account, out var owner)
             && owner == Guid.ParseExact(parts[2], "N") && row.Details.GetValueOrDefault("didid") == parts[3];
     }
     public static string Label(string state) => state switch

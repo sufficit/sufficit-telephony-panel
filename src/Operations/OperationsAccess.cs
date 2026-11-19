@@ -63,7 +63,7 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
     public bool InboundUnavailable { get; private set; }
     private async Task<ObservedResource[]> InboundRows(Guid context, EventsPanelCardInfo[] cards, ObservedResource[] rows, CancellationToken ct)
     {
-        if (!cards.Any(c => InboundCatalogueEntry.State(c.Channels) is not null && c.Channels.Single().StartsWith("entry:did:", StringComparison.Ordinal))) return rows;
+        if (!cards.Any(c => c.Kind == EventsPanelCardKind.PEER || InboundCatalogueEntry.State(c.Channels) is not null && c.Channels.Single().StartsWith("entry:did:", StringComparison.Ordinal))) return rows;
         var sources = await api.Inbound(await Token(ct), context, ct);
         if (!(await Permissions(ct)).CanRead(context)) throw new UnauthorizedAccessException();
         var now = DateTimeOffset.UtcNow;
