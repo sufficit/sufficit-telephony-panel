@@ -48,6 +48,16 @@ public sealed class OperationsApi(IHttpClientFactory clients)
             record.Status is not ("not_observed" or "pending_debit" or "legacy_debit_unknown" or "not_reconciled" or "confirmed"))throw new InvalidDataException("Accounting scope mismatch.");
         return record;
     }
+    public async Task<EndpointRegistration[]> Registrations(string token, Guid? context, CancellationToken ct)
+    {
+        var json = await Send(token, "telephony/panel/endpoint-presence" + (context is { } id ? $"?contextid={id:D}" : ""), ct);
+        var rows = json.Deserialize<EndpointRegistration[]>(Json) ?? [];
+        if (rows.Length > 10000 || rows.Any(r => r.ContextId == Guid.Empty || r.EndpointId == Guid.Empty
+            || context.HasValue && r.ContextId != context.Value || string.IsNullOrWhiteSpace(r.Node) || r.Node.Length > 128
+            || r.Title is null || r.Title.Length > 256 || r.Label is null || r.Label.Length > 256))
+            throw new InvalidDataException("PJSIP registration scope or shape mismatch.");
+        return rows;
+    }
     public async Task<EventsPanelCardInfo[]> Cards(string token, Guid? context, CancellationToken ct)
     {
         if (!context.HasValue || context == Guid.Empty) throw new InvalidOperationException("A concrete context is required for the card catalogue.");

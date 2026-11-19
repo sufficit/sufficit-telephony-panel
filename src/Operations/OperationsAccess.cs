@@ -50,12 +50,34 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
     public async Task<CurrentAuthorization> Permissions(CancellationToken ct) =>
         await sessions.AuthorizationAsync((await authentication.GetAuthenticationStateAsync()).User, ct);
 
+    private readonly Dictionary<Guid, (DateTimeOffset Until, EndpointRegistration[] Rows)> registrations = new();
+    private async Task<EndpointRegistration[]> Registrations(Guid? context, CancellationToken ct)
+    {
+        var key = context ?? Guid.Empty;
+        if (registrations.TryGetValue(key, out var cached) && cached.Until > DateTimeOffset.UtcNow)
+            return cached.Rows.Where(r => r.Current(DateTimeOffset.UtcNow)).ToArray();
+        var rows = await api.Registrations(await Token(ct), context, ct);
+        registrations[key] = (DateTimeOffset.UtcNow.AddSeconds(10), rows);
+        return rows.Where(r => r.Current(DateTimeOffset.UtcNow)).ToArray();
+    }
     public async Task<AuthorizedObservation> Observation(Guid? context, EventsPanelCardInfo[] cards, CancellationToken ct)
     {
         var permissions = await Permissions(ct);
         context = permissions.SelectContext(context);
         var connection = await Connection(ct);
         var rows = connection.Connected ? connection.Projection.Snapshot(DateTimeOffset.UtcNow) : [];
+        // Registration is a separate read-only snapshot: idle realtime PJSIP contacts may emit no AMI events.
+        // Never store it in the shared stream or infer an account from a channel display number.
+        if (context.HasValue || permissions.Manager)
+        {
+            var presence = await Registrations(context, ct);
+            permissions = await Permissions(ct);
+            context = permissions.SelectContext(context);
+            if (!context.HasValue && !permissions.Manager) throw new UnauthorizedAccessException();
+            presence = presence.Where(r => permissions.CanRead(r.ContextId)).ToArray();
+            rows = EndpointRegistration.Merge(rows, presence, DateTimeOffset.UtcNow);
+            if (context.HasValue) cards = EndpointRegistration.Attach(cards, presence);
+        }
         if (permissions.Manager) rows = AuthorizedObservation.InheritCallAccounts(rows);
         if (permissions.Manager)
             return context is { } managerContext ? AuthorizedObservation.Create(cards, rows, managerContext)
@@ -70,7 +92,9 @@ public sealed class OperationsAccess(AuthenticationStateProvider authentication,
                 var catalogue = await Catalogue(id, ct);
                 total += catalogue.Length;
                 if (total > 10000) throw new InvalidOperationException("Há mais de 10.000 recursos. Selecione uma empresa.");
-                scoped[id] = catalogue;
+                var presence = await Registrations(id, ct);
+                scoped[id] = EndpointRegistration.Attach(catalogue, presence);
+                rows = EndpointRegistration.Merge(rows, presence, DateTimeOffset.UtcNow);
             }
             permissions = await Permissions(ct);
             return AuthorizedObservation.ForPortfolio(scoped, rows, permissions);

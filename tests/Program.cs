@@ -23,6 +23,7 @@ QueueDistributionChecks.Run(Check);
 AutoSignInChecks.Run(Check);
 await SessionStoreChecks.Run(Check);
 RegistrationChecks.Run(Check);
+EndpointRegistrationChecks.Run(Check);
 QueueDiagnosticChecks.Run(Check);
 await AccountingChecks.Run(Check);
 await CustomerAccessChecks.Run(Check);
