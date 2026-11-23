@@ -1,0 +1,91 @@
+using System.Text.Json;
+using Sufficit.Telephony.Panel;
+using Sufficit.Telephony.Panel.Operations;
+using Sufficit.Telephony.Streaming;
+
+/// <summary>"Do not disturb" on a phone: immediate busy (cause 17) while the extension has no other call.</summary>
+internal static class CallRefusalChecks
+{
+    public static void Run(Action<bool, string> check)
+    {
+        // Evidence a few seconds in the past, as it reaches the board from the event stream.
+        var now = DateTimeOffset.UtcNow.AddSeconds(-10);
+        var tenant = Guid.NewGuid();
+        JsonElement Channel(string key, string state = "Down") => JsonSerializer.SerializeToElement(new
+        { channel = key, channelstate = state, accountcode = tenant.ToString("N"), linkedid = "private-call", calleridnum = "private-caller" });
+        JsonElement Hangup(string key, int cause) => JsonSerializer.SerializeToElement(new
+        { channel = key, cause, accountcode = tenant.ToString("N"), linkedid = "private-call" });
+        ObservedResource? Refusal(LiveProjection p, DateTimeOffset at) => p.Snapshot(at).SingleOrDefault(r => r.Kind == RecentCallRefusal.Kind);
+
+        var store = new TelemetryStore();
+        for (var i = 0; i < 3; i++)
+        {
+            var key = $"SIP/0006676007-0000000{i}";
+            store.Append("google", "NewChannelEvent", Channel(key), now.AddSeconds(i));
+            store.Append("google", "HangupEvent", Hangup(key, 17), now.AddSeconds(i).AddMilliseconds(200));
+        }
+        var replica = new TelemetryReplica();
+        foreach (var frame in store.Read("", 0).Frames) replica.Apply(frame);
+        var rows = replica.Projection.Snapshot(now.AddSeconds(3));
+        var refusal = rows.Single(r => r.Kind == RecentCallRefusal.Kind);
+        check(refusal.Key == "SIP/0006676007" && refusal.Account == tenant.ToString("N"), "Refusal keeps the exact endpoint and tenant");
+        check(refusal.Details.GetValueOrDefault("count") == "3" && refusal.Details.GetValueOrDefault("cause") == "17", "Repeated refusals are counted, not duplicated");
+        check(refusal.Caller is null or "" && !refusal.Details.ContainsKey("linkedid"), "Refusal does not retain caller or call metadata");
+        var observation = AuthorizedObservation.ForManager(rows);
+        var tile = OperatorTile.Create(observation.Cards, observation.ByCard).Single();
+        check(tile.RefusingCalls is not null && tile.Status.Tone == "refusing" && tile.Status.Label == "Do not disturb likely", "Extension card shows likely Do not disturb");
+        check(BoardTotals.ActiveCalls([tile]) == 0, "Refusal cannot inflate active-call counters");
+        var card = new EventsPanelCardInfo { Label = "agent", Kind = EventsPanelCardKind.PEER, Channels = ["^SIP/0006676007"] };
+        check(AuthorizedObservation.Create([card], rows, tenant).Rows.Any(r => r.Kind == RecentCallRefusal.Kind), "Owner tenant sees the refusal");
+        check(!AuthorizedObservation.Create([card], rows, Guid.NewGuid()).Rows.Any(r => r.Kind == RecentCallRefusal.Kind), "Another tenant cannot see the refusal");
+        check(!AuthorizedObservation.Create([card], rows.Select(r => r with { Account = null }), tenant).Rows.Any(r => r.Kind == RecentCallRefusal.Kind), "Unowned refusal stays out of customer views");
+        check(replica.Projection.Snapshot(now.AddSeconds(3) + RecentCallRefusal.Lifetime).All(r => r.Kind != RecentCallRefusal.Kind), "Refusal fades after its lifetime without new evidence");
+
+        // Busy because the extension is on another call is ordinary busy, not Do not disturb.
+        var inCall = new LiveProjection();
+        inCall.Apply("google", "NewChannelEvent", Channel("SIP/0006676008-000000a1", "Up"), now);
+        inCall.Apply("google", "NewChannelEvent", Channel("SIP/0006676008-000000a2"), now);
+        inCall.Apply("google", "HangupEvent", Hangup("SIP/0006676008-000000a2", 17), now.AddMilliseconds(100));
+        check(Refusal(inCall, now) is null, "Busy during another call of the same extension is not a refusal");
+
+        // A person declining after ringing, or a slow busy, is not a device setting.
+        var declined = new LiveProjection();
+        declined.Apply("google", "NewChannelEvent", Channel("SIP/0006676009-000000b1"), now);
+        declined.Apply("google", "NewStateEvent", Channel("SIP/0006676009-000000b1", "Ringing"), now.AddMilliseconds(500));
+        declined.Apply("google", "HangupEvent", Hangup("SIP/0006676009-000000b1", 17), now.AddSeconds(1));
+        check(Refusal(declined, now.AddSeconds(1)) is null, "Busy after ringing (declined by a person) is not a refusal");
+        var slow = new LiveProjection();
+        slow.Apply("google", "NewChannelEvent", Channel("SIP/0006676009-000000b2"), now);
+        slow.Apply("google", "HangupEvent", Hangup("SIP/0006676009-000000b2", 17), now + RecentCallRefusal.ImmediateWindow + TimeSpan.FromSeconds(1));
+        check(Refusal(slow, now.AddSeconds(5)) is null, "Busy after the immediate window is not a refusal");
+        foreach (var cause in new[] { 16, 18, 19, 21, 1 })
+        {
+            var other = new LiveProjection();
+            other.Apply("google", "NewChannelEvent", Channel("SIP/0006676005-000000c1"), now);
+            other.Apply("google", "HangupEvent", Hangup("SIP/0006676005-000000c1", cause), now.AddMilliseconds(100));
+            check(Refusal(other, now) is null, "Only busy (17) indicates a refusal: cause " + cause);
+        }
+        var trunk = new LiveProjection();
+        trunk.Apply("google", "NewChannelEvent", Channel("Local/0006676005@queue-000000d1;2"), now);
+        trunk.Apply("google", "HangupEvent", Hangup("Local/0006676005@queue-000000d1;2", 17), now.AddMilliseconds(100));
+        check(Refusal(trunk, now) is null, "Technical Local legs never create refusals");
+
+        // Ringing for an incoming call proves the phone accepts calls again.
+        var cleared = new LiveProjection();
+        cleared.Apply("google", "NewChannelEvent", Channel("SIP/0006676006-000000e1"), now);
+        cleared.Apply("google", "HangupEvent", Hangup("SIP/0006676006-000000e1", 17), now.AddMilliseconds(100));
+        check(Refusal(cleared, now) is not null, "Refusal recorded before clearing");
+        cleared.Apply("other", "NewStateEvent", Channel("SIP/0006676006-000000e2", "Ringing"), now.AddSeconds(1));
+        check(Refusal(cleared, now.AddSeconds(1)) is not null, "Ringing on another node does not clear this node's refusal");
+        cleared.Apply("google", "NewChannelEvent", Channel("SIP/0006676006-000000e3"), now.AddSeconds(2));
+        check(Refusal(cleared, now.AddSeconds(2)) is not null, "A new attempt alone does not clear the refusal");
+        cleared.Apply("google", "NewStateEvent", Channel("SIP/0006676006-000000e3", "Ringing"), now.AddSeconds(2));
+        check(Refusal(cleared, now.AddSeconds(2)) is null, "Ringing on the extension clears the refusal");
+
+        // An active call on the card takes precedence over the refusal badge.
+        var active = OperatorTile.Create(observation.Cards, observation.ByCard.ToDictionary(p => p.Key,
+            p => p.Value.Append(new ObservedResource("google|call|SIP/0006676007-000000f1", "google", "call", "SIP/0006676007-000000f1", "Up",
+                null, null, tenant.ToString("N"), now, now, new Dictionary<string, string>())).ToList())).Single();
+        check(active.RefusingCalls is null && active.Status.Tone != "refusing", "A live call hides the refusal badge");
+    }
+}

@@ -128,6 +128,12 @@
             <span class="tile-attempt-detail">@Text["Dialed"]: <bdi>@(RecentDialFailure.Dialed(failed.Destination) ?? Text["Not reported"])</bdi></span>
             <span class="tile-attempt-detail" title="@Text["AMI reports an Asterisk hangup cause here, not a SIP response code."]">@Text["Asterisk cause"]: @(failed.Details.GetValueOrDefault("cause") ?? Text["Not reported"])@if (RecentDialFailure.CauseLabel(failed.Details.GetValueOrDefault("cause")) is { } causeLabel) { <text> · @Text[causeLabel]</text> }</span>
         }
+        @if (tile.RefusingCalls is { } refusal)
+        {
+            <span class="tile-refusal">@Text.Format("Refused calls while free ({0})", refusal.Details.GetValueOrDefault("count") ?? "1")</span>
+            <span class="tile-attempt-detail">@Text.Format("Last at {0}", refusal.Updated.ToLocalTime().ToString("HH:mm:ss"))</span>
+            <span class="tile-attempt-detail">@Text["Check \"Do not disturb\" on the phone or app."]</span>
+        }
         @foreach (var flow in tile.Flows.Take(2)) { <span class="tile-channel"><CallNumbers Caller="@flow.Caller" Destination="@flow.Destination" Compact="true" />@if (tile.Queue is not null) { <text> · @Text[flow.Phase switch { "greeting" => "Queue greeting", "announcing" => "Queue announcement", "offering" => "Calling an agent", "answered" => "Answered in queue", _ => "Waiting in queue" }]</text> }</span> }
         @if (tile.Flows.Length > 2) { <span class="tile-channel">@Text.Format("+{0} call flows in details", tile.Flows.Length - 2)</span> }
     </button>

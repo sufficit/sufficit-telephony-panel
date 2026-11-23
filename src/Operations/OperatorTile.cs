@@ -13,7 +13,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public bool HasObservedActivity => Kind == EventsPanelCardKind.QUEUE
         ? Queue is { } queue ? queue.State == "current" && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0
             : QueueCalls.Length > 0
-        : Channels.Length > 0 || FailedDial is not null;
+        : Channels.Length > 0 || FailedDial is not null || RefusingCalls is not null;
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
         .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => (r.Node, r.Id)).ToArray();
@@ -38,6 +38,10 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         ? Rows.Where(r => r.Kind == "call-result" && DateTimeOffset.UtcNow - r.Updated < RecentDialFailure.Lifetime
             && DateTimeOffset.UtcNow >= r.Updated && RecentDialFailure.Label(r.State) is not null)
             .OrderByDescending(r => r.Updated).FirstOrDefault() : null;
+    /// <summary>Busy answers while this endpoint had no other call ("Do not disturb" on the phone), never a device read.</summary>
+    public ObservedResource? RefusingCalls => Kind == EventsPanelCardKind.PEER && Channels.Length == 0
+        ? Rows.Where(r => r.Kind == RecentCallRefusal.Kind && DateTimeOffset.UtcNow - r.Updated < RecentCallRefusal.Lifetime
+            && DateTimeOffset.UtcNow >= r.Updated.AddSeconds(-2)).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);
@@ -47,7 +51,8 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         : Queue is { } queue ? queue.State != "current" ? ("unknown", "QUEUE state unavailable")
             : queue.Details.GetValueOrDefault("pending", "0") != "0"
                 ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
-        : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade")) : CallStatus;
+        : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade"))
+        : RefusingCalls is not null ? ("refusing", "Do not disturb likely") : CallStatus;
     private static bool IsDialing(ObservedResource channel) => channel.State.ToLowerInvariant()
         is "dialing" or "3" or "ring" or "4" or "dialing offhook" or "dialingoffhook" or "8" or "pre-ring" or "prering" or "9";
     private static bool IsRinging(ObservedResource channel) => channel.State.ToLowerInvariant() is "ringing" or "5";

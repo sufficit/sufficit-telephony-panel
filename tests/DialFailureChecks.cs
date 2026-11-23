@@ -39,7 +39,7 @@ internal static class DialFailureChecks
             var projection = new LiveProjection();
             projection.Apply("google", "NewChannelEvent", Event(), now);
             projection.Apply("google", "HangupEvent", Event(cause), now);
-            check(projection.Snapshot(now).Length == 0, "Normal, busy, no answer and cancellation are not invalid dialing");
+            check(projection.Snapshot(now).All(r => r.Kind == RecentCallRefusal.Kind && cause == 17), "Normal, busy, no answer and cancellation are not invalid dialing");
         }
         var immediate = new LiveProjection();
         immediate.Apply("google", "NewChannelEvent", JsonSerializer.SerializeToElement(new { channel, channelstate = "Ring", accountcode = tenant.ToString("N") }), now);

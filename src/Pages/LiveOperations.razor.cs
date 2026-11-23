@@ -563,6 +563,14 @@ public partial class LiveOperations
                         : new Dictionary<string, string> { ["cause"] = failureState == "immediate" ? "16" : failureState == "no-route" ? "3" : "28" })).ToArray();
             }
         }
+        if (demoQuery.ContainsKey("refusalpreview"))
+        {
+            // Extension refusing calls while free (Do not disturb on the phone).
+            Rows = Rows.Where(row => row.Id != "demo-call" && !(row.Kind == "call" && RecentDialFailure.Endpoint(row.Key) == "PJSIP/6007")).Append(
+                new ObservedResource("demo-refusal", "eveo-voip", RecentCallRefusal.Kind, "PJSIP/6007", RecentCallRefusal.State, null, null,
+                    tenant.ToString("N"), now.AddMinutes(-3), now.AddSeconds(-4),
+                    new Dictionary<string, string> { ["cause"] = "17", ["count"] = "42" })).ToArray();
+        }
         if (demoQuery.ContainsKey("numberpreview"))
             Rows = Rows.Select(row => row.Kind is "call" or "waiting"
                 ? row with { Caller = demoQuery["numberpreview"] == "e164" ? "552140627711" : "5508000000697", Destination = demoQuery["numberpreview"] == "e164" ? "5511999999999" : "+5508000000697" } : row).ToArray();

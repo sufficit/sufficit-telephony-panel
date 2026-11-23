@@ -145,7 +145,7 @@ public sealed class AuthorizedObservation
         var candidates = source.OrderByDescending(r => r.Updated).Take(LiveProjection.Capacity).ToArray();
         foreach (var row in candidates)
         {
-            if (row.Kind is "call" or "waiting" or "call-result" && (!Guid.TryParse(row.Account, out var account) || account != context)) continue;
+            if (row.Kind is "call" or "waiting" or "call-result" or RecentCallRefusal.Kind && (!Guid.TryParse(row.Account, out var account) || account != context)) continue;
             var matched = false;
             foreach (var card in cards)
             {

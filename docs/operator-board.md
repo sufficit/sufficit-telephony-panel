@@ -313,6 +313,28 @@ convertido da causa. Ausências aparecem como Não informado. O exten original
 caracteres de discagem. Esses dados só acompanham o resultado transitório em
 memória, com a mesma autorização e expiração; não vão para histórico de inventário.
 
+### Não perturbe provável
+
+Telefones e softphones com **Não perturbe** ligado recusam as chamadas com
+"ocupado" (no MicroSIP, `486` com `Reason: Do Not Disturb`). A AMI informa apenas
+a causa **17**. Quando uma tentativa para o ramal termina com causa 17 em até
+3 s, sem ter tocado e sem nenhuma outra chamada do mesmo ramal naquele nó, o
+card do ramal passa para **Não perturbe provável**, em vermelho, com
+"Recusou chamadas estando livre (n)", o horário da última recusa e a orientação
+de verificar o Não perturbe no telefone ou aplicativo.
+
+É evidência de recusa estando livre, não leitura da configuração do aparelho.
+Ocupado durante outra chamada do ramal, recusa depois de tocar, causa diferente
+de 17 e pernas `Local` não geram o aviso. O aviso dura 15 minutos desde a última
+recusa (filas renovam a evidência a cada tentativa) e some assim que o ramal
+volta a tocar no mesmo nó. Uma chamada ativa no card tem precedência. O registro
+segue a mesma posse por `accountcode` das falhas de discagem e não guarda
+chamador nem linkedid.
+
+Motivo: clientes ativam o Não perturbe sem perceber e abrem suporte porque
+"a fila não toca". Em 23/11/2026, no google-voip, os ramais de uma fila
+recusaram cerca de 68 mil ofertas num dia por esse motivo.
+
 ## Troncos por fornecedor e encerramento de canal
 
 O quadro reúne troncos com o mesmo nome/fornecedor, ignorando diferenças de
