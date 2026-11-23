@@ -13,7 +13,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public bool HasObservedActivity => Kind == EventsPanelCardKind.QUEUE
         ? Queue is { } queue ? queue.State == "current" && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0
             : QueueCalls.Length > 0
-        : Channels.Length > 0 || FailedDial is not null || RefusingCalls is not null;
+        : Channels.Length > 0 || FailedDial is not null || RefusingCalls is not null || ConfirmedDnd is not null;
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
         .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => (r.Node, r.Id)).ToArray();
@@ -42,6 +42,11 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public ObservedResource? RefusingCalls => Kind == EventsPanelCardKind.PEER && Channels.Length == 0
         ? Rows.Where(r => r.Kind == RecentCallRefusal.Kind && DateTimeOffset.UtcNow - r.Updated < RecentCallRefusal.Lifetime
             && DateTimeOffset.UtcNow >= r.Updated.AddSeconds(-2)).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
+    /// <summary>Do not disturb confirmed by the PBX device state (Custom:DND), not inferred from refusals.</summary>
+    public ObservedResource? ConfirmedDnd => Kind == EventsPanelCardKind.PEER
+        ? Rows.Where(r => r.Kind == ConfirmedDoNotDisturb.Kind).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
+    /// <summary>"confirmed", "likely" or null: drives the DND tag and red border.</summary>
+    public string? DndLevel => ConfirmedDnd is not null ? "confirmed" : RefusingCalls is not null ? "likely" : null;
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);

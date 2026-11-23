@@ -563,6 +563,9 @@ public partial class LiveOperations
                         : new Dictionary<string, string> { ["cause"] = failureState == "immediate" ? "16" : failureState == "no-route" ? "3" : "28" })).ToArray();
             }
         }
+        if (demoQuery.TryGetValue("refusalpreview", out var refusalLevel) && refusalLevel == "confirmed")
+            Rows = Rows.Append(new ObservedResource("demo-dnd", "eveo-voip", ConfirmedDoNotDisturb.Kind, "6007", "on", null, null, null,
+                now.AddMinutes(-30), now.AddMinutes(-30), new Dictionary<string, string> { ["source"] = "devstate" })).ToArray();
         if (demoQuery.ContainsKey("refusalpreview"))
         {
             // Extension refusing calls while free (Do not disturb on the phone).

@@ -772,5 +772,7 @@
   "End a channel…": "Encerrar um canal…",
   "Do not disturb likely": "Não perturbe provável",
   "Do not disturb likely · {0} refused": "Não perturbe provável · {0} recusas",
-  "{0} · {1} · Do not disturb likely: refused {2} calls while free, last at {3}. Check \"Do not disturb\" on the phone or app. Open details.": "{0} · {1} · Não perturbe provável: recusou {2} chamadas estando livre, a última às {3}. Verifique o \"Não perturbe\" no telefone ou aplicativo. Abrir detalhes."
+  "{0} · {1} · Do not disturb likely: refused {2} calls while free, last at {3}. Check \"Do not disturb\" on the phone or app. Open details.": "{0} · {1} · Não perturbe provável: recusou {2} chamadas estando livre, a última às {3}. Verifique o \"Não perturbe\" no telefone ou aplicativo. Abrir detalhes.",
+  "Do not disturb on": "Não perturbe ativo",
+  "{0} · {1} · Do not disturb on in the PBX. Open details.": "{0} · {1} · Não perturbe ativo no PABX. Abrir detalhes."
 }

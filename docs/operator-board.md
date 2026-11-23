@@ -338,6 +338,20 @@ Motivo: clientes ativam o Não perturbe sem perceber e abrem suporte porque
 "a fila não toca". Em 23/11/2026, no google-voip, os ramais de uma fila
 recusaram cerca de 68 mil ofertas num dia por esse motivo.
 
+#### Não perturbe confirmado × provável
+
+- **DND** (tag vermelha cheia, "Não perturbe ativo"): confirmado pelo PABX, pelo
+  estado de dispositivo `Custom:DND<ramal>` que os códigos `*76/*78` do FreePBX
+  mantêm (`BUSY`/`INUSE` = ligado; `NOT_INUSE` desliga). Fica até o PABX informar
+  que desligou. O PABX só envia o evento quando o estado muda: um DND ligado
+  antes da conexão do coletor só aparece na próxima mudança.
+- **DND?** (tag com contorno, "Não perturbe provável · n recusas"): inferido das
+  recusas com ocupado estando livre, como descrito acima.
+
+Outras fontes de confirmação, como o `Reason: ... Do Not Disturb` da resposta
+486 em ramais PJSIP, devem marcar o mesmo estado `Custom:DND<ramal>` no dialplan,
+sem mudança no painel. Ramais `chan_sip` não expõem esse cabeçalho.
+
 ## Troncos por fornecedor e encerramento de canal
 
 O quadro reúne troncos com o mesmo nome/fornecedor, ignorando diferenças de

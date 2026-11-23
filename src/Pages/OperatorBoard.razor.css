@@ -52,6 +52,7 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .is-refusing .tile-dot { position:relative; width:11px; height:11px; background:var(--sui-color-error); }
 .is-refusing .tile-dot::after { content:""; position:absolute; left:2px; right:2px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--sui-surface); }
 .tile-tag { flex:none; margin-left:auto; padding:0 5px; border-radius:3px; background:var(--sui-color-error); color:var(--sui-surface); font-size:10px; font-weight:700; line-height:16px; letter-spacing:.02em; }
+.tile-tag.is-likely { background:transparent; color:var(--sui-color-error); box-shadow:inset 0 0 0 1px var(--sui-color-error); }
 .tile-status, .tile-node { display:block; margin-top:3px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tile-node { color:var(--sui-text-secondary); font-size:10px; }
 .tile-channel { display:block; margin-top:5px; padding-top:4px; border-top:1px solid var(--sui-border); font-size:11px; overflow-wrap:anywhere; }

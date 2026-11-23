@@ -87,5 +87,27 @@ internal static class CallRefusalChecks
             p => p.Value.Append(new ObservedResource("google|call|SIP/0006676007-000000f1", "google", "call", "SIP/0006676007-000000f1", "Up",
                 null, null, tenant.ToString("N"), now, now, new Dictionary<string, string>())).ToList())).Single();
         check(active.RefusingCalls is null, "A live call hides the refusal badge");
+
+        // Do not disturb confirmed by the PBX device state (FreePBX Custom:DND), distinct from a likely refusal.
+        JsonElement Dnd(string device, string state) => JsonSerializer.SerializeToElement(new { device, state });
+        var pbx = new LiveProjection();
+        pbx.Apply("google", "DeviceStateChangeEvent", Dnd("Custom:DND0006676031", "BUSY"), now);
+        var dndRow = pbx.Snapshot(now).Single();
+        check(dndRow.Kind == ConfirmedDoNotDisturb.Kind && dndRow.Key == "0006676031", "PBX Do not disturb becomes one row per extension");
+        var sipCard = new EventsPanelCardInfo { Label = "agent", Kind = EventsPanelCardKind.PEER, Channels = ["^SIP/0006676031"] };
+        var otherCard = new EventsPanelCardInfo { Label = "other", Kind = EventsPanelCardKind.PEER, Channels = ["^SIP/0006676032"] };
+        var authorized = AuthorizedObservation.Create([sipCard, otherCard], pbx.Snapshot(now), tenant);
+        check(authorized.ByCard.TryGetValue(sipCard, out var own) && own.Any(r => r.Kind == ConfirmedDoNotDisturb.Kind)
+            && !authorized.ByCard.ContainsKey(otherCard), "PBX Do not disturb attaches only to the exact extension card");
+        var confirmedTile = OperatorTile.Create(authorized.Cards, authorized.ByCard).Single(t => t.Title == "agent");
+        check(confirmedTile.DndLevel == "confirmed", "PBX Do not disturb is confirmed, not likely");
+        check(tile.DndLevel == "likely", "Refusals alone stay likely");
+        pbx.Apply("google", "DeviceStateChangeEvent", Dnd("Custom:DND0006676031", "NOT_INUSE"), now.AddSeconds(5));
+        check(pbx.Snapshot(now.AddSeconds(5)).Length == 0, "Turning Do not disturb off removes the confirmation");
+        pbx.Apply("google", "DeviceStateChangeEvent", Dnd("Custom:DND0006676031", "INUSE"), now.AddSeconds(6));
+        check(pbx.Snapshot(now.AddHours(3)).Length == 1, "Confirmed Do not disturb does not fade like transient evidence");
+        var plain = new LiveProjection();
+        plain.Apply("google", "DeviceStateChangeEvent", Dnd("SIP/0006676031", "BUSY"), now);
+        check(plain.Snapshot(now).All(r => r.Kind != ConfirmedDoNotDisturb.Kind), "Ordinary device busy is not Do not disturb");
     }
 }
