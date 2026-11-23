@@ -33,7 +33,7 @@ internal static class CallRefusalChecks
         check(refusal.Caller is null or "" && !refusal.Details.ContainsKey("linkedid"), "Refusal does not retain caller or call metadata");
         var observation = AuthorizedObservation.ForManager(rows);
         var tile = OperatorTile.Create(observation.Cards, observation.ByCard).Single();
-        check(tile.RefusingCalls is not null && tile.Status.Tone == "refusing" && tile.Status.Label == "Do not disturb likely", "Extension card shows likely Do not disturb");
+        check(tile.RefusingCalls is not null && tile.Status.Tone != "refusing", "Extension card shows likely Do not disturb without replacing the evidence tone");
         check(BoardTotals.ActiveCalls([tile]) == 0, "Refusal cannot inflate active-call counters");
         var card = new EventsPanelCardInfo { Label = "agent", Kind = EventsPanelCardKind.PEER, Channels = ["^SIP/0006676007"] };
         check(AuthorizedObservation.Create([card], rows, tenant).Rows.Any(r => r.Kind == RecentCallRefusal.Kind), "Owner tenant sees the refusal");
@@ -86,6 +86,6 @@ internal static class CallRefusalChecks
         var active = OperatorTile.Create(observation.Cards, observation.ByCard.ToDictionary(p => p.Key,
             p => p.Value.Append(new ObservedResource("google|call|SIP/0006676007-000000f1", "google", "call", "SIP/0006676007-000000f1", "Up",
                 null, null, tenant.ToString("N"), now, now, new Dictionary<string, string>())).ToList())).Single();
-        check(active.RefusingCalls is null && active.Status.Tone != "refusing", "A live call hides the refusal badge");
+        check(active.RefusingCalls is null, "A live call hides the refusal badge");
     }
 }

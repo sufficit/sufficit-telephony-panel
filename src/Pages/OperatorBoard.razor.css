@@ -39,7 +39,7 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .board-tile.tone-dialing, .board-tile.tone-busy { background:color-mix(in srgb,var(--sui-color-warning) 22%,var(--sui-surface)); }
 .board-tile.tone-ringing { background:color-mix(in srgb,var(--sui-color-info) 20%,var(--sui-surface)); }
 .board-tile.tone-offline { background:color-mix(in srgb,var(--sui-color-error) 12%,var(--sui-surface)); }
-.board-tile.tone-refusing { background:color-mix(in srgb,var(--sui-color-error) 12%,var(--sui-surface)); box-shadow:inset 0 0 0 2px var(--sui-color-error); }
+.board-tile.is-refusing { box-shadow:inset 0 0 0 1px var(--sui-color-error); border-color:var(--sui-color-error); }
 .board-tile:hover { border-color:var(--sui-color-primary); }
 .board-tile.is-selected { outline:2px solid var(--sui-color-primary); outline-offset:-2px; }
 .tile-title { display:flex; align-items:center; gap:6px; font-size:12px; }
@@ -49,8 +49,8 @@ html .board-only .board-focus .board-trunks, html .board-only .board-focus .boar
 .tone-dialing .tile-dot, .tone-busy .tile-dot { background:var(--sui-color-warning); }
 .tone-ringing .tile-dot { background:var(--sui-color-info); }
 .tone-offline .tile-dot { background:var(--sui-color-error); }
-.tone-refusing .tile-dot { position:relative; width:11px; height:11px; background:var(--sui-color-error); }
-.tone-refusing .tile-dot::after { content:""; position:absolute; left:2px; right:2px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--sui-surface); }
+.is-refusing .tile-dot { position:relative; width:11px; height:11px; background:var(--sui-color-error); }
+.is-refusing .tile-dot::after { content:""; position:absolute; left:2px; right:2px; top:50%; height:2px; margin-top:-1px; border-radius:1px; background:var(--sui-surface); }
 .tile-tag { flex:none; margin-left:auto; padding:0 5px; border-radius:3px; background:var(--sui-color-error); color:var(--sui-surface); font-size:10px; font-weight:700; line-height:16px; letter-spacing:.02em; }
 .tile-status, .tile-node { display:block; margin-top:3px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tile-node { color:var(--sui-text-secondary); font-size:10px; }

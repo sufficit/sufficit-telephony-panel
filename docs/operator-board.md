@@ -320,8 +320,9 @@ Telefones e softphones com **Não perturbe** ligado recusam as chamadas com
 a causa **17**. Quando uma tentativa para o ramal termina com causa 17 em até
 3 s, sem ter tocado e sem nenhuma outra chamada do mesmo ramal naquele nó, o
 card do ramal passa para **Não perturbe provável · n recusas**, sem aumentar o
-tamanho do card: borda vermelha, ícone de "não perturbe" no lugar do ponto e a
-tag **DND** na linha do título. A dica do card traz a quantidade de recusas, o
+tamanho do card nem trocar o fundo, que continua mostrando o estado do ramal
+(registrado, já visto etc.), para não parecer offline: borda vermelha fina, ícone
+de "não perturbe" no lugar do ponto e a tag **DND** na linha do título. A dica do card traz a quantidade de recusas, o
 horário da última e a orientação de verificar o Não perturbe no telefone ou
 aplicativo.
 

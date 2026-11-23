@@ -52,7 +52,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
             : queue.Details.GetValueOrDefault("pending", "0") != "0"
                 ? ("busy", "QUEUE queue activity") : ("online", "No active QUEUE visits")
         : Kind == EventsPanelCardKind.QUEUE ? (QueueCalls.Length > 0 ? ("busy", "Queue activity observed") : ("unknown", "Fila observada · não comprova atividade"))
-        : RefusingCalls is not null ? ("refusing", "Do not disturb likely") : CallStatus;
+        : CallStatus;
     private static bool IsDialing(ObservedResource channel) => channel.State.ToLowerInvariant()
         is "dialing" or "3" or "ring" or "4" or "dialing offhook" or "dialingoffhook" or "8" or "pre-ring" or "prering" or "9";
     private static bool IsRinging(ObservedResource channel) => channel.State.ToLowerInvariant() is "ringing" or "5";
