@@ -319,9 +319,11 @@ Telefones e softphones com **Não perturbe** ligado recusam as chamadas com
 "ocupado" (no MicroSIP, `486` com `Reason: Do Not Disturb`). A AMI informa apenas
 a causa **17**. Quando uma tentativa para o ramal termina com causa 17 em até
 3 s, sem ter tocado e sem nenhuma outra chamada do mesmo ramal naquele nó, o
-card do ramal passa para **Não perturbe provável**, em vermelho, com
-"Recusou chamadas estando livre (n)", o horário da última recusa e a orientação
-de verificar o Não perturbe no telefone ou aplicativo.
+card do ramal passa para **Não perturbe provável · n recusas**, sem aumentar o
+tamanho do card: borda vermelha, ícone de "não perturbe" no lugar do ponto e a
+tag **DND** na linha do título. A dica do card traz a quantidade de recusas, o
+horário da última e a orientação de verificar o Não perturbe no telefone ou
+aplicativo.
 
 É evidência de recusa estando livre, não leitura da configuração do aparelho.
 Ocupado durante outra chamada do ramal, recusa depois de tocar, causa diferente

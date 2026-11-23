@@ -771,7 +771,6 @@
   "Channel termination was not confirmed. Refresh the channel status before trying again. No automatic retry.": "O encerramento não foi confirmado. Atualize o estado do canal antes de tentar novamente. Não haverá repetição automática.",
   "End a channel…": "Encerrar um canal…",
   "Do not disturb likely": "Não perturbe provável",
-  "Refused calls while free ({0})": "Recusou chamadas estando livre ({0})",
-  "Last at {0}": "Última às {0}",
-  "Check \"Do not disturb\" on the phone or app.": "Verifique o \"Não perturbe\" no telefone ou aplicativo."
+  "Do not disturb likely · {0} refused": "Não perturbe provável · {0} recusas",
+  "{0} · {1} · Do not disturb likely: refused {2} calls while free, last at {3}. Check \"Do not disturb\" on the phone or app. Open details.": "{0} · {1} · Não perturbe provável: recusou {2} chamadas estando livre, a última às {3}. Verifique o \"Não perturbe\" no telefone ou aplicativo. Abrir detalhes."
 }
