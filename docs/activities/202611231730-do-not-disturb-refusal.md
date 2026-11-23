@@ -57,9 +57,21 @@ not changed.
 When staging a release, preserve per-file ownership: `appsettings.json` must stay
 `root:sufftelpanel 0640`. Do not use `chown -R --reference`.
 
+## Compact card (3b91044)
+
+The owner confirmed the warning on real cards in production: the agents from
+0006676005 to 0006676009 on google-voip. The first layout added three lines and
+broke the mosaic. Release `dnd-compact-20261123-3b91044` keeps the standard card
+height (62 px, the same as neighboring cards in the preview). It shows a red
+border, a do-not-disturb glyph in place of the dot and a `DND` tag on the title
+row. The status line reads "Não perturbe provável · n recusas", and the tooltip
+carries the count, the time of the last refusal and the hint. Staging copied
+each file's owner and mode from the running release before activation.
+Activation passed: NRestarts=0, public health 200, the published CSS contains
+`tile-tag`, and no errors were logged.
+DLL SHA256 `272552de4ea803bd552770e335d7aee07d1fa9886859bc6bca14dd7e7ea1fcad`.
+
 ## Open
 
-- Not yet confirmed on a real card in production by a signed-in user (the
-  customer with the 0006676xxx agents on google-voip should show it).
 - Queue retry load caused by DND phones is a separate `sufficit-ari` item
   (per-member backoff after busy). It is not part of this change.
