@@ -45,6 +45,19 @@ internal static class CustomerAccessChecks
         check(peers.Rows.Select(r => r.Id).Order().SequenceEqual(["own", "zero"]),
             "Endpoint status without AccountCode is shown only for the context's exact catalogued extension");
         check(peers.ByCard.TryGetValue(own, out var ownRows) && ownRows.Count == 2, "Attributed endpoint status reaches the extension card");
+        // Extension presence (by GUID) and PBX Do not disturb (by title) carry no AccountCode either.
+        const string presenceGuid = "71a36cbccb2511e8af50001c42ead1e6";
+        var aliased = new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Own aliased", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER,
+            Channels = ["^SIP/0000006001", "^PJSIP/" + presenceGuid] };
+        var presenceRow = new ObservedResource("google|presence|" + presenceGuid, "google", ExtensionPresenceState.Kind, presenceGuid, "dnd", null, null, null, now, now, new Dictionary<string, string>());
+        var dndRow = new ObservedResource("google|dnd|0000006001", "google", ConfirmedDoNotDisturb.Kind, "0000006001", "on", null, null, null, now, now, new Dictionary<string, string>());
+        var foreignPresence = presenceRow with { Id = "google|presence|ffffffffffffffffffffffffffffffff", Key = "ffffffffffffffffffffffffffffffff" };
+        var presenceView = AuthorizedObservation.ForCustomer([aliased], [presenceRow, dndRow, foreignPresence], single, a);
+        check(presenceView.Rows.Select(r => r.Id).Order().SequenceEqual(new[] { dndRow.Id, presenceRow.Id }.Order()),
+            "Customer view keeps presence and PBX DND of its own extension, never of another GUID");
+        check(presenceView.ByCard.TryGetValue(aliased, out var aliasedRows) && aliasedRows.Count == 2, "Presence and PBX DND reach the extension card in the customer view");
+        var portfolio = AuthorizedObservation.ForPortfolio(new Dictionary<Guid, Sufficit.Telephony.Panel.EventsPanelCardInfo[]> { [a] = [aliased] }, [presenceRow], multi);
+        check(portfolio.Rows.Any(r => r.Kind == ExtensionPresenceState.Kind && r.Account == a.ToString("N")), "Portfolio view attributes presence to the owning company");
         foreach (var unsafeCard in new[] { "PJSIP/6007", "^PJSIP/60.*", "^PJSIP/6007|^PJSIP/6008", "^Local/6007", "^PJSIP/" })
             check(AuthorizedObservation.ForCustomer([new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "Own", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER, Channels = [unsafeCard] }], [Row("own", "")], single, a).Rows.Length == 0,
                 "Unanchored, wildcard, alternation or non-endpoint card never attributes unowned status: " + unsafeCard);

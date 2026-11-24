@@ -25,14 +25,12 @@ public sealed class AuthorizedObservation
             // Ambiguous unowned peer status cannot be assigned to either company.
             var scoped = ForCustomer(catalogue, candidates.Where(row =>
                 Guid.TryParse(row.Account, out var id) && id != Guid.Empty
-                || owners.GetValueOrDefault(row.Key) == 1), permissions, context);
+                || OwnershipKeys(row).Any(key => owners.GetValueOrDefault(key) == 1)), permissions, context);
             cards.AddRange(scoped.Cards);
-            rows.AddRange(scoped.Rows.Select(row => row.Kind == "peer" &&
-                (!Guid.TryParse(row.Account, out var account) || account == Guid.Empty)
+            rows.AddRange(scoped.Rows.Select(row => EndpointEvidence(row) && Unowned(row)
                 ? row with { Account = context.ToString("N") } : row));
             foreach (var card in scoped.Cards) result.CardContexts[card] = context;
-            foreach (var pair in scoped.ByCard) result.ByCard[pair.Key] = pair.Value.Select(row => row.Kind == "peer" &&
-                (!Guid.TryParse(row.Account, out var account) || account == Guid.Empty)
+            foreach (var pair in scoped.ByCard) result.ByCard[pair.Key] = pair.Value.Select(row => EndpointEvidence(row) && Unowned(row)
                 ? row with { Account = context.ToString("N") } : row).ToList();
             foreach (var pair in scoped.Labels) result.Labels.TryAdd(pair.Key, pair.Value);
             result.Limited |= scoped.Limited;
@@ -56,7 +54,7 @@ public sealed class AuthorizedObservation
         var owned = context.HasValue ? OwnedEndpoints(cards) : [];
         var rows = source.Where(row => Guid.TryParse(row.Account, out var account) && account != Guid.Empty
             ? permissions.CanRead(account) && (!context.HasValue || account == context)
-            : row.Kind == "peer" && owned.Contains(row.Key)).ToArray();
+            : OwnershipKeys(row).Any(owned.Contains)).ToArray();
         if (context is { } selected) return Create(cards, rows, selected);
         var result = new AuthorizedObservation { Rows = rows };
         foreach (var group in rows.GroupBy(row => Guid.Parse(row.Account!)))
@@ -71,6 +69,19 @@ public sealed class AuthorizedObservation
     private static readonly System.Text.RegularExpressions.Regex ExtensionPattern = new(@"^\^((?:SIP|PJSIP|IAX2)/[A-Za-z0-9_.-]+)\$?$",
         System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(10));
     /// <summary>Exact endpoint identities of the context's own extension cards; wildcards and display patterns never qualify.</summary>
+    /// <summary>
+    /// Catalogue identities that prove ownership of an unowned row (no AccountCode): the peer key itself, the
+    /// extension presence by GUID (PJSIP/&lt;guid&gt; alias added by EndPoints), or the PBX Do not disturb by title.
+    /// </summary>
+    public static IEnumerable<string> OwnershipKeys(ObservedResource row) => row.Kind switch
+    {
+        "peer" => [row.Key],
+        ExtensionPresenceState.Kind => ["PJSIP/" + row.Key],
+        ConfirmedDoNotDisturb.Kind => ["SIP/" + row.Key, "PJSIP/" + row.Key],
+        _ => []
+    };
+    private static bool Unowned(ObservedResource row) => !Guid.TryParse(row.Account, out var account) || account == Guid.Empty;
+    private static bool EndpointEvidence(ObservedResource row) => row.Kind is "peer" or ExtensionPresenceState.Kind or ConfirmedDoNotDisturb.Kind;
     public static HashSet<string> OwnedEndpoints(IEnumerable<EventsPanelCardInfo> cards) => cards
         .Where(card => card.Kind == EventsPanelCardKind.PEER)
         .SelectMany(card => card.Channels)
