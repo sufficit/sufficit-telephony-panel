@@ -128,6 +128,26 @@ public sealed class AuthorizedObservation
             result.ByCard[card].Add(row);
             result.Labels[row.Id] = card.Label;
         }
+        // Endpoint evidence without a channel key: extension presence (by GUID) and PBX Do not disturb (by title).
+        // Attach to the cards already built for that endpoint. Without one, presence gets the Chrome extension's
+        // WebRTC card (PJSIP/wss-<guid>, the only presence writer today), so a remembered card shows it too.
+        foreach (var row in result.Rows.Where(r => r.Kind is ExtensionPresenceState.Kind or ConfirmedDoNotDisturb.Kind))
+        {
+            var keys = OwnershipKeys(row).ToArray();
+            var targets = keys.Select(k => cards.GetValueOrDefault("peer|" + k)).OfType<EventsPanelCardInfo>().ToList();
+            if (targets.Count == 0 && row.Kind == ExtensionPresenceState.Kind)
+            {
+                var key = "PJSIP/wss-" + row.Key;
+                var created = new EventsPanelCardInfo { Label = key, Kind = EventsPanelCardKind.PEER, Channels = [key] };
+                cards["peer|" + key] = created; result.ByCard[created] = [];
+                targets.Add(created);
+            }
+            foreach (var target in targets)
+            {
+                result.ByCard[target].Add(row);
+                result.Labels.TryAdd(row.Id, target.Label);
+            }
+        }
         result.Cards = cards.Values.ToArray();
         return result;
     }

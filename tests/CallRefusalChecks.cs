@@ -133,5 +133,22 @@ internal static class CallRefusalChecks
         var foreign = new LiveProjection();
         foreign.Apply("google", "PresenceStateChangeEvent", JsonSerializer.SerializeToElement(new { presentity = "CustomPresence:6001", status = "dnd" }), now);
         check(foreign.Snapshot(now).Length == 0, "Only GUID-keyed presence is projected");
+
+        // Manager view: presence (key = GUID) reaches the endpoint's card, never a standalone GUID card.
+        {
+            const string g = "71a36cbccb2511e8af50001c42ead1e6";
+            var mgrPresence = new ObservedResource("google|presence|" + g, "google", ExtensionPresenceState.Kind, g, "dnd", null, null, null, now, now, new Dictionary<string, string>());
+            var wssPeer = new ObservedResource("google|peer|PJSIP/wss-" + g, "google", "peer", "PJSIP/wss-" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
+            var withPeer = AuthorizedObservation.ForManager([mgrPresence, wssPeer]);
+            var tiles = OperatorTile.Create(withPeer.Cards, withPeer.ByCard);
+            check(tiles.Length == 1 && tiles[0].DndLevel == "confirmed", "Manager view attaches presence to the existing PJSIP/wss-<guid> card");
+            var alone = AuthorizedObservation.ForManager([mgrPresence]);
+            var aloneTiles = OperatorTile.Create(alone.Cards, alone.ByCard);
+            check(aloneTiles.Length == 1 && aloneTiles[0].Keys.SequenceEqual(new[] { "PJSIP/wss-" + g }) && aloneTiles[0].DndLevel == "confirmed",
+                "Without a card, presence gets the Chrome extension's PJSIP/wss-<guid> card");
+            var desk = new ObservedResource("google|peer|PJSIP/" + g, "google", "peer", "PJSIP/" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
+            var withDesk = AuthorizedObservation.ForManager([mgrPresence, desk]);
+            check(OperatorTile.Create(withDesk.Cards, withDesk.ByCard).Single().DndLevel == "confirmed", "A PJSIP/<guid> card takes the presence without creating a WebRTC card");
+        }
     }
 }
