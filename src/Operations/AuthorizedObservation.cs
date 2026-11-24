@@ -76,7 +76,7 @@ public sealed class AuthorizedObservation
     public static IEnumerable<string> OwnershipKeys(ObservedResource row) => row.Kind switch
     {
         "peer" => [row.Key],
-        ExtensionPresenceState.Kind => ["PJSIP/" + row.Key],
+        ExtensionPresenceState.Kind => ["PJSIP/" + row.Key, "PJSIP/wss-" + row.Key],
         ConfirmedDoNotDisturb.Kind => ["SIP/" + row.Key, "PJSIP/" + row.Key],
         _ => []
     };
