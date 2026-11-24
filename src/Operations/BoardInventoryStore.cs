@@ -76,9 +76,16 @@ public sealed class BoardInventoryStore(string path)
             if (!retain) return current;
             var ids = current.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
             var permitted = authorizedCards.Select(c => (c.Kind, Keys: string.Join(";", c.Channels))).ToHashSet();
+            // Extension tiles were one per voice node until 2026-11-24 and are one per device now (id "...|device:<x>").
+            // A remembered extension entry of the older form is hidden while the same card is live, and the older
+            // per-node entries of one card collapse into the latest, so the change never doubles a card.
+            var live = current.Where(t => t.Rows.Length > 0).Select(t => (t.Kind, Keys: string.Join(";", t.Keys))).ToHashSet();
             var remembered = known.Values.Where(r => r.Scope == scope && !ids.Contains(r.Id)
                 && (!context.HasValue || permitted.Contains((r.Kind, string.Join(";", r.Keys)))))
-                .Select(r => r.Tile()).ToArray();
+                .Select(r => r.Tile())
+                .Where(t => t.Kind != EventsPanelCardKind.PEER || t.Device is not null || !live.Contains((t.Kind, string.Join(";", t.Keys))))
+                .GroupBy(t => t.Kind == EventsPanelCardKind.PEER && t.Device is null ? "legacy|" + t.Kind + "|" + string.Join(";", t.Keys) : "id|" + t.Id)
+                .Select(g => g.OrderByDescending(t => t.LastSeen).First()).ToArray();
             // Avoid a duplicate unobserved placeholder when a real node is already known.
             var withNodes = remembered.Concat(current.Where(t => t.Rows.Length > 0))
                 .Select(t => (t.Kind, Keys: string.Join(";", t.Keys))).ToHashSet();

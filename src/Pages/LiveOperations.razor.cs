@@ -195,7 +195,7 @@ public partial class LiveOperations
             if (!ReferenceEquals(source, queueGroupingSource) || Node != queueGroupingNode)
             {
                 queueGroupingSource = source; queueGroupingNode = Node;
-                groupedQueueTiles = TrunkCardGrouping.Merge(QueueCardGrouping.Merge(source.Where(t => Node == "all" || t.Node == Node)));
+                groupedQueueTiles = TrunkCardGrouping.Merge(QueueCardGrouping.Merge(source.Where(t => Node == "all" || t.SeenOn(Node))));
             }
             return groupedQueueTiles;
         }

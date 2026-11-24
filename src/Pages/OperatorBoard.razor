@@ -121,14 +121,14 @@
     }
     private string RefusalTitle(OperatorTile tile, ObservedResource refusal) => Text.Format(
         "{0} · {1} · Do not disturb likely: refused {2} calls while free, last at {3}. Check \"Do not disturb\" on the phone or app. Open details.",
-        tile.Title, tile.Node, refusal.Details.GetValueOrDefault("count") ?? "1", refusal.Updated.ToLocalTime().ToString("HH:mm:ss"));
+        tile.Title, tile.Where, refusal.Details.GetValueOrDefault("count") ?? "1", refusal.Updated.ToLocalTime().ToString("HH:mm:ss"));
     private RenderFragment TileButton(OperatorTile tile) => @<div @key="tile.Id" class="board-card" @oncontextmenu="e => OpenMenu(tile, e)" @oncontextmenu:preventDefault="true" @onkeydown="e => MenuKey(tile, e)">
     <button type="button"
         class="board-tile tone-@tile.Status.Tone @(tile.DndLevel is not null ? "is-refusing dnd-" + tile.DndLevel : "") @(tile.Kind == EventsPanelCardKind.PEER ? "call-motion" : "") @(Selected == tile.Id ? "is-selected" : "")"
         aria-pressed="@(Selected == tile.Id)" @onclick="() => Select.InvokeAsync(tile)"
-        title="@(tile.Kind == EventsPanelCardKind.QUEUE ? Text.Format("{0}. Open details.", tile.Title) : tile.DndLevel == "confirmed" ? Text.Format("{0} · {1} · Do not disturb on in the PBX. Open details.", tile.Title, tile.Node) : tile.RefusingCalls is { } refusal ? RefusalTitle(tile, refusal) : Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Node, Text.Observed(tile.Status.Label)))">
+        title="@(tile.Kind == EventsPanelCardKind.QUEUE ? Text.Format("{0}. Open details.", tile.Title) : tile.DndLevel == "confirmed" ? Text.Format("{0} · {1} · Do not disturb on in the PBX. Open details.", tile.Title, tile.Where) : tile.RefusingCalls is { } refusal ? RefusalTitle(tile, refusal) : Text.Format("{0} · {1} · {2}. Open details.", tile.Title, tile.Where, Text.Observed(tile.Status.Label)))">
         <span class="tile-title"><span class="tile-dot" aria-hidden="true"></span><strong>@tile.Title</strong>@if (tile.DndLevel is { } dnd) { <span class="tile-tag @(dnd == "likely" ? "is-likely" : "")" aria-hidden="true">@(dnd == "likely" ? "DND?" : "DND")</span> }</span>
-        <span class="tile-status">@FlowStatus(tile)</span>@if (tile.Kind == EventsPanelCardKind.PEER) { <span class="tile-node">@tile.Node</span> }
+        <span class="tile-status">@FlowStatus(tile)</span>@if (tile.Kind == EventsPanelCardKind.PEER) { <span class="tile-node" title="@string.Join(", ", tile.Nodes)">@tile.Where</span> }
         @if (tile.FailedDial is { } failed)
         {
             <span class="tile-failure @(failed.State == "attempt-ended" ? "is-ended" : "")">@(failed.State == "attempt-ended" ? Text["Attempt ended"] : Text.Format("Call failed: {0}", Text[RecentDialFailure.Label(failed.State)!]))</span>

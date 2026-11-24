@@ -45,7 +45,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     /// <summary>Do not disturb confirmed by the PBX device state (Custom:DND), not inferred from refusals.</summary>
     public ObservedResource? ConfirmedDnd => Kind == EventsPanelCardKind.PEER
         ? Rows.Where(r => r.Kind == ConfirmedDoNotDisturb.Kind).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
-    /// <summary>Native presence of the extension (keyed by its GUID): dnd, away, xa, unavailable, available, chat.</summary>
+    /// <summary>Native presence of this device (unified extensions: the same on every device): dnd, away, xa, unavailable, available, chat.</summary>
     public ObservedResource? Presence => Kind == EventsPanelCardKind.PEER
         ? Rows.Where(r => r.Kind == ExtensionPresenceState.Kind).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
     /// <summary>"confirmed", "likely" or null: drives the DND tag and red border.</summary>
@@ -113,23 +113,58 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         if (peer?.Registration == "registered") return ("online", "Registrado no evento");
         return ("unknown", "Sem informação de alcance");
     }
-    /// <summary>Presence and PBX DND belong to the extension, not to a voice node (they are written on every node).</summary>
-    private static bool EndpointWide(ObservedResource row) => row.Kind is ExtensionPresenceState.Kind or ConfirmedDoNotDisturb.Kind;
+    /// <summary>pjsip, webrtc, sip or iax2 for extension tiles grouped by device; null for trunks, queues and older ids.</summary>
+    public string? Device => Id.Split('|').FirstOrDefault(p => p.StartsWith(DevicePrefix, StringComparison.Ordinal))?[DevicePrefix.Length..];
+    /// <summary>Voice nodes where this device was observed (the tile node is the most relevant of them).</summary>
+    public string[] Nodes { get; init; } = [];
+    public bool SeenOn(string node) => Node == node || Nodes.Contains(node);
+    /// <summary>Short device and node line for extension tiles: "WebRTC · eveo-voip" (+N when seen on more nodes).</summary>
+    public string Where => (Device switch { ExtensionPresenceState.WebRtc => "WebRTC · ", ExtensionPresenceState.Pjsip => "PJSIP · ",
+        ExtensionPresenceState.Sip => "SIP · ", "iax2" => "IAX2 · ", _ => "" }) + Node + (Nodes.Length > 1 ? $" +{Nodes.Length - 1}" : "");
+    private const string DevicePrefix = "device:";
+
+    /// <summary>Device of an extension row: presence by its key, everything else by its endpoint key or channel.</summary>
+    private static string? DeviceOf(ObservedResource row) => row.Kind switch
+    {
+        ExtensionPresenceState.Kind => ExtensionPresenceState.Device(row.Key),
+        ConfirmedDoNotDisturb.Kind => null,
+        _ => ExtensionPresenceState.DeviceOfEndpoint(row.Key)
+    };
 
     /// <summary>
-    /// One tile per voice node with evidence. Extension-wide rows (presence, PBX DND) never create a node tile of
-    /// their own: they join every node tile of the extension, deduplicated to the latest row per kind; when they
-    /// are the only evidence, they form a single tile on the node that reported them last.
+    /// Extension tiles: one per device type (PJSIP phone, WebRTC, chan_sip), never one per voice node; in PJSIP every
+    /// device is individual, and the same device may appear on several nodes. Presence rows are per device: they join
+    /// their device's tile and never create one of their own, unless presence is the only evidence (then a single tile,
+    /// WebRTC first). Rows of no device (PBX DND, call results without an endpoint key) join every tile. Latest row per
+    /// presence key only (every node holds the same state). Trunks, queues and the customer inbound entry keep node tiles.
     /// </summary>
-    private static IEnumerable<(string Node, ObservedResource[] Rows)> NodeGroups(EventsPanelCardInfo card, List<ObservedResource> rows)
+    private static IEnumerable<(string Node, string? Device, string[] Nodes, ObservedResource[] Rows)> Groups(EventsPanelCardInfo card, List<ObservedResource> rows)
     {
         if (InboundCatalogueEntry.State(card.Channels) is not null)
-            return [(rows.Select(r => r.Node).Distinct().Count() == 1 ? rows[0].Node : "", rows.ToArray())];
-        var wide = rows.Where(EndpointWide).GroupBy(r => r.Kind).Select(g => g.OrderByDescending(r => r.Updated).First()).ToArray();
-        var local = rows.Where(r => !EndpointWide(r)).ToArray();
+            return [(rows.Select(r => r.Node).Distinct().Count() == 1 ? rows[0].Node : "", null, [], rows.ToArray())];
+        if (card.Kind != EventsPanelCardKind.PEER)
+            return rows.GroupBy(r => r.Node).Select(g => (g.Key, (string?)null, new[] { g.Key }, g.ToArray()));
+        var presence = rows.Where(r => r.Kind == ExtensionPresenceState.Kind).GroupBy(r => r.Key)
+            .Select(g => g.OrderByDescending(r => r.Updated).First()).ToArray();
+        var wide = rows.Where(r => r.Kind != ExtensionPresenceState.Kind && DeviceOf(r) is null)
+            .GroupBy(r => (r.Kind, r.Key)).Select(g => g.OrderByDescending(r => r.Updated).First()).ToArray();
+        var local = rows.Where(r => r.Kind != ExtensionPresenceState.Kind && DeviceOf(r) is not null).ToArray();
         if (local.Length == 0)
-            return wide.Length == 0 ? [] : [(wide.OrderByDescending(r => r.Updated).First().Node, wide)];
-        return local.GroupBy(r => r.Node).Select(g => (g.Key, g.Concat(wide).ToArray()));
+        {
+            if (presence.Length == 0 && wide.Length == 0) return [];
+            var only = presence.OrderBy(r => DeviceOf(r) == ExtensionPresenceState.WebRtc ? 0 : 1).ThenByDescending(r => r.Updated).FirstOrDefault();
+            var all = (only is null ? wide : wide.Append(only)).ToArray();
+            var at = all.OrderByDescending(r => r.Updated).First().Node;
+            return [(at, only is null ? null : DeviceOf(only), new[] { at }, all)];
+        }
+        return local.GroupBy(r => DeviceOf(r)!).Select(g =>
+        {
+            // The tile node is where the device is now: an active call first, then its latest registration evidence.
+            var node = (g.Where(r => r.Kind == "call").OrderByDescending(r => r.Updated).FirstOrDefault()
+                ?? g.OrderByDescending(r => r.Updated).First()).Node;
+            var nodes = g.Select(r => r.Node).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+            return (node, (string?)g.Key, nodes, g.Concat(presence.Where(r => DeviceOf(r) == g.Key)).Concat(wide).ToArray());
+        });
     }
 
     public static OperatorTile[] Create(IEnumerable<EventsPanelCardInfo> cards,
@@ -137,10 +172,10 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         IReadOnlyDictionary<EventsPanelCardInfo, Guid>? cardContexts = null) => cards
         .Where(c => c.Kind is EventsPanelCardKind.PEER or EventsPanelCardKind.TRUNK or EventsPanelCardKind.QUEUE)
         .SelectMany(c => (byCard.TryGetValue(c, out var rows) && rows.Count > 0
-            ? NodeGroups(c, rows)
-            : [(Node: InboundCatalogueEntry.State(c.Channels) is not null ? "Entrada do cliente" : "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
-            .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node
+            ? Groups(c, rows)
+            : [(Node: InboundCatalogueEntry.State(c.Channels) is not null ? "Entrada do cliente" : "Sem nó observado", Device: (string?)null, Nodes: Array.Empty<string>(), Rows: Array.Empty<ObservedResource>())])
+            .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + (g.Device is { } device ? DevicePrefix + device : g.Node)
                 + (isolateContexts ? "|" + (cardContexts is not null && cardContexts.TryGetValue(c, out var context) ? context.ToString("N") : g.Rows.FirstOrDefault()?.Account) : ""),
-                c.Label, g.Node, c.Kind, g.Rows) { Keys = c.Channels.ToArray() }))
-        .OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Node, StringComparer.Ordinal).ToArray();
+                c.Label, g.Node, c.Kind, g.Rows) { Keys = c.Channels.ToArray(), Nodes = g.Nodes }))
+        .OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Device, StringComparer.Ordinal).ThenBy(t => t.Node, StringComparer.Ordinal).ToArray();
 }

@@ -52,7 +52,12 @@ internal static class OperatorBoardChecks
         var card = new EventsPanelCardInfo { Label = "6007", Kind = EventsPanelCardKind.PEER, Channels = ["PJSIP/6007"] };
         var byCard = new Dictionary<EventsPanelCardInfo, List<ObservedResource>> { [card] = [peer, peer with { Node = "google", Id = "other" }] };
         var tiles = OperatorTile.Create([card], byCard);
-        check(tiles.Length == 2 && tiles.All(t => t.Rows.Length == 1), "Tile status isolated per server");
+        check(tiles.Length == 1 && tiles[0].Rows.Length == 2 && tiles[0].Nodes.Length == 2 && tiles[0].Device == "pjsip",
+            "One tile per device type: the same device seen on two servers is one tile, servers are detail");
+        var webrtcPeer = peer with { Id = "webrtc", Key = "PJSIP/wss-6007" };
+        var withWebRtc = OperatorTile.Create([card], new Dictionary<EventsPanelCardInfo, List<ObservedResource>> { [card] = [peer, webrtcPeer] });
+        check(withWebRtc.Length == 2 && withWebRtc.Select(t => t.Device).Order().SequenceEqual(["pjsip", "webrtc"]) && withWebRtc.All(t => t.Rows.Length == 1),
+            "Each PJSIP device type of an extension keeps its own tile");
         check(tiles.All(t => t.Kind == EventsPanelCardKind.PEER), "No trunk classification inferred from channel name");
         check(OperatorTile.Create([card], new Dictionary<EventsPanelCardInfo, List<ObservedResource>>()).Single().Rows.Length == 0, "Configured resource without events remains visible and unknown");
     }

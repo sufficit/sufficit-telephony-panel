@@ -211,7 +211,7 @@ else
             }
             @if (SelectedTile is { } tile)
             {
-                <BoardResourceDialog Title="@(tile.Kind != EventsPanelCardKind.PEER ? tile.Title : $"{tile.Title} · {tile.Node}")" Closed="CloseTile">
+                <BoardResourceDialog Title="@(tile.Kind != EventsPanelCardKind.PEER ? tile.Title : $"{tile.Title} · {tile.Where}")" Closed="CloseTile">
                     @ResourceDetails(tile)
                     @ActionConfirmation
                     @ActionResult

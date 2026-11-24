@@ -58,9 +58,11 @@ internal static class CustomerAccessChecks
         check(presenceView.ByCard.TryGetValue(aliased, out var aliasedRows) && aliasedRows.Count == 2, "Presence and PBX DND reach the extension card in the customer view");
         var webrtcOnly = new Sufficit.Telephony.Panel.EventsPanelCardInfo { Label = "WebRTC", Kind = Sufficit.Telephony.Panel.EventsPanelCardKind.PEER,
             Channels = ["^PJSIP/wss-" + presenceGuid] };
-        var webrtcView = AuthorizedObservation.ForCustomer([webrtcOnly], [presenceRow], single, a);
-        check(webrtcView.ByCard.TryGetValue(webrtcOnly, out var webrtcRows) && webrtcRows.Count == 1,
-            "Presence reaches a card that only carries the Chrome extension's PJSIP/wss-<guid> registration");
+        // Presence is per device: the WebRTC key reaches the WebRTC card, the PJSIP phone key does not.
+        var webrtcPresence = presenceRow with { Id = "google|presence|wss-" + presenceGuid, Key = "wss-" + presenceGuid };
+        var webrtcView = AuthorizedObservation.ForCustomer([webrtcOnly], [presenceRow, webrtcPresence], single, a);
+        check(webrtcView.ByCard.TryGetValue(webrtcOnly, out var webrtcRows) && webrtcRows.Count == 1 && webrtcRows[0].Key == webrtcPresence.Key,
+            "WebRTC presence (wss-<guid>) reaches the card of the Chrome extension's PJSIP/wss-<guid> registration, the phone key does not");
         var portfolio = AuthorizedObservation.ForPortfolio(new Dictionary<Guid, Sufficit.Telephony.Panel.EventsPanelCardInfo[]> { [a] = [aliased] }, [presenceRow], multi);
         check(portfolio.Rows.Any(r => r.Kind == ExtensionPresenceState.Kind && r.Account == a.ToString("N")), "Portfolio view attributes presence to the owning company");
         foreach (var unsafeCard in new[] { "PJSIP/6007", "^PJSIP/60.*", "^PJSIP/6007|^PJSIP/6008", "^Local/6007", "^PJSIP/" })

@@ -71,12 +71,13 @@ public sealed class AuthorizedObservation
     /// <summary>Exact endpoint identities of the context's own extension cards; wildcards and display patterns never qualify.</summary>
     /// <summary>
     /// Catalogue identities that prove ownership of an unowned row (no AccountCode): the peer key itself, the
-    /// extension presence by GUID (PJSIP/&lt;guid&gt; alias added by EndPoints), or the PBX Do not disturb by title.
+    /// extension device presence (PJSIP/&lt;guid&gt;, PJSIP/wss-&lt;guid&gt; aliases added by EndPoints, SIP/&lt;title&gt;),
+    /// or the PBX Do not disturb by title.
     /// </summary>
     public static IEnumerable<string> OwnershipKeys(ObservedResource row) => row.Kind switch
     {
         "peer" => [row.Key],
-        ExtensionPresenceState.Kind => ["PJSIP/" + row.Key, "PJSIP/wss-" + row.Key],
+        ExtensionPresenceState.Kind => ExtensionPresenceState.Channel(row.Key) is { } channel ? [channel] : [],
         ConfirmedDoNotDisturb.Kind => ["SIP/" + row.Key, "PJSIP/" + row.Key],
         _ => []
     };
@@ -128,16 +129,17 @@ public sealed class AuthorizedObservation
             result.ByCard[card].Add(row);
             result.Labels[row.Id] = card.Label;
         }
-        // Endpoint evidence without a channel key: extension presence (by GUID) and PBX Do not disturb (by title).
-        // Attach to the cards already built for that endpoint. Without one, presence gets the Chrome extension's
-        // WebRTC card (PJSIP/wss-<guid>, the only presence writer today), so a remembered card shows it too.
+        // Endpoint evidence without a channel key: device presence and PBX Do not disturb (by title). Attach to the
+        // card already built for that device. Without one, only WebRTC presence creates its card (PJSIP/wss-<guid>):
+        // unified extensions hold the same state on every device key, and a phone or chan_sip key with no evidence
+        // of that device would otherwise invent cards for devices the extension does not use.
         foreach (var row in result.Rows.Where(r => r.Kind is ExtensionPresenceState.Kind or ConfirmedDoNotDisturb.Kind))
         {
             var keys = OwnershipKeys(row).ToArray();
             var targets = keys.Select(k => cards.GetValueOrDefault("peer|" + k)).OfType<EventsPanelCardInfo>().ToList();
-            if (targets.Count == 0 && row.Kind == ExtensionPresenceState.Kind)
+            if (targets.Count == 0 && row.Kind == ExtensionPresenceState.Kind && ExtensionPresenceState.Device(row.Key) == ExtensionPresenceState.WebRtc)
             {
-                var key = "PJSIP/wss-" + row.Key;
+                var key = "PJSIP/" + row.Key;
                 var created = new EventsPanelCardInfo { Label = key, Kind = EventsPanelCardKind.PEER, Channels = [key] };
                 cards["peer|" + key] = created; result.ByCard[created] = [];
                 targets.Add(created);

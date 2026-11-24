@@ -131,38 +131,41 @@ internal static class CallRefusalChecks
         presence.Apply("google", "PresenceStateChangeEvent", Presence("not_set"), now.AddSeconds(2));
         check(presence.Snapshot(now.AddSeconds(2)).Length == 0, "not_set removes the presence");
         var foreign = new LiveProjection();
+        foreign.Apply("google", "PresenceStateChangeEvent", JsonSerializer.SerializeToElement(new { presentity = "CustomPresence:lunch-room", status = "dnd" }), now);
+        check(foreign.Snapshot(now).Length == 0, "Only device keys (GUID, wss-GUID, numeric title) are projected");
         foreign.Apply("google", "PresenceStateChangeEvent", JsonSerializer.SerializeToElement(new { presentity = "CustomPresence:6001", status = "dnd" }), now);
-        check(foreign.Snapshot(now).Length == 0, "Only GUID-keyed presence is projected");
+        check(foreign.Snapshot(now).Single().Key == "6001" && ExtensionPresenceState.Channel("6001") == "SIP/6001", "A numeric title is the chan_sip device key");
 
-        // Manager view: presence (key = GUID) reaches the endpoint's card, never a standalone GUID card.
+        // Manager view: presence is per device. The WebRTC key reaches PJSIP/wss-<guid>, the phone key PJSIP/<guid>.
         {
             const string g = "71a36cbccb2511e8af50001c42ead1e6";
-            var mgrPresence = new ObservedResource("google|presence|" + g, "google", ExtensionPresenceState.Kind, g, "dnd", null, null, null, now, now, new Dictionary<string, string>());
+            ObservedResource Pr(string key, string node = "google", int age = 0) => new(node + "|presence|" + key, node, ExtensionPresenceState.Kind, key, "dnd", null, null, null,
+                now.AddSeconds(-age), now.AddSeconds(-age), new Dictionary<string, string>());
             var wssPeer = new ObservedResource("google|peer|PJSIP/wss-" + g, "google", "peer", "PJSIP/wss-" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
-            var withPeer = AuthorizedObservation.ForManager([mgrPresence, wssPeer]);
+            var desk = new ObservedResource("google|peer|PJSIP/" + g, "google", "peer", "PJSIP/" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
+            var withPeer = AuthorizedObservation.ForManager([Pr("wss-" + g), wssPeer]);
             var tiles = OperatorTile.Create(withPeer.Cards, withPeer.ByCard);
-            check(tiles.Length == 1 && tiles[0].DndLevel == "confirmed", "Manager view attaches presence to the existing PJSIP/wss-<guid> card");
-            var alone = AuthorizedObservation.ForManager([mgrPresence]);
+            check(tiles.Length == 1 && tiles[0].DndLevel == "confirmed", "Manager view attaches WebRTC presence to the existing PJSIP/wss-<guid> card");
+            var phoneOnly = AuthorizedObservation.ForManager([Pr(g), wssPeer]);
+            check(OperatorTile.Create(phoneOnly.Cards, phoneOnly.ByCard).Single().DndLevel is null, "Phone presence never marks the WebRTC device");
+            var alone = AuthorizedObservation.ForManager([Pr("wss-" + g)]);
             var aloneTiles = OperatorTile.Create(alone.Cards, alone.ByCard);
             check(aloneTiles.Length == 1 && aloneTiles[0].Keys.SequenceEqual(new[] { "PJSIP/wss-" + g }) && aloneTiles[0].DndLevel == "confirmed",
-                "Without a card, presence gets the Chrome extension's PJSIP/wss-<guid> card");
-            var desk = new ObservedResource("google|peer|PJSIP/" + g, "google", "peer", "PJSIP/" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
-            var withDesk = AuthorizedObservation.ForManager([mgrPresence, desk]);
-            check(OperatorTile.Create(withDesk.Cards, withDesk.ByCard).Single().DndLevel == "confirmed", "A PJSIP/<guid> card takes the presence without creating a WebRTC card");
-        }
-
-        // Presence is written on every node: it must not split the extension into one tile per node.
-        {
-            const string g = "71a36cbccb2511e8af50001c42ead1e6";
-            ObservedResource P(string node, int age) => new(node + "|presence|" + g, node, ExtensionPresenceState.Kind, g, "dnd", null, null, null, now.AddSeconds(-age), now.AddSeconds(-age), new Dictionary<string, string>());
-            var onlyPresence = AuthorizedObservation.ForManager([P("google", 5), P("apoint", 1)]);
+                "Without a card, WebRTC presence gets the Chrome extension's PJSIP/wss-<guid> card");
+            check(AuthorizedObservation.ForManager([Pr(g), Pr("6001")]).Cards.Length == 0, "Phone and chan_sip presence never invent a card");
+            // Unified: the same state on every device key; each device tile shows it once, no extra tiles.
+            var unified = AuthorizedObservation.ForManager([Pr(g), Pr("wss-" + g), Pr("6001"), desk, wssPeer]);
+            var unifiedTiles = OperatorTile.Create(unified.Cards, unified.ByCard);
+            check(unifiedTiles.Length == 2 && unifiedTiles.All(t => t.DndLevel == "confirmed" && t.Rows.Count(r => r.Kind == ExtensionPresenceState.Kind) == 1),
+                "Unified presence marks every device tile once");
+            // Presence is written on every node: it must not split a device into one tile per node.
+            var onlyPresence = AuthorizedObservation.ForManager([Pr("wss-" + g, "google", 5), Pr("wss-" + g, "apoint", 1)]);
             var single = OperatorTile.Create(onlyPresence.Cards, onlyPresence.ByCard);
             check(single.Length == 1 && single[0].Node == "apoint" && single[0].DndLevel == "confirmed", "Presence from two nodes is one tile, on the node that reported it last");
-            var reg = new ObservedResource("google|peer|PJSIP/wss-" + g, "google", "peer", "PJSIP/wss-" + g, "Registered", null, null, null, now, now, new Dictionary<string, string>());
-            var withReg = AuthorizedObservation.ForManager([P("google", 5), P("apoint", 1), reg]);
+            var withReg = AuthorizedObservation.ForManager([Pr("wss-" + g, "google", 5), Pr("wss-" + g, "apoint", 1), wssPeer]);
             var regTiles = OperatorTile.Create(withReg.Cards, withReg.ByCard);
             check(regTiles.Length == 1 && regTiles[0].Node == "google" && regTiles[0].DndLevel == "confirmed"
-                && regTiles[0].Rows.Count(r => r.Kind == ExtensionPresenceState.Kind) == 1, "Presence joins the node where the extension is registered, once");
+                && regTiles[0].Rows.Count(r => r.Kind == ExtensionPresenceState.Kind) == 1, "Presence joins the device tile where it is registered, once");
         }
     }
 }
