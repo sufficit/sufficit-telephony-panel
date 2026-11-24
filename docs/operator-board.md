@@ -341,7 +341,7 @@ recusaram cerca de 68 mil ofertas num dia por esse motivo.
 #### Não perturbe confirmado × provável
 
 - **DND** (tag vermelha cheia, "Não perturbe ativo"): confirmado pelo PABX, pelo
-  estado de dispositivo `Custom:DND<ramal>` que os códigos `*76/*78` do FreePBX
+  estado de dispositivo legado `Custom:DND<ramal>` que os códigos `*76/*78` do FreePBX (em aposentadoria)
   mantêm (`BUSY`/`INUSE` = ligado; `NOT_INUSE` desliga). Fica até o PABX informar
   que desligou. O PABX só envia o evento quando o estado muda: um DND ligado
   antes da conexão do coletor só aparece na próxima mudança.
@@ -355,7 +355,7 @@ sem mudança no painel. Ramais `chan_sip` não expõem esse cabeçalho.
 #### Presença do ramal
 
 A presença nativa do Asterisk (`CustomPresence:<GUID do ramal>`, gravada pela API
-de presença da EndPoints e pelos códigos de discagem) aparece no card que tem a
+de presença da EndPoints, sem códigos de discagem) aparece no card que tem a
 chave `PJSIP/<GUID>`, nunca pelo número. Sem chamada ativa, a linha de status mostra:
 
 | Presença | Card |
