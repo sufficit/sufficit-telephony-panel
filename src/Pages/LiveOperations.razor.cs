@@ -563,6 +563,12 @@ public partial class LiveOperations
                         : new Dictionary<string, string> { ["cause"] = failureState == "immediate" ? "16" : failureState == "no-route" ? "3" : "28" })).ToArray();
             }
         }
+        if (demoQuery.TryGetValue("presencepreview", out var presenceValue) && presenceValue.ToString() is { } presenceState)
+            Rows = Rows.Where(row => row.Id != "demo-call" && !(row.Kind == "call" && RecentDialFailure.Endpoint(row.Key) == "PJSIP/6007")).Append(
+                new ObservedResource("demo-presence", "eveo-voip", ExtensionPresenceState.Kind, "6007", presenceState == "busy" ? "away" : presenceState, null, null, null,
+                    now.AddMinutes(-5), now.AddMinutes(-5), presenceState is "away" or "busy"
+                        ? new Dictionary<string, string> { ["message"] = "Almoço, volto 14h", ["subtype"] = presenceState == "busy" ? "busy" : "" }
+                        : new Dictionary<string, string>())).ToArray();
         if (demoQuery.TryGetValue("refusalpreview", out var refusalLevel) && refusalLevel == "confirmed")
             Rows = Rows.Append(new ObservedResource("demo-dnd", "eveo-voip", ConfirmedDoNotDisturb.Kind, "6007", "on", null, null, null,
                 now.AddMinutes(-30), now.AddMinutes(-30), new Dictionary<string, string> { ["source"] = "devstate" })).ToArray();

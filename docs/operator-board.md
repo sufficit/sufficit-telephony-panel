@@ -352,6 +352,24 @@ Outras fontes de confirmação, como o `Reason: ... Do Not Disturb` da resposta
 486 em ramais PJSIP, devem marcar o mesmo estado `Custom:DND<ramal>` no dialplan,
 sem mudança no painel. Ramais `chan_sip` não expõem esse cabeçalho.
 
+#### Presença do ramal
+
+A presença nativa do Asterisk (`CustomPresence:<GUID do ramal>`, gravada pela API
+de presença da EndPoints e pelos códigos de discagem) aparece no card que tem a
+chave `PJSIP/<GUID>`, nunca pelo número. Sem chamada ativa, a linha de status mostra:
+
+| Presença | Card |
+|---|---|
+| `dnd` | **DND** cheio, "Não perturbe ativo" |
+| `away` subtipo `busy` | "Ocupado · nota" |
+| `away` | "Ausente · nota" |
+| `xa` | "Ausência prolongada · nota" |
+| `unavailable` | "Indisponível" |
+| `available`, `chat`, `not_set` | estado normal do card |
+
+A nota é o texto livre de até 140 caracteres. O fundo continua mostrando o estado
+do ramal. Preview: `?preview=true&presencepreview=dnd|busy|away|xa|unavailable`.
+
 ## Troncos por fornecedor e encerramento de canal
 
 O quadro reúne troncos com o mesmo nome/fornecedor, ignorando diferenças de

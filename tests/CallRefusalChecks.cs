@@ -109,5 +109,29 @@ internal static class CallRefusalChecks
         var plain = new LiveProjection();
         plain.Apply("google", "DeviceStateChangeEvent", Dnd("SIP/0006676031", "BUSY"), now);
         check(plain.Snapshot(now).All(r => r.Kind != ConfirmedDoNotDisturb.Kind), "Ordinary device busy is not Do not disturb");
+
+        // Native presence keyed by the extension GUID (CustomPresence:<guid>), attached to the PJSIP/<guid> card.
+        const string guid = "71a36cbccb2511e8af50001c42ead1e6";
+        JsonElement Presence(string status, string? subtype = null, string? message = null)
+            => JsonSerializer.SerializeToElement(new { presentity = "CustomPresence:" + guid, status, subtype, message });
+        var presence = new LiveProjection();
+        presence.Apply("google", "PresenceStateChangeEvent", Presence("away", "busy", "Almoço, volto 14h"), now);
+        var presenceRow = presence.Snapshot(now).Single();
+        check(presenceRow.Kind == ExtensionPresenceState.Kind && presenceRow.Key == guid && presenceRow.State == "away"
+            && presenceRow.Details["subtype"] == "busy" && presenceRow.Details["message"] == "Almoço, volto 14h", "Presence row keeps state, subtype and note by GUID");
+        var pjsipCard = new EventsPanelCardInfo { Label = "pj", Kind = EventsPanelCardKind.PEER, Channels = ["^PJSIP/" + guid] };
+        var numberCard = new EventsPanelCardInfo { Label = "num", Kind = EventsPanelCardKind.PEER, Channels = ["^SIP/0006676031"] };
+        var presenceView = AuthorizedObservation.Create([pjsipCard, numberCard], presence.Snapshot(now), tenant);
+        check(presenceView.ByCard.ContainsKey(pjsipCard) && !presenceView.ByCard.ContainsKey(numberCard), "Presence attaches only to the PJSIP/<guid> card, never by number");
+        var busyTile = OperatorTile.Create(presenceView.Cards, presenceView.ByCard).Single(t => t.Title == "pj");
+        check(busyTile.PresenceStatus is { Label: "Busy", Message: "Almoço, volto 14h" } && busyTile.DndLevel is null, "Away with subtype busy is Busy with its note, not DND");
+        presence.Apply("google", "PresenceStateChangeEvent", Presence("dnd"), now.AddSeconds(1));
+        var dndView = AuthorizedObservation.Create([pjsipCard], presence.Snapshot(now.AddSeconds(1)), tenant);
+        check(OperatorTile.Create(dndView.Cards, dndView.ByCard).Single().DndLevel == "confirmed", "Presence dnd is confirmed Do not disturb");
+        presence.Apply("google", "PresenceStateChangeEvent", Presence("not_set"), now.AddSeconds(2));
+        check(presence.Snapshot(now.AddSeconds(2)).Length == 0, "not_set removes the presence");
+        var foreign = new LiveProjection();
+        foreign.Apply("google", "PresenceStateChangeEvent", JsonSerializer.SerializeToElement(new { presentity = "CustomPresence:6001", status = "dnd" }), now);
+        check(foreign.Snapshot(now).Length == 0, "Only GUID-keyed presence is projected");
     }
 }

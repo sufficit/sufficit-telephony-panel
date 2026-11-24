@@ -13,7 +13,7 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     public bool HasObservedActivity => Kind == EventsPanelCardKind.QUEUE
         ? Queue is { } queue ? queue.State == "current" && int.TryParse(queue.Details.GetValueOrDefault("pending"), out var pending) && pending > 0
             : QueueCalls.Length > 0
-        : Channels.Length > 0 || FailedDial is not null || RefusingCalls is not null || ConfirmedDnd is not null;
+        : Channels.Length > 0 || FailedDial is not null || RefusingCalls is not null || ConfirmedDnd is not null || PresenceStatus is not null;
     public ObservedResource[] QueueCalls => Rows.Where(r => r.Kind == "waiting" && r.State is not ("answered" or "connected")).ToArray();
     public ObservedResource[] DetailChannels => Flows.SelectMany(f => f.Channels)
         .Concat(Kind == EventsPanelCardKind.QUEUE ? [] : Channels).DistinctBy(r => (r.Node, r.Id)).ToArray();
@@ -45,8 +45,21 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
     /// <summary>Do not disturb confirmed by the PBX device state (Custom:DND), not inferred from refusals.</summary>
     public ObservedResource? ConfirmedDnd => Kind == EventsPanelCardKind.PEER
         ? Rows.Where(r => r.Kind == ConfirmedDoNotDisturb.Kind).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
+    /// <summary>Native presence of the extension (keyed by its GUID): dnd, away, xa, unavailable, available, chat.</summary>
+    public ObservedResource? Presence => Kind == EventsPanelCardKind.PEER
+        ? Rows.Where(r => r.Kind == ExtensionPresenceState.Kind).OrderByDescending(r => r.Updated).FirstOrDefault() : null;
     /// <summary>"confirmed", "likely" or null: drives the DND tag and red border.</summary>
-    public string? DndLevel => ConfirmedDnd is not null ? "confirmed" : RefusingCalls is not null ? "likely" : null;
+    public string? DndLevel => ConfirmedDnd is not null || Presence?.State == "dnd" ? "confirmed" : RefusingCalls is not null ? "likely" : null;
+    /// <summary>Status line for a declared presence other than available/chat, or null.</summary>
+    public (string Label, string? Message)? PresenceStatus => Presence is { } p ? p.State switch
+    {
+        "dnd" => ("Do not disturb on", Note(p)),
+        "unavailable" => ("Unavailable", Note(p)),
+        "xa" => ("Extended away", Note(p)),
+        "away" => (p.Details.GetValueOrDefault("subtype") is "busy" ? "Busy" : "Away", Note(p)),
+        _ => null
+    } : ConfirmedDnd is not null ? ("Do not disturb on", null) : null;
+    private static string? Note(ObservedResource row) => row.Details.GetValueOrDefault("message") is { Length: > 0 } note ? note : null;
     public ObservedResource[] Channels => Rows.Where(r => r.Kind == "call").ToArray();
     public PeerEvidence? Peer => Rows.Where(r => r.Peer is not null).OrderByDescending(r => r.Updated).FirstOrDefault()?.Peer;
     public DateTimeOffset? Updated => Rows.Length == 0 ? LastSeen : Rows.Max(r => r.Updated);
