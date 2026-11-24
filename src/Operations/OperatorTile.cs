@@ -113,13 +113,31 @@ public sealed record OperatorTile(string Id, string Title, string Node, EventsPa
         if (peer?.Registration == "registered") return ("online", "Registrado no evento");
         return ("unknown", "Sem informação de alcance");
     }
+    /// <summary>Presence and PBX DND belong to the extension, not to a voice node (they are written on every node).</summary>
+    private static bool EndpointWide(ObservedResource row) => row.Kind is ExtensionPresenceState.Kind or ConfirmedDoNotDisturb.Kind;
+
+    /// <summary>
+    /// One tile per voice node with evidence. Extension-wide rows (presence, PBX DND) never create a node tile of
+    /// their own: they join every node tile of the extension, deduplicated to the latest row per kind; when they
+    /// are the only evidence, they form a single tile on the node that reported them last.
+    /// </summary>
+    private static IEnumerable<(string Node, ObservedResource[] Rows)> NodeGroups(EventsPanelCardInfo card, List<ObservedResource> rows)
+    {
+        if (InboundCatalogueEntry.State(card.Channels) is not null)
+            return [(rows.Select(r => r.Node).Distinct().Count() == 1 ? rows[0].Node : "", rows.ToArray())];
+        var wide = rows.Where(EndpointWide).GroupBy(r => r.Kind).Select(g => g.OrderByDescending(r => r.Updated).First()).ToArray();
+        var local = rows.Where(r => !EndpointWide(r)).ToArray();
+        if (local.Length == 0)
+            return wide.Length == 0 ? [] : [(wide.OrderByDescending(r => r.Updated).First().Node, wide)];
+        return local.GroupBy(r => r.Node).Select(g => (g.Key, g.Concat(wide).ToArray()));
+    }
+
     public static OperatorTile[] Create(IEnumerable<EventsPanelCardInfo> cards,
         IReadOnlyDictionary<EventsPanelCardInfo, List<ObservedResource>> byCard, bool isolateContexts = false,
         IReadOnlyDictionary<EventsPanelCardInfo, Guid>? cardContexts = null) => cards
         .Where(c => c.Kind is EventsPanelCardKind.PEER or EventsPanelCardKind.TRUNK or EventsPanelCardKind.QUEUE)
         .SelectMany(c => (byCard.TryGetValue(c, out var rows) && rows.Count > 0
-            ? rows.GroupBy(r => InboundCatalogueEntry.State(c.Channels) is not null ? "" : r.Node)
-                .Select(g => (Node: g.Select(r => r.Node).Distinct().Count() == 1 ? g.First().Node : "", Rows: g.ToArray()))
+            ? NodeGroups(c, rows)
             : [(Node: InboundCatalogueEntry.State(c.Channels) is not null ? "Entrada do cliente" : "Sem nó observado", Rows: Array.Empty<ObservedResource>())])
             .Select(g => new OperatorTile(c.Kind + "|" + string.Join(";", c.Channels) + "|" + g.Node
                 + (isolateContexts ? "|" + (cardContexts is not null && cardContexts.TryGetValue(c, out var context) ? context.ToString("N") : g.Rows.FirstOrDefault()?.Account) : ""),
