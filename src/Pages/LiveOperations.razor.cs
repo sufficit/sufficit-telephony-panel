@@ -285,7 +285,8 @@ public partial class LiveOperations
         if (!first) return;
         Navigation.LocationChanged += LocationChanged;
         var initial = BoardViewQuery.Parse(Navigation.Uri);
-        var initialContext = Demo ? initial.ContextId : await Access.InitialContext(initial.ContextId, lifetime.Token);
+        var embeddedContext = BoardPage ? HermesBoard.Context(Navigation.Uri) : null;
+        var initialContext = embeddedContext ?? (Demo ? initial.ContextId : await Access.InitialContext(initial.ContextId, lifetime.Token));
         await SelectClient(initialContext, initialContext?.ToString("N") ?? Text["Entire exchange"], false);
         await ApplyUrl(false);
         UrlReady = true;

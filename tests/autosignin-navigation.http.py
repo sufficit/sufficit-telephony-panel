@@ -27,4 +27,26 @@ for key, value in [('Sec-Purpose', 'prefetch;prerender'), ('Purpose', 'prefetch'
 for path in ['/?signedout=1', '/?login=failed', '/?login=denied']:
     status, headers, _ = request(path)
     assert status == 200 and 'Location' not in headers, 'Explicit outcomes/logout remain visible without loops'
-print('PASS: expired/absent session, legacy/pending cookies, repeated navigation, completed loop, prefetch/prerender, deep link and logout/errors')
+
+context = '11111111-1111-7111-8111-111111111111'
+embedded = f'/board?embed=hermes&contextid={context}'
+status, headers, _ = request(embedded, **{'Sec-Fetch-Dest': 'iframe'})
+assert status == 200 and 'Location' not in headers
+assert 'X-Frame-Options' not in headers
+assert set(headers['Content-Security-Policy'].split()) == {
+    'frame-ancestors', 'https://chatwoot.sufficit.com.br', 'https://chat.sufficit.com.br',
+    'https://hermes.sufficit.com.br', 'https://eveo-chatwoot.sufficit.com.br',
+}
+for path in (
+    f'/board?contextid={context}', '/board?embed=hermes',
+    '/board?embed=hermes&contextid=invalid', f'{embedded}&contextid={context}',
+    '/board?embed=hermes&contextid=00000000-0000-0000-0000-000000000000',
+    embedded.replace('/board', '/'), embedded.replace('/board', '/api/fleet'),
+):
+    status, headers, _ = request(path, **{'Sec-Fetch-Dest': 'iframe'})
+    assert headers.get('X-Frame-Options') == 'DENY', path
+    assert 'sufficit.com.br' not in headers.get('Content-Security-Policy', ''), path
+    if path.startswith('/api/fleet'):
+        assert status == 401, 'Embedding never grants API access'
+
+print('PASS: sign-in navigation, scoped Hermes iframe headers and anonymous API denial')

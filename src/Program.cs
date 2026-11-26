@@ -219,6 +219,18 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
     ctx.Response.Headers["X-Frame-Options"] = "DENY";
     ctx.Response.Headers["Cache-Control"] = "no-store";
+    if (HttpMethods.IsGet(ctx.Request.Method) && ctx.Request.Path == "/board" && HermesBoard.Context(ctx.Request.Query).HasValue)
+    {
+        ctx.Response.OnStarting(() =>
+        {
+            if (ctx.Response.StatusCode == StatusCodes.Status200OK)
+            {
+                ctx.Response.Headers.Remove("X-Frame-Options");
+                ctx.Response.Headers.ContentSecurityPolicy = HermesBoard.FramePolicy;
+            }
+            return Task.CompletedTask;
+        });
+    }
     await next();
 });
 app.UseAuthentication();

@@ -3,6 +3,7 @@
 @page "/queues"
 @page "/infrastructure"
 @using Sufficit.Telephony.Panel.Operations
+@using Sufficit.Telephony.Panel.Security
 @implements IAsyncDisposable
 @inject PanelAccess Access
 @inject FleetMetrics Metrics
@@ -75,7 +76,7 @@
     {
         <section class="entry">
             <div><h1>@Text["Telephony under observation."]</h1><p>@Text["An operational view of the Apoint, Eveo and Google PBXs. Connection, load and history together, with the source and age of each reading."]</p>
-            <SUIButton Href="@LoginUrl" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
+            <SUIButton Href="@LoginUrl" Target="@(HermesEmbed ? "_blank" : null)" Rel="@(HermesEmbed ? "noopener" : null)" VariantValue="SUIVariant.Filled">@Text["Sign in with Sufficit Identity"]</SUIButton></div>
             <aside><h2>@Text["Authorized access"]</h2><p>@Text["Sign in to view your authorized contexts. Permissions are checked on the server."]</p>
             @if (LoginDenied) { <SUIAlert ToneValue="SUITone.Warning">@Text["Your Sufficit account signed in, but it has no access to the Telephony Panel. Ask a manager to grant access, or sign in with another account."]</SUIAlert>
                 @if (Support.Enabled) { <SUIButton OnClick="OpenDeniedSupport" VariantValue="SUIVariant.Outlined">@Text["Talk to support"]</SUIButton> } }
@@ -170,6 +171,7 @@
 
 @code {
     private bool BoardPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/board", StringComparison.Ordinal);
+    private bool HermesEmbed => BoardPage && HermesBoard.Context(Navigation.Uri).HasValue;
     private bool QueuePage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/queues", StringComparison.Ordinal);
     // Legacy ?area=infrastructure links keep working; the canonical address is /infrastructure.
     private bool InfraPage => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/infrastructure", StringComparison.Ordinal)
