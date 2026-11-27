@@ -8,13 +8,14 @@ internal static class FopRulesChecks
     {
         var catalog = JsonSerializer.Deserialize<BoardConfiguration>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fop-board-rules.json")), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         catalog.Validate();
-        check(catalog.Rules.Length == 14 && catalog.Rules.Sum(r => r.Patterns.Length) == 141, "Complete FOP trunk catalog retained, plus the 11 PJSIP interconnection endpoints");
+        check(catalog.Rules.Length == 14 && catalog.Rules.Sum(r => r.Patterns.Length) == 142, "Complete FOP trunk catalog retained, plus the 12 PJSIP interconnection endpoints");
         check(catalog.Rules.Single(r => r.Label == "INBOUND").Patterns.Length == 45, "Inbound is not truncated at old 32 limit");
         check(catalog.Rules.All(r => r.Kind == "trunk" && r.Node == "" && r.Enabled), "All source trunk groups enabled on every node");
         string? Match(string key) => catalog.Rules.FirstOrDefault(r => BoardRuleEngine.Matches(r, key, "google-voip"))?.Label;
         check(Match("SIP/in-dtr-67") == "DATORA", "Specific incoming group wins over fallback");
         check(Match("SIP/outdtr01") == "DATORA", "Outbound trunk of a carrier shares the carrier card");
         check(Match("PJSIP/xep-d64e8b18e42ef111aa58f26e44c3a574") == "DATORA", "PJSIP interconnection of the carrier shares the card");
+        check(Match("PJSIP/xep-65f535a8a9b345d6816363ce4266e668") == "TIP", "TIP PJSIP ingress uses the existing carrier card");
         check(Match("SIP/out-gtgi") == "GTGI" && Match("SIP/out-flux") == "FLUX" && Match("SIP/out-tipbrasil") == "TIP", "Carrier outbound trunks leave the generic outbound card");
         check(Match("SIP/out-eai") == "OUTBOUND", "Outbound-only carriers stay in OUTBOUND");
         check(Match("SIP/in-new-provider") == "INBOUND", "Inbound stem made explicit");

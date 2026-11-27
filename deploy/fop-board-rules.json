@@ -70,6 +70,7 @@
         "SIP/in-tip-02",
         "SIP/in-tip-03",
         "SIP/in-tip-04",
+        "PJSIP/xep-65f535a8a9b345d6816363ce4266e668",
         "SIP/out-tipbrasil"
       ]
     },
